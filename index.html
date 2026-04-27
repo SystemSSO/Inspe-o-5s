@@ -1,0 +1,2975 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a1628">
+<title>Inspeção 5S</title>
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<!-- Firebase App e Firestore SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<!-- Firebase Storage não necessário: fotos salvas como base64 no Firestore -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+:root {
+  --navy: #020617; /* Deepest blue */
+  --navy2: #0f172a; /* Card background */
+  --navy3: #1e293b; /* Borders and accents */
+  --orange: #4f46e5; /* Main Indigo */
+  --orange2: #818cf8;
+  --gold: #f59e0b;
+  --green: #10b981;
+  --red: #f43f5e;
+  --yellow: #eab308;
+  --text: #f8fafc;
+  --text2: #64748b;
+  --border: rgba(255, 255, 255, 0.08);
+  --card: rgba(30, 41, 59, 0.5);
+  --radius: 20px;
+  --font-display: 'Barlow Condensed', sans-serif;
+  --font-body: 'Barlow', sans-serif;
+  --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --glass: rgba(2, 6, 23, 0.8);
+}
+body.light-mode {
+  --navy: #f8fafc;
+  --navy2: #ffffff;
+  --navy3: #f1f5f9;
+  --text: #0f172a;
+  --text2: #64748b;
+  --border: rgba(15, 23, 42, 0.08);
+  --card: #ffffff;
+  --glass: rgba(255, 255, 255, 0.9);
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { 
+  height: 100%; 
+  background: var(--navy); 
+  color: var(--text); 
+  font-family: var(--font-body); 
+  overflow: hidden; 
+  scroll-behavior: smooth; 
+}
+
+@keyframes screenFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes cardAppear {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* â”€â”€ SCREENS â”€â”€ */
+.screen { position: fixed; inset: 0; display: none; flex-direction: column; overflow: hidden; }
+.screen.active { display: flex; animation: screenFadeIn 0.3s ease-out; }
+
+/* â”€â”€ HEADER â”€â”€ */
+.app-header {
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px); 
+  border-bottom: 1px solid var(--border);
+  padding: 12px 16px;
+  display: flex; align-items: center; gap: 12px;
+  flex-shrink: 0; z-index: 10;
+}
+.app-header .logo {
+  width: 32px; height: 32px;
+  background: var(--orange);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 700; font-size: 14px; color: white;
+  flex-shrink: 0;
+}
+.app-header h1 { font-family: var(--font-display); font-size: 18px; font-weight: 700; letter-spacing: 0.5px; }
+.app-header .sub { font-size: 11px; color: var(--text2); margin-top: 1px; }
+.app-header .spacer { flex: 1; }
+.btn-icon { background: none; border: 1px solid var(--border); border-radius: 8px; color: var(--text2); width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+.btn-icon:active { background: var(--card); }
+
+/* â”€â”€ SCROLL BODY â”€â”€ */
+.scroll-body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.scroll-body::-webkit-scrollbar { width: 3px; }
+.scroll-body::-webkit-scrollbar-thumb { background: var(--navy3); border-radius: 3px; }
+
+/* â”€â”€ BOTTOM NAV â”€â”€ */
+.bottom-nav {
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px); 
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-shrink: 0; z-index: 10;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.nav-btn {
+  flex: 1; background: none; border: none; color: var(--text2);
+  padding: 10px 0; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  font-size: 10px; font-family: var(--font-body); cursor: pointer;
+  transition: all 0.2s;
+}
+.nav-btn svg { width: 22px; height: 22px; }
+.nav-btn.active { color: var(--orange); transform: translateY(-2px); }
+.nav-btn.active svg { stroke: var(--orange); }
+
+/* â”€â”€ CARDS â”€â”€ */
+.card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin: 12px 16px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(8px);
+  animation: cardAppear 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card:active { transform: scale(0.98); }
+.card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.card-title { font-family: var(--font-display); font-size: 16px; font-weight: 600; letter-spacing: 0.3px; }
+.card-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+/* â”€â”€ BUTTONS â”€â”€ */
+.btn-primary {
+  background: var(--orange); color: white;
+  border: none; border-radius: 14px;
+  padding: 16px 24px; font-size: 15px; font-weight: 600;
+  font-family: var(--font-body); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
+  transition: all 0.2s ease;
+}
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 20px 25px -5px rgba(79, 70, 229, 0.4); }
+.light-mode .btn-primary { box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2); }
+.btn-primary:active { background: #c94f10; transform: scale(0.98); }
+.btn-secondary {
+  background: var(--card); color: var(--text);
+  border: 1px solid var(--border); border-radius: 12px;
+  padding: 12px 20px; font-size: 14px; font-weight: 500;
+  font-family: var(--font-body); cursor: pointer; width: 100%; transition: transform 0.2s;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-secondary:active { background: rgba(255,255,255,0.08); }
+
+/* â”€â”€ BADGE â”€â”€ */
+.badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 2px 8px; border-radius: 100px; font-size: 11px; font-weight: 600;
+}
+.badge-green { background: rgba(46,204,113,0.15); color: var(--green); border: 1px solid rgba(46,204,113,0.3); }
+.badge-orange { background: rgba(14, 165, 233, 0.15); color: var(--orange2); border: 1px solid rgba(14, 165, 233, 0.3); }
+.badge-red { background: rgba(231,76,60,0.15); color: var(--red); border: 1px solid rgba(231,76,60,0.3); }
+.badge-gold { background: rgba(240,165,0,0.15); color: var(--gold); border: 1px solid rgba(240,165,0,0.3); }
+
+/* â”€â”€ SCORE RING â”€â”€ */
+.score-ring-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.score-ring { position: relative; width: 72px; height: 72px; }
+.score-ring svg { transform: rotate(-90deg); }
+.score-ring .score-val {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 20px; font-weight: 700;
+}
+.score-ring .score-lbl { font-size: 9px; color: var(--text2); margin-top: -2px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* â”€â”€ FORM CONTROLS â”€â”€ */
+.form-group { margin-bottom: 16px; }
+.form-label { font-size: 12px; color: var(--text2); margin-bottom: 6px; display: block; text-transform: uppercase; letter-spacing: 0.5px; }
+.form-select, .form-input {
+  width: 100%; background: var(--navy2); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); padding: 10px 12px;
+  font-size: 14px; font-family: var(--font-body);
+  appearance: none; -webkit-appearance: none;
+}
+.form-select:focus, .form-input:focus { outline: none; border-color: var(--orange); }
+.form-textarea {
+  width: 100%; background: var(--navy2); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); padding: 10px 12px;
+  font-size: 14px; font-family: var(--font-body); resize: none; min-height: 72px;
+}
+.form-textarea:focus { outline: none; border-color: var(--orange); }
+
+/* â”€â”€ NOTA SLIDER â”€â”€ */
+.nota-row { display: flex; gap: 6px; margin-top: 6px; }
+.nota-btn {
+  flex: 1; height: 44px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--navy3); color: var(--text2);
+  font-size: 16px; font-weight: 700; font-family: var(--font-display);
+  cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.nota-btn.sel-0 { background: var(--red); border-color: var(--red); color: white; box-shadow: 0 0 15px rgba(244, 63, 94, 0.3); }
+.nota-btn.sel-1 { background: #ea580c; border-color: #ea580c; color: white; }
+.nota-btn.sel-2 { background: #ca8a04; border-color: #ca8a04; color: white; }
+.nota-btn.sel-3 { background: #16a34a; border-color: #16a34a; color: white; }
+.nota-btn.sel-4 { background: var(--green); border-color: var(--green); color: white; box-shadow: 0 0 15px rgba(16, 185, 129, 0.3); }
+
+.light-mode .nota-btn { background: #f1f5f9; color: var(--text2); }
+.light-mode .nota-btn.sel-0 { background: var(--red); color: white; }
+.light-mode .nota-btn.sel-4 { background: var(--green); color: white; }
+
+/* â”€â”€ FOTO AREA â”€â”€ */
+.foto-area {
+  border: 1.5px dashed var(--border); border-radius: 10px;
+  padding: 14px; display: flex; flex-direction: column; align-items: center; gap: 8px;
+  cursor: pointer; transition: border-color 0.15s;
+}
+.foto-area:active { border-color: var(--orange); }
+.foto-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
+.foto-thumb { aspect-ratio: 1; border-radius: 6px; overflow: hidden; position: relative; }
+.foto-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.foto-thumb .rm-foto {
+  position: absolute; top: 3px; right: 3px; width: 18px; height: 18px;
+  background: rgba(0,0,0,0.7); border-radius: 50%; border: none; color: white;
+  font-size: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+
+/* â”€â”€ PROGRESSO â”€â”€ */
+.progress-bar { height: 6px; background: var(--navy3); border-radius: 100px; overflow: hidden; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--orange), var(--orange2)); border-radius: 100px; transition: width 0.3s; box-shadow: 0 0 10px rgba(79, 70, 229, 0.4); }
+
+/* â”€â”€ DIVIDER â”€â”€ */
+.divider { height: 1px; background: var(--border); margin: 8px 0; }
+
+/* â”€â”€ S-SECTION â”€â”€ */
+.s-section-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px; cursor: pointer; user-select: none;
+}
+.s-num {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: var(--navy3); display: flex; align-items: center; justify-content: center; 
+  font-family: var(--font-display); font-weight: 700; font-size: 16px;
+  flex-shrink: 0;
+}
+.s-num.orange { background: rgba(232,96,28,0.2); color: var(--orange2); border: 1px solid rgba(232,96,28,0.3); }
+.s-title { font-family: var(--font-display); font-size: 16px; font-weight: 600; flex: 1; }
+.s-score-mini { font-family: var(--font-display); font-size: 18px; font-weight: 700; }
+.s-body { padding: 0 16px 12px; display: none; }
+.s-body.open { display: block; }
+
+/* â”€â”€ ITEM CRITERIO â”€â”€ */
+.criterio-item { padding: 12px 0; border-bottom: 1px solid var(--border); }
+.criterio-item:last-child { border-bottom: none; }
+.criterio-nome { font-size: 13px; margin-bottom: 8px; line-height: 1.4; }
+.criterio-obs { margin-top: 8px; }
+
+/* â”€â”€ TOAST â”€â”€ */
+#toast {
+  position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--navy3); border: 1px solid var(--orange); border-radius: 10px;
+  padding: 12px 24px; font-size: 13px; opacity: 0; transition: all 0.25s;
+  pointer-events: none; z-index: 999; white-space: nowrap;
+  box-shadow: var(--shadow);
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* â”€â”€ HOME â”€â”€ */
+.home-hero {
+  background: var(--navy2);
+  padding: 24px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.home-hero-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.greeting { font-size: 14px; color: var(--text2); }
+.greeting strong { color: var(--text); font-size: 20px; font-family: var(--font-display); font-weight: 700; display: block; margin-top: 2px; }
+.tech-badge {
+  background: rgba(79, 70, 229, 0.1); border: 1px solid rgba(79, 70, 229, 0.2);
+  border-radius: 20px; padding: 6px 12px; font-size: 12px; color: var(--orange);
+  display: flex; align-items: center; gap: 6px; cursor: pointer;
+}
+.home-stats-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px;
+}
+.stat-item {
+  background: var(--navy3); border: 1px solid var(--border); border-radius: 16px;
+  padding: 12px;
+}
+.stat-val { font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--orange2); }
+.stat-lbl { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+.home-actions { padding: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.home-actions .btn-primary, .home-actions .btn-secondary { width: 100%; }
+
+@media (max-width: 420px) {
+  .home-actions { grid-template-columns: 1fr; }
+}
+
+.section-title {
+  font-family: var(--font-display); font-size: 13px; font-weight: 600;
+  color: var(--text2); text-transform: uppercase; letter-spacing: 1px;
+  padding: 16px 16px 8px;
+}
+
+.sector-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin: 0 16px 12px;
+  padding: 4px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.light-mode .sector-card { background: #ffffff; border-color: rgba(0,0,0,0.05); }
+.sector-card-head {
+  padding: 16px 16px 12px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.sector-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+}
+.sector-sub {
+  font-size: 11px;
+  color: var(--text2);
+  margin-top: 4px;
+}
+.sector-area-list {
+  padding: 0 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sector-area-item {
+  background: var(--navy3);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--orange2); /* Indicador de cor default */
+  border-radius: 12px;
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.sector-area-item.status-green { border-left-color: var(--green); }
+.sector-area-item.status-gold { border-left-color: var(--gold); }
+.sector-area-item.status-orange { border-left-color: var(--orange2); }
+.sector-area-item.status-red { border-left-color: var(--red); }
+
+.sector-area-item:hover { transform: translateX(2px); background: rgba(129, 140, 248, 0.1); }
+.light-mode .sector-area-item { 
+  background: #f1f5f9; 
+  border-top-color: rgba(0,0,0,0.05);
+  border-right-color: rgba(0,0,0,0.05);
+  border-bottom-color: rgba(0,0,0,0.05);
+}
+.sector-area-item:active { background: rgba(79, 70, 229, 0.1); transform: scale(0.98); }
+.sector-area-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.sector-area-name {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.sector-area-meta {
+  font-size: 11px;
+  color: var(--text2); 
+  margin-top: 5px;
+}
+.sector-card-actions {
+  padding: 0 10px 10px;
+}
+
+/* ── HISTORY SPECIFIC ── */
+.hist-sector-header {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--orange2);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 20px 16px 8px;
+}
+.hist-local-group {
+  margin: 0 16px 16px 20px;
+  padding-left: 12px;
+  border-left: 2px solid var(--navy3);
+}
+.hist-local-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+  opacity: 0.8;
+}
+
+/* â”€â”€ INSP CARD â”€â”€ */
+.insp-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); margin: 0 16px 10px;
+  overflow: hidden; cursor: pointer;
+  animation: cardAppear 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.insp-card:active { transform: scale(0.98); }
+.insp-card:hover { transform: translateY(-2px); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.4); }
+.insp-card-header {
+  padding: 12px 14px; display: flex; align-items: center; gap: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.insp-card-body { padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; }
+.insp-setor { font-size: 14px; font-weight: 600; }
+.insp-data { font-size: 11px; color: var(--text2); margin-top: 2px; }
+.insp-tec { font-size: 12px; color: var(--text2); }
+
+/* â”€â”€ MODAL â”€â”€ */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+  display: none; align-items: flex-end; justify-content: center;
+  z-index: 100; padding: 0;
+}
+.modal-overlay.open { display: flex; }
+.modal-sheet {
+  background: var(--navy2); border-radius: 24px 24px 0 0;
+  width: 100%; max-height: 85vh; overflow-y: auto;
+  padding: 20px 16px 32px; border-top: 1px solid var(--border);
+}
+.modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 16px; }
+.modal-title { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin-bottom: 16px; }
+
+/* â”€â”€ COMPARACAO â”€â”€ */
+.comp-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.comp-row:last-child { border-bottom: none; }
+.comp-s-name { flex: 1; font-size: 13px; }
+.comp-nota { font-family: var(--font-display); font-size: 16px; font-weight: 700; width: 36px; text-align: center; }
+.comp-arrow { font-size: 16px; width: 24px; text-align: center; }
+.comp-up { color: var(--green); }
+.comp-down { color: var(--red); }
+.comp-eq { color: var(--text2); }
+
+/* â”€â”€ PENDENCIAS â”€â”€ */
+.pend-item {
+  background: rgba(231,76,60,0.07); border: 1px solid rgba(231,76,60,0.2);
+  border-left: 3px solid var(--red); border-radius: 8px;
+  padding: 10px 12px; margin-bottom: 8px;
+}
+.pend-item.resolvida {
+  background: rgba(46,204,113,0.07); border: 1px solid rgba(46,204,113,0.2);
+  border-left-color: var(--green);
+}
+.pend-setor { font-size: 11px; color: var(--text2); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.4px; }
+.pend-desc { font-size: 13px; line-height: 1.4; }
+.pend-status { font-size: 11px; margin-top: 4px; }
+
+/* â”€â”€ CHIPS â”€â”€ */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.chip {
+  padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+  cursor: pointer; border: 1px solid var(--border); color: var(--text2);
+  background: var(--card);
+}
+.chip.active { background: rgba(232,96,28,0.15); border-color: var(--orange); color: var(--orange2); }
+
+/* â”€â”€ OFFLINE BANNER â”€â”€ */
+#offline-banner {
+  background: rgba(240,165,0,0.15); border-bottom: 1px solid rgba(240,165,0,0.3);
+  padding: 6px 16px; font-size: 12px; color: var(--gold); display: none;
+  align-items: center; gap: 6px; flex-shrink: 0;
+}
+#offline-banner.show { display: flex; }
+
+/* â”€â”€ PDF HIDDEN â”€â”€ */
+#pdf-render { position: absolute; left: -9999px; top: 0; width: 794px; font-family: Arial, sans-serif; }
+</style>
+</head>
+<body>
+
+<!-- OFFLINE BANNER -->
+<div id="offline-banner">
+  <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l2.5 2.5"/></svg>
+  Modo offline - dados salvos localmente
+</div>
+
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+     SCREEN: HOME
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+<div class="screen active" id="screen-home">
+  <div class="app-header">
+    <div class="logo">5S</div>
+    <div>
+      <div class="app-header h1" style="font-family:var(--font-display);font-size:17px;font-weight:700">Inspeção 5S</div>
+      <div class="app-header sub" style="font-size:10px;color:var(--text2)"></div>
+    </div>
+    <div class="spacer"></div>
+  <button class="btn-icon" onclick="toggleTheme()" style="margin-right:6px">
+    <svg id="theme-icon" width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
+      <!-- Sun Icon -->
+      <circle cx="10" cy="10" r="4"/>
+      <path d="M10 2v2m0 12v2M2 10h2m12 0h2M4.3 4.3l1.5 1.5m8.4 8.4l1.5 1.5M4.3 15.7l1.5-1.5m8.4-8.4l1.5-1.5"/>
+    </svg>
+  </button>
+    <button class="btn-icon" onclick="openTecModal()">
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="7" r="3.5"/><path d="M3 17c0-3.3 3.1-6 7-6s7 2.7 7 6"/></svg>
+    </button>
+  </div>
+
+  <div class="scroll-body">
+    <div class="home-hero">
+      <div class="home-hero-top">
+        <div class="greeting">
+          Bem-vindo,
+          <strong id="home-tec-name">Selecionar técnico</strong>
+        </div>
+        <div class="tech-badge" onclick="openTecModal()">
+          <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="7" r="3.5"/><path d="M3 17c0-3.3 3.1-6 7-6s7 2.7 7 6"/></svg>
+          Trocar
+        </div>
+      </div>
+      
+      <div class="home-stats-grid">
+        <div class="stat-item">
+          <div class="stat-val" id="stats-insps">0</div>
+          <div class="stat-lbl">Inspeções Hoje</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-val" id="stats-pend">0</div>
+          <div class="stat-lbl">Pendências</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="home-actions">
+      <button class="btn-primary" onclick="showNewInspModal()">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="8"/><path d="M10 6v8M6 10h8"/></svg>
+        Nova inspeção
+      </button>
+      <button class="btn-secondary" onclick="goToLatestInspection()">
+        <svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4l-6 6 6 6"/><path d="M15 4l-6 6 6 6"/></svg>
+        Última inspeção
+      </button>
+    </div>
+
+    <div class="section-title">Setores e áreas</div>
+    <div id="home-sector-list"></div>
+
+    <div class="section-title">Últimos registros</div>
+    <div id="home-insp-list" style="padding-bottom:16px"></div>
+  </div>
+
+  <div class="bottom-nav">
+    <button class="nav-btn active" onclick="navTo('home')">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9.5L10 3l7 6.5V17a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/></svg>
+      Início
+    </button>
+    <button class="nav-btn" onclick="navTo('historico')">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="14" height="13" rx="1.5"/><path d="M7 2v4M13 2v4M3 9h14"/></svg>
+      Histórico
+    </button>
+    <button class="nav-btn" onclick="navTo('pendencias')">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="7.5"/><path d="M10 6v4.5l3 2"/></svg>
+      Pendências
+    </button>
+    <button class="nav-btn" onclick="navTo('relatorios')">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 2h7l4 4v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M12 2v4h4M7 9h6M7 12h6M7 15h4"/></svg>
+      Relatórios
+    </button>
+  </div>
+</div>
+
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+     SCREEN: INSPEÃ‡ÃƒO (formulÃ¡rio)
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+<div class="screen" id="screen-inspecao">
+  <div class="app-header">
+    <button class="btn-icon" onclick="navTo('home')" style="margin-right:4px">
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4l-6 6 6 6"/></svg>
+    </button>
+    <div>
+      <div style="font-family:var(--font-display);font-size:17px;font-weight:700" id="insp-header-setor">Nova inspeção</div>
+      <div style="font-size:10px;color:var(--text2)" id="insp-header-sub">Preparação de Carga</div>
+    </div>
+    <div class="spacer"></div>
+    <div style="font-family:var(--font-display);font-size:22px;font-weight:700;color:var(--orange2)" id="insp-nota-geral">—</div>
+  </div>
+
+  <div style="padding: 10px 16px 0; flex-shrink:0">
+    <div class="progress-bar">
+      <div class="progress-fill" id="insp-progress" style="width:0%"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:4px">
+      <span style="font-size:11px;color:var(--text2)" id="insp-progress-txt">0 de 5 sensos avaliados</span>
+      <span style="font-size:11px;color:var(--text2)" id="insp-date-txt"></span>
+    </div>
+  </div>
+
+  <div class="scroll-body" id="insp-form-body" style="padding:12px 0 20px">
+    <!-- dinÃ¢mico -->
+  </div>
+
+  <div style="padding:12px 16px; flex-shrink:0; border-top:1px solid var(--border)">
+    <button class="btn-primary" id="btn-salvar-insp" onclick="salvarInspecao()">
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 13l4 4L16 7"/></svg>
+      Finalizar e Salvar
+    </button>
+  </div>
+</div>
+
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+     SCREEN: HISTÃ“RICO
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+<div class="screen" id="screen-historico">
+  <div class="app-header">
+    <div class="logo">5S</div>
+    <div>
+      <div style="font-family:var(--font-display);font-size:17px;font-weight:700">Histórico</div>
+      <div style="font-size:10px;color:var(--text2)">Todas as inspeções</div>
+    </div>
+  <div class="spacer"></div>
+  <button class="btn-icon" onclick="toggleTheme()" style="margin-right:12px">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-11.314l.707.707m11.314 11.314l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z"/></svg>
+  </button>
+  </div>
+  <div class="scroll-body" style="padding-top:8px">
+    <div id="hist-list" style="padding-bottom:16px"></div>
+  </div>
+  <div class="bottom-nav">
+    <button class="nav-btn" onclick="navTo('home')">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9.5L10 3l7 6.5V17a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/></svg>
+      Início
+    </button>
+    <button class="nav-btn active" onclick="navTo('historico')">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="14" height="13" rx="1.5"/><path d="M7 2v4M13 2v4M3 9h14"/></svg>
+      Histórico
+    </button>
+    <button class="nav-btn" onclick="navTo('pendencias')">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="7.5"/><path d="M10 6v4.5l3 2"/></svg>
+      Pendências
+    </button>
+    <button class="nav-btn" onclick="navTo('relatorios')">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 2h7l4 4v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M12 2v4h4M7 9h6M7 12h6M7 15h4"/></svg>
+      Relatórios
+    </button>
+  </div>
+</div>
+
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+     SCREEN: PENDÃŠNCIAS
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+<div class="screen" id="screen-pendencias">
+  <div class="app-header">
+    <div class="logo">5S</div>
+    <div>
+      <div style="font-family:var(--font-display);font-size:17px;font-weight:700">Pendências</div>
+      <div style="font-size:10px;color:var(--text2)">Acompanhamento de não conformidades</div>
+    </div>
+  </div>
+  <div class="scroll-body" style="padding-top:8px">
+    <div style="padding: 0 16px 8px">
+      <div class="chips" id="pend-filter-chips"></div>
+    </div>
+    <div id="pend-list" style="padding:0 16px 80px"></div>
+  </div>
+  <div class="bottom-nav">
+    <button class="nav-btn" onclick="navTo('home')">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9.5L10 3l7 6.5V17a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/></svg>
+      Início
+    </button>
+    <button class="nav-btn" onclick="navTo('historico')">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="14" height="13" rx="1.5"/><path d="M7 2v4M13 2v4M3 9h14"/></svg>
+      Histórico
+    </button>
+    <button class="nav-btn active" onclick="navTo('pendencias')">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="7.5"/><path d="M10 6v4.5l3 2"/></svg>
+      Pendências
+    </button>
+    <button class="nav-btn" onclick="navTo('relatorios')">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 2h7l4 4v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M12 2v4h4M7 9h6M7 12h6M7 15h4"/></svg>
+      Relatórios
+    </button>
+  </div>
+</div>
+
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+     SCREEN: RELATÃ“RIOS
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+<div class="screen" id="screen-relatorios">
+  <div class="app-header">
+    <div class="logo">5S</div>
+    <div>
+      <div style="font-family:var(--font-display);font-size:17px;font-weight:700">Relatórios</div>
+      <div style="font-size:10px;color:var(--text2)">Gerar e comparar</div>
+    </div>
+  </div>
+  <div class="scroll-body" style="padding:12px 0 20px">
+    <div class="section-title">Gerar relatório de inspeção</div>
+    <div class="card">
+      <div class="form-group">
+        <label class="form-label">Selecionar setor</label>
+        <select class="form-select" id="rel-insp-select">
+          <option value="">— Escolha um setor —</option>
+        </select>
+      </div>
+      <button class="btn-primary" onclick="gerarPDF()">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 2h7l4 4v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M12 2v4h4"/><path d="M7 13l3 3 3-3M10 10v6"/></svg>
+        Gerar PDF
+      </button>
+    </div>
+  </div>
+  <div class="bottom-nav">
+    <button class="nav-btn" onclick="navTo('home')">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9.5L10 3l7 6.5V17a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/></svg>
+      Início
+    </button>
+    <button class="nav-btn" onclick="navTo('historico')">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="14" height="13" rx="1.5"/><path d="M7 2v4M13 2v4M3 9h14"/></svg>
+      Histórico
+    </button>
+    <button class="nav-btn" onclick="navTo('pendencias')">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="7.5"/><path d="M10 6v4.5l3 2"/></svg>
+      Pendências
+    </button>
+    <button class="nav-btn active" onclick="navTo('relatorios')">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 2h7l4 4v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M12 2v4h4M7 9h6M7 12h6M7 15h4"/></svg>
+      Relatórios
+    </button>
+  </div>
+</div>
+
+<!-- â•â•â•â• MODALS â•â•â•â• -->
+<!-- Selecionar técnico -->
+<div class="modal-overlay" id="modal-tec">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Identificação do técnico</div>
+    <div class="form-group">
+      <label class="form-label">Selecione seu nome</label>
+      <select class="form-select" id="tec-select">
+        <option value="">— Escolha —</option>
+      </select>
+    </div>
+    <div style="margin-bottom:12px;font-size:12px;color:var(--text2)">ou adicione um novo técnico:</div>
+    <div class="form-group" style="display:flex;gap:8px">
+      <input class="form-input" id="tec-novo-input" placeholder="Nome do técnico" style="flex:1">
+      <button class="btn-secondary" onclick="addTecnico()" style="width:auto;padding:10px 16px">Adicionar</button>
+    </div>
+    <button class="btn-primary" onclick="confirmarTecnico()" style="margin-top:8px">Confirmar</button>
+  </div>
+</div>
+
+<!-- Nova inspeção -->
+<div class="modal-overlay" id="modal-nova-insp">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Nova inspeção</div>
+    <div class="form-group">
+      <label class="form-label">Setor / Local</label>
+      <select class="form-select" id="nova-setor-select"></select>
+    </div>
+    <div class="form-group" id="nova-subarea-group" style="display:none;">
+      <label class="form-label">Local</label>
+      <select class="form-select" id="nova-subarea-select"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Período de referência</label>
+      <input type="month" class="form-input" id="nova-periodo" value="">
+    </div>
+    <div id="nova-insp-anterior-wrap" style="display:none">
+      <div class="divider"></div>
+      <div style="font-size:12px;color:var(--gold);margin-bottom:10px;display:flex;gap:6px;align-items:center">
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="8"/><path d="M10 6v4.5l2.5 2.5"/></svg>
+        Inspeção anterior encontrada para este local
+      </div>
+      <div class="form-group">
+        <label class="form-label">Usar como base para comparação</label>
+        <select class="form-select" id="nova-base-select">
+          <option value="">Nenhuma (inspeção nova)</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn-primary" onclick="iniciarInspecao()">
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10h12M14 6l4 4-4 4"/></svg>
+      Iniciar inspeção
+    </button>
+  </div>
+</div>
+
+<!-- Detalhe da inspeÃ§Ã£o -->
+<div class="modal-overlay" id="modal-detalhe">
+  <div class="modal-sheet" id="modal-detalhe-body"></div>
+</div>
+
+<!-- Escolha de fonte da foto -->
+<div class="modal-overlay" id="modal-foto-opcao">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Adicionar foto</div>
+    <button class="btn-primary" onclick="escolherFonteFoto('camera')" style="margin-bottom:8px">
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="5" width="16" height="12" rx="2"/><circle cx="10" cy="11" r="3"/><path d="M7 5l1.5-2h3L13 5"/></svg>
+      Tirar foto agora
+    </button>
+    <button class="btn-secondary" onclick="escolherFonteFoto('gallery')" style="margin-bottom:8px">
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="14" height="14" rx="2"/><circle cx="7.5" cy="8" r="1.5"/><path d="M4.5 14l4-3.5 2.5 2 2.5-2 2 3.5"/></svg>
+      Escolher da galeria
+    </button>
+    <button class="btn-secondary" onclick="closeFotoModal()">
+      Cancelar
+    </button>
+  </div>
+</div>
+
+<!-- PDF oculto -->
+<div id="pdf-render"></div>
+<div id="toast"></div>
+
+<script>
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  DADOS
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+const SENSOS = [
+  {
+    id: 's1', nome: '1S - Utilização', cor: '#e8601c',
+    criterios: [
+      'Existência de materiais, ferramentas ou equipamentos desnecessários no local',
+      'Itens sem identificação ou sem utilidade definida no setor',
+      'Entulhos, resíduos ou sucatas acumulados na área',
+      'Excesso de estoque de materiais além do necessário para o turno',
+      'Documentos e formulários obsoletos sendo mantidos'
+    ]
+  },
+  {
+    id: 's2', nome: '2S - Organização', cor: '#f0a500',
+    criterios: [
+      'Ferramentas e equipamentos possuem local definido e demarcado',
+      'Identificação clara dos locais de armazenamento (etiquetas, placas)',
+      'Facilidade para localizar qualquer item em até 30 segundos',
+      'Corredores e vias de circulação livres e devidamente demarcadas',
+      'Quadros, painéis e murais organizados e atualizados'
+    ]
+  },
+  {
+    id: 's3', nome: '3S - Limpeza', cor: '#2ecc71',
+    criterios: [
+      'Piso limpo, sem poeira, óleo, respingos ou resíduos visíveis',
+      'Equipamentos e máquinas limpos e sem acúmulo de sujeira',
+      'Paredes, teto e estruturas sem manchas, mofo ou danos visíveis',
+      'Ralos, canaletas e sistemas de drenagem limpos e desobstruídos',
+      'Fontes de sujeira identificadas e com ação corretiva em andamento'
+    ]
+  },
+  {
+    id: 's4', nome: '4S - Padronização', cor: '#3498db',
+    criterios: [
+      'Padrões visuais (cores, sinalizações, layouts) respeitados na área',
+      'EPIs necessários disponíveis, em bom estado e sendo utilizados',
+      'Procedimentos operacionais visíveis e acessíveis no local de trabalho',
+      'Periodicidade de limpeza estabelecida e registrada (check-lists)',
+      'Responsáveis por cada 5S definidos e divulgados na área'
+    ]
+  },
+  {
+    id: 's5', nome: '5S - Autodisciplina', cor: '#9b59b6',
+    criterios: [
+      'Colaboradores seguem as práticas 5S de forma autônoma',
+      'Melhorias e sugestões são registradas pelos próprios colaboradores',
+      'Inspeções 5S anteriores foram atendidas e fechadas',
+      'Nível de comprometimento e engajamento da equipe com o programa',
+      'Ausência de reincidências nas mesmas não conformidades'
+    ]
+  }
+];
+
+const SETORES = [
+  {
+    nome: 'Preparação de Carga',
+    subareas: [
+      '1 – Galpão de recebimento de minério',
+      '2 – Banheiro do galpão de recebimento de minério',
+      '3 – Britador primário',
+      '4 – Planta de amostragem',
+      '5 – Misturador de pó - britagem primária',
+      '6 – Galpões de retomada trippers A, B e C',
+      '7 – Fornalha',
+      '8 – Sistema de picagem de madeira',
+      '9 – Banheiro próximo à sala de supervisão',
+      '10 – Forno secador',
+      '11 – Depósitos de materiais - britagem terciária',
+      '12 – Parte superior do prédio da britagem terciária - silo de minério grosso',
+      '13 – Parte superior do prédio do silo retomada',
+      '14 – Fosso da TC:627-02 - transporte de cavaco',
+      '15 – Galpão de estacionamento de máquinas (em frente à antiga carpintaria)',
+      '16 – Pátio de estacionamento de carretas',
+      '17 – Estocagem de pó',
+      '18 – Antiga casa de recebimento de notas',
+      '19 – Depósito de escória'
+    ]
+  },
+  {
+    nome: 'Infraestrutura',
+    subareas: [
+      '1 – Prédio de apoio H&F',
+      '2 – Área de armazenamento de ferramentas H&F próximo à carpintaria',
+      '3 – Container Selcar',
+      '4 – Estacionamento Externo (Entrada da Usina)',
+      '5 – Área de lazer',
+      '6 – Vila residencial',
+      '7 – Estação de tratamento (Vila dos supervisores)'
+    ]
+  },
+  {
+    nome: 'Manutenção Elétrica',
+    subareas: [
+      '1 – CCM Britagem primária',
+      '2 – CCM Cavaco',
+      '3 – Tenda de apoio da empresa Alfa (em frente à antiga carpintaria)',
+      '4 – Subestação principal',
+      '5 – Galpão de estoque de transformadores (próximo à administração)',
+      '6 – CCM Refino',
+      '7 – CCM (sala de apoio no prédio CTM)',
+      '8 – Sala de elétrica e instrumentação'
+    ]
+  },
+  {
+    nome: 'Engenharia de Projetos',
+    subareas: [
+      '1 – Galpão de estocagem de peças (próximo à carpintaria)',
+      '2 – Canteiro H. Sampaio',
+      '3 – Canteiro Guimarães',
+      '4 – Canteiro STMIL',
+      '5 – Sala da engenharia'
+    ]
+  },
+  {
+    nome: 'Manutenção Mecânica',
+    subareas: [
+      '1 – Lavador de veículos',
+      '2 – Estacionamento de máquinas (em frente à oficina de veículos)',
+      '3 – Sala de planejamento',
+      '4 – Sala de supervisão mecânica',
+      '5 – Mecânica de usinagem',
+      '6 – Área de fabricação de virolas',
+      '7 – Pátio de estocagem de sucatas (ao lado do galpão de reciclados)',
+      '8 – Área de solda dos rolos britadores',
+      '9 – Área de fabricação de peças (Prep. de Carga)',
+      '10 – Sala de apoio à manutenção mecânica (Prep. de Carga)',
+      '11 – Casa de bombas'
+    ]
+  },
+  {
+    nome: 'Segurança, Medicina e Resposta à Emergência',
+    subareas: [
+      '1 – Escritório (Segurança)',
+      '2 – Copa (Segurança)',
+      '3 – Sala de armários (Segurança)',
+      '4 – Banheiros (Segurança)',
+      '5 – Sala de atendimento (Medicina)',
+      '6 – Banheiros (Medicina)',
+      '7 – Sala de arquivo morto (Medicina)',
+      '8 – Ponto de apoio (Sillion)',
+      '9 – Brigada',
+      '10 – Carreta de brigada',
+      '11 – Container de resposta à emergência',
+      '12 – Sala de arquivo (Antiga carpintaria)'
+    ]
+  },
+  {
+    nome: 'Expedição',
+    subareas: [
+      '1 – Pátio de estacionamento de carretas',
+      '2 – Vestiários e banheiros',
+      '3 – Sala de DDS (ao lado do laboratório)',
+      '4 – Área de enchimento de Big Bags',
+      '5 – Área de baias de estocagem',
+      '6 – Sala administrativa da balança'
+    ]
+  },
+  {
+    nome: 'Armazém',
+    subareas: [
+      '1 – Almoxarifado',
+      '2 – Área administrativa',
+      '3 – Prateleiras de estoque',
+      '4 – Banheiros (Armazém)',
+      '5 – Galpão de estocagem de produtos químicos (interior do almoxarifado)',
+      '6 – Estocagem de acetileno',
+      '7 – Tanques de óleo 1A',
+      '8 – Recebimento de óleo 1A',
+      '9 – Nortel',
+      '10 – Tanque de óleo diesel'
+    ]
+  },
+  {
+    nome: 'Administração, Refeitório e RH',
+    subareas: [
+      '1 – Refeitório',
+      '2 – Área de estoque do refeitório',
+      '3 – Tanque GLP refeitório',
+      '4 – Sala da administração',
+      '5 – Banheiros do prédio administrativo',
+      '6 – Arquivo (sala RH)',
+      '7 – Sala de videoconferência',
+      '8 – Sala SGI',
+      '9 – Sala de espera dos taxistas',
+      '10 – Alojamento clube dos supervisores',
+      '11 – Viveiro',
+      '12 – Clube dos supervisores (parte interna)'
+    ]
+  },
+  {
+    nome: 'Meio Ambiente',
+    subareas: ['1 – Sala administrativa', '2 – Galpão de resíduos']
+  },
+  {
+    nome: 'Tecnologia da Informação',
+    subareas: ['1 – Sala administrativa', '2 – Depósito de peças (em frente ao armazém)']
+  },
+  {
+    nome: 'Engenharia de Manutenção',
+    subareas: ['1 – Sala administrativa', '2 – Sala de reuniões', '3 – Container STMIL']
+  },
+  {
+    nome: 'Laboratório',
+    subareas: ['1 – Sala administrativa', '2 – Sala de operações', '3 – Banheiros']
+  },
+  {
+    nome: 'Calcinação e Redução',
+    subareas: [
+      '1 – Prédio de alimentação',
+      '2 – Filtro de mangas da calcinação',
+      '3 – Nível calcinadores',
+      '4 – Salas de pré-aquecedores e bombeamento de óleo',
+      '5 – Nível Zero da calcinação',
+      '6 – Nível do prédio 5.500: Vazamento de escória/metal',
+      '7 – Nível do prédio 8.900: Abóbada, compressores, sala hidráulica red. I e II',
+      '8 – Nível do prédio 15.400: Nível dos hoists forno I e II',
+      '9 – Nível do prédio 20.900: Nível das pontes rolantes',
+      '10 – Banheiros',
+      '11 – Antiga sala de operação da calcinação redução',
+      '12 – Fosso de içamento de materiais ponte rolante I e II da redução',
+      '13 – Reservatório de água industrial acima do enchedor de pipa'
+    ]
+  },
+  {
+    nome: 'Refino',
+    subareas: [
+      '1 – Área dos pedreiros refrataristas',
+      '2 – Forno Demag',
+      '3 – Manutenção de panelas',
+      '4 – Banheiros',
+      '5 – Cabine de granulação',
+      '6 – Armazém de apoio à parada de manutenção (Antigo CTM)',
+      '7 – Sala antigo centro de treinamento (CTM)',
+      '8 – Filtros de mangas do refino',
+      '9 – Antiga britagem de escória (próximo aos filtros de mangas)',
+      '10 – Sala de descanso',
+      '11 – Vestiários'
+    ]
+  },
+  {
+    nome: 'Reflorestamento',
+    subareas: [
+      '1 – Administração Florestal',
+      '2 – Área de estoque de implementos agrícolas (atrás do armazém)',
+      '3 – Área de estacionamento de máquinas pesadas',
+      '4 – Galpão de reunião (Silvicultura)',
+      '5 – Container da colheita florestal',
+      '6 – Área de estoque de produtos químicos no viveiro florestal',
+      '7 – Vestiário do viveiro florestal',
+      '8 – Sala de treinamentos (próximo à casa de defensivos)',
+      '9 – Manutenção mecânica',
+      '10 – Viveiro florestal (casa de defensivos)',
+      '11 – Silvicultura',
+      '12 – Medicina',
+      '13 – Colheita florestal',
+      '14 – Horto Cristo Redentor',
+      '15 – Horto Rosariana',
+      '16 – Lavador de veículos',
+      '17 – Refeitório',
+      '18 – Tanque de abastecimento de óleo diesel'
+    ]
+  }
+];
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  STORAGE (IndexedDB com fallback localStorage)
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+const DB_KEY = 'aa5s_data';
+const DRAFT_KEY = 'aa5s_draft';
+// ConfiguraÃ§Ã£o do Firebase (Substitua pelos seus dados do console do Firebase)
+const firebaseConfig = {
+  apiKey: "AIzaSyDY4GZmEg6cZwqxMELGY7AlOOBEPngampA",
+  authDomain: "inspecao-5s.firebaseapp.com",
+  projectId: "inspecao-5s",
+  storageBucket: "inspecao-5s.firebasestorage.app",
+  messagingSenderId: "407095141982",
+  appId: "1:407095141982:web:d5619290f20b3db2c0f6cf",
+  measurementId: "G-W2DMDV4MWP"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+// Storage não utilizado: fotos em base64 no Firestore
+
+function hasFirebaseConfig() {
+  return firebaseConfig.apiKey && firebaseConfig.apiKey !== 'COLE_AQUI_SUA_API_KEY' &&
+    firebaseConfig.projectId && firebaseConfig.projectId !== 'seu-projeto' &&
+    firebaseConfig.storageBucket && firebaseConfig.storageBucket !== 'seu-projeto.appspot.com';
+}
+
+function fileToDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// Habilita persistÃªncia offline automÃ¡tica
+db.enablePersistence().catch((err) => console.error("Erro offline:", err.code));
+
+function normalizeAppState(data) {
+  const base = data && typeof data === 'object' ? data : {};
+  return {
+    tecnicos: Array.isArray(base.tecnicos) ? base.tecnicos : [],
+    inspecoes: Array.isArray(base.inspecoes) ? base.inspecoes : [],
+    syncQueue: Array.isArray(base.syncQueue) ? [...new Set(base.syncQueue)] : []
+  };
+}
+
+function persistLocalApp(data = APP) {
+  localStorage.setItem(DB_KEY, JSON.stringify(normalizeAppState(data)));
+}
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(DB_KEY);
+    return raw ? normalizeAppState(JSON.parse(raw)) : normalizeAppState();
+  } catch {
+    return normalizeAppState();
+  }
+}
+
+let syncInProgress = false;
+let syncRetryTimer = null;
+let draftSaveTimer = null;
+
+async function saveData(d) {
+  try {
+    APP = normalizeAppState(d);
+    persistLocalApp(APP);
+    scheduleSyncQueue();
+  } catch (e) {
+    console.error("Erro ao salvar dados localmente:", e);
+  }
+}
+
+function enqueueSyncInspection(inspId) {
+  if (!inspId) return;
+  APP = normalizeAppState(APP);
+  if (!APP.syncQueue.includes(inspId)) APP.syncQueue.push(inspId);
+  persistLocalApp(APP);
+}
+
+function loadDraft() {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveDraftNow() {
+  if (!currentInsp) return;
+  try {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(currentInsp));
+  } catch (e) {
+    console.warn("Não foi possível salvar rascunho:", e);
+  }
+}
+
+function scheduleDraftSave() {
+  clearTimeout(draftSaveTimer);
+  draftSaveTimer = setTimeout(saveDraftNow, 350);
+}
+
+function clearDraft() {
+  localStorage.removeItem(DRAFT_KEY);
+}
+
+function scheduleSyncQueue(delay = 200) {
+  clearTimeout(syncRetryTimer);
+  syncRetryTimer = setTimeout(() => syncPendingQueue(), delay);
+}
+
+async function syncPendingQueue() {
+  if (syncInProgress) return;
+  if (!navigator.onLine || !hasFirebaseConfig()) return;
+  APP = normalizeAppState(APP);
+  syncInProgress = true;
+
+  try {
+    await db.collection("config").doc("geral").set({ tecnicos: APP.tecnicos }, { merge: true });
+
+    const pendentes = [...APP.syncQueue];
+    for (const inspId of pendentes) {
+      const insp = APP.inspecoes.find(i => i.id === inspId);
+      if (!insp) {
+        APP.syncQueue = APP.syncQueue.filter(id => id !== inspId);
+        continue;
+      }
+
+      // Separa os dados: inspeção sem fotos + fotos em doc separado (evita limite 1MB)
+      const inspSemFotos = JSON.parse(JSON.stringify(insp));
+      const fotosDoc = {};
+      SENSOS.forEach(s => {
+        if (!inspSemFotos.sensos[s.id]) return;
+        inspSemFotos.sensos[s.id].forEach((cr, ci) => {
+          if (Array.isArray(cr.fotos) && cr.fotos.length > 0) {
+            fotosDoc[`${s.id}_${ci}`] = cr.fotos;
+            inspSemFotos.sensos[s.id][ci].fotos = ['__ref__'];
+          }
+        });
+      });
+
+      await db.collection("inspecoes").doc(insp.id).set(inspSemFotos, { merge: true });
+
+      if (Object.keys(fotosDoc).length > 0) {
+        await db.collection("inspecoes_fotos").doc(insp.id).set(fotosDoc, { merge: true });
+      }
+
+      APP.syncQueue = APP.syncQueue.filter(id => id !== inspId);
+      persistLocalApp(APP);
+    }
+
+    persistLocalApp(APP);
+  } catch (e) {
+    console.warn("Falha ao sincronizar agora. Tentaremos novamente ao reconectar.", e);
+  } finally {
+    syncInProgress = false;
+  }
+}
+
+// Função para buscar dados novos do servidor ao iniciar
+async function syncFromCloud() {
+  if (!hasFirebaseConfig()) return;
+  try {
+    // Buscar técnicos
+    const config = await db.collection("config").doc("geral").get();
+    if (config.exists && Array.isArray(config.data().tecnicos)) APP.tecnicos = config.data().tecnicos;
+
+    // Buscar últimas 50 inspeções
+    const snapshot = await db.collection("inspecoes").orderBy("data", "desc").limit(50).get();
+    const cloudInsps = [];
+    snapshot.forEach(doc => cloudInsps.push(doc.data()));
+
+    // Restaurar fotos de documentos separados
+    for (const insp of cloudInsps) {
+      if (!insp?.id) continue;
+      let temFotoRef = false;
+      SENSOS.forEach(s => {
+        if (!insp.sensos?.[s.id]) return;
+        insp.sensos[s.id].forEach(cr => {
+          if (Array.isArray(cr.fotos) && cr.fotos[0] === '__ref__') temFotoRef = true;
+        });
+      });
+      if (temFotoRef) {
+        try {
+          const fotosDoc = await db.collection("inspecoes_fotos").doc(insp.id).get();
+          if (fotosDoc.exists) {
+            const fotos = fotosDoc.data();
+            SENSOS.forEach(s => {
+              if (!insp.sensos?.[s.id]) return;
+              insp.sensos[s.id].forEach((cr, ci) => {
+                const key = `${s.id}_${ci}`;
+                if (fotos[key]) cr.fotos = fotos[key];
+                else if (cr.fotos?.[0] === '__ref__') cr.fotos = [];
+              });
+            });
+          }
+        } catch(e) { console.warn("Erro ao buscar fotos:", e); }
+      }
+    }
+
+    if (cloudInsps.length > 0) {
+      const merged = {};
+      cloudInsps.forEach(i => { if (i?.id) merged[i.id] = i; });
+      APP.inspecoes.forEach(i => {
+        if (!i?.id) return;
+        if (!merged[i.id] || APP.syncQueue.includes(i.id)) merged[i.id] = i;
+      });
+      APP.inspecoes = Object.values(merged).sort((a, b) => new Date(a.data) - new Date(b.data));
+    }
+    persistLocalApp(APP);
+    renderHome();
+    scheduleSyncQueue(0);
+  } catch (e) {
+    console.warn("Rodando em modo offline ou erro de sync:", e);
+  }
+}
+
+let APP = loadData();
+let currentTec = localStorage.getItem('aa5s_tec') || '';
+let currentInsp = null; // inspeÃ§Ã£o em andamento
+let isSavingInspecao = false;
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  NAVEGAÃ‡ÃƒO
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+function navTo(id) {
+  if (currentInsp && id !== 'inspecao') saveDraftNow();
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+  if (id === 'home') renderHome();
+  if (id === 'historico') renderHistorico();
+  if (id === 'pendencias') renderPendencias();
+  if (id === 'relatorios') renderRelatorios();
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  TÃ‰CNICOS
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+function openTecModal() {
+  renderTecSelect();
+  document.getElementById('modal-tec').classList.add('open');
+}
+
+function renderTecSelect() {
+  const sel = document.getElementById('tec-select');
+  sel.innerHTML = '<option value="">Escolha</option>';
+  APP.tecnicos.forEach(t => {
+    const o = document.createElement('option');
+    o.value = t; o.textContent = t;
+    if (t === currentTec) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+function addTecnico() {
+  const inp = document.getElementById('tec-novo-input');
+  const nome = inp.value.trim();
+  if (!nome) return;
+  if (!APP.tecnicos.includes(nome)) {
+    APP.tecnicos.push(nome);
+    saveData(APP);
+  }
+  inp.value = '';
+  renderTecSelect();
+  document.getElementById('tec-select').value = nome;
+}
+
+function confirmarTecnico() {
+  const v = document.getElementById('tec-select').value;
+  if (!v) { toast('Selecione um técnico'); return; }
+  currentTec = v;
+  localStorage.setItem('aa5s_tec', v);
+  document.getElementById('modal-tec').classList.remove('open');
+  document.getElementById('home-tec-name').textContent = v;
+  renderHome();
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  HOME
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+function renderHome() {
+  document.getElementById('home-tec-name').textContent = currentTec || 'Selecionar técnico';
+  
+  document.getElementById('stats-insps').textContent = countInspecoesHoje();
+  document.getElementById('stats-pend').textContent = contarPendencias();
+
+  const sectorList = document.getElementById('home-sector-list');
+  const list = document.getElementById('home-insp-list');
+  sectorList.innerHTML = sectorCardListHTML();
+
+  const recentes = [...APP.inspecoes].reverse().slice(0, 4);
+  if (recentes.length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:24px 16px 32px;color:var(--text2);font-size:13px">Nenhuma inspeção registrada ainda.</div>';
+    return;
+  }
+  list.innerHTML = recentes.map(i => inspCardHTML(i)).join('');
+}
+
+function getSortedInspecoesDesc() {
+  return [...APP.inspecoes].sort((a, b) => new Date(b.data) - new Date(a.data));
+}
+
+function countInspecoesHoje() {
+  const hoje = new Date();
+  const y = hoje.getFullYear();
+  const m = String(hoje.getMonth() + 1).padStart(2, '0');
+  const d = String(hoje.getDate()).padStart(2, '0');
+  const hojeIso = `${y}-${m}-${d}`;
+  return APP.inspecoes.filter(i => i.data === hojeIso).length;
+}
+
+function countSetoresSemInspecao(dias) {
+  const limite = new Date();
+  limite.setDate(limite.getDate() - dias);
+  let semInspecao = 0;
+
+  SETORES.forEach(setor => {
+    const ultima = APP.inspecoes
+      .filter(i => i.setor === setor.nome)
+      .sort((a, b) => new Date(b.data) - new Date(a.data))[0];
+    if (!ultima || new Date(ultima.data) < limite) semInspecao++;
+  });
+
+  return semInspecao;
+}
+
+function goToLatestInspection() {
+  const ultima = getSortedInspecoesDesc()[0];
+  if (!ultima) {
+    toast('Ainda não existe inspeção para continuar.');
+    return;
+  }
+  openDetalhe(ultima.id);
+}
+
+function sectorCardListHTML() {
+  const setoresOrdenados = [...SETORES.map(s => s.nome)];
+  APP.inspecoes.forEach(insp => {
+    if (!setoresOrdenados.includes(insp.setor)) setoresOrdenados.push(insp.setor);
+  });
+
+  return setoresOrdenados.map(setor => {
+    const inspecoesSetor = APP.inspecoes.filter(i => i.setor === setor).sort((a, b) => new Date(b.data) - new Date(a.data));
+    const areasMap = {};
+
+    inspecoesSetor.forEach(insp => {
+      const chave = insp.subarea || '__setor__';
+      if (!areasMap[chave]) areasMap[chave] = [];
+      areasMap[chave].push(insp);
+    });
+
+    const areaKeys = Object.keys(areasMap);
+    const ultimaSetor = inspecoesSetor[0];
+    const resumoSetor = areaKeys.length
+      ? `${areaKeys.length} área(s) com registro${ultimaSetor ? ` · Última em ${formatDate(ultimaSetor.data)}` : ''}`
+      : 'Nenhuma área com registro ainda';
+
+    const areasHtml = areaKeys.length ? areaKeys.map(areaKey => {
+      const ultima = areasMap[areaKey][0];
+      const labelArea = areaKey === '__setor__' ? 'Área geral do setor' : areaKey;
+      const totalArea = areasMap[areaKey].length;
+      const score = ultima.notaGeral;
+      const statusClass = score >= 3.5 ? 'status-green' : score >= 2.5 ? 'status-gold' : score >= 1.5 ? 'status-orange' : 'status-red';
+
+      return `
+        <div class="sector-area-item ${statusClass}" onclick="openDetalhe('${ultima.id}')">
+          <div class="sector-area-top">
+            <div style="flex:1">
+              <div class="sector-area-name">${labelArea}</div>
+              <div class="sector-area-meta"><strong>${totalArea}</strong> inspeções · Última: ${formatDate(ultima.data)}</div>
+            </div>
+            <div style="font-family:var(--font-display); font-weight:700; color:${notaCor(score)}">${score.toFixed(2)}</div>
+          </div>
+        </div>
+      `;
+    }).join('') : `
+      <div class="sector-area-item" style="cursor:default">
+        <div class="sector-area-name">Nenhum registro neste setor</div>
+        <div class="sector-area-meta">Use "Nova inspeção" para iniciar o primeiro checklist.</div>
+      </div>
+    `;
+
+    return `
+      <div class="sector-card">
+        <div class="sector-card-head">
+          <div>
+            <div class="sector-title">${setor}</div>
+            <div class="sector-sub">${resumoSetor}</div>
+          </div>
+          ${ultimaSetor ? notaBadge(ultimaSetor.notaGeral) : '<span class="badge badge-orange">Sem registros</span>'}
+        </div>
+        <div class="sector-area-list">${areasHtml}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function contarPendencias() {
+  let c = 0;
+  APP.inspecoes.forEach(insp => {
+    SENSOS.forEach(s => {
+      (insp.sensos[s.id] || []).forEach((cr, ci) => {
+        if ((cr.nota || 0) < 2 && cr.obs) c++;
+      });
+    });
+  });
+  return c;
+}
+
+function inspCardHTML(insp) {
+  const cor = notaCor(insp.notaGeral);
+  const badge = notaBadge(insp.notaGeral);
+  return `<div class="insp-card" onclick="openDetalhe('${insp.id}')">
+    <div class="insp-card-header">
+      <div style="flex:1">
+        <div class="insp-setor">${insp.setor}</div>
+        <div class="insp-data">${formatDate(insp.data)} · ${insp.subarea ? insp.subarea + ' · ' : ''}${insp.periodo || ''}</div>
+      </div>
+      ${badge}
+    </div>
+    <div class="insp-card-body">
+      <span class="insp-tec">${insp.tecnico}</span>
+      ${insp.baseId ? '<span style="font-size:11px;color:var(--gold)">Comparativa</span>' : '<span style="font-size:11px;color:var(--text2)">Primeira inspeção</span>'}
+    </div>
+  </div>`;
+}
+
+function notaCor(n) {
+  if (n == null) return 'var(--text2)';
+  if (n >= 3.5) return 'var(--green)';
+  if (n >= 2.5) return 'var(--gold)';
+  if (n >= 1.5) return 'var(--orange2)';
+  return 'var(--red)';
+}
+
+function notaBadge(n) {
+  if (n == null) return '<span class="badge badge-orange">Em andamento</span>';
+  const cor = n >= 3.5 ? 'green' : n >= 2.5 ? 'gold' : n >= 1.5 ? 'orange' : 'red';
+  return `<span class="badge badge-${cor}" style="font-size:14px;padding:4px 10px">${n.toFixed(2)}</span>`;
+}
+
+function formatDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('pt-BR', { day:'2-digit', month:'short', year:'numeric' });
+}
+
+function localLabel(insp) {
+  return insp.subarea || insp.setor;
+}
+
+function localKey(insp) {
+  return `${insp.setor}||${insp.subarea || ''}`;
+}
+
+function sameLocal(a, b) {
+  if (!a || !b) return false;
+  return a.setor === b.setor && (a.subarea || '') === (b.subarea || '');
+}
+
+function getAllSetorNames() {
+  const nomes = new Set(SETORES.map(s => s.nome));
+  APP.inspecoes.forEach(insp => nomes.add(insp.setor));
+  return Array.from(nomes).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+}
+
+function getLatestInspecoesByLocal(limitDateIso = null) {
+  const latestMap = {};
+  APP.inspecoes.forEach(insp => {
+    if (limitDateIso && new Date(insp.data) > new Date(limitDateIso)) return;
+    const key = localKey(insp);
+    if (!latestMap[key] || new Date(insp.data) > new Date(latestMap[key].data)) {
+      latestMap[key] = insp;
+    }
+  });
+  return Object.values(latestMap);
+}
+
+function getPendenciasRecebidas(setorDestino, limitDateIso = null) {
+  const recebidas = [];
+  getLatestInspecoesByLocal(limitDateIso).forEach(inspOrigem => {
+    if (inspOrigem.setor === setorDestino) return;
+    SENSOS.forEach(s => {
+      inspOrigem.sensos[s.id].forEach((cr, ci) => {
+        if ((cr.nota || 0) >= 2) return;
+        if ((cr.encaminharSetor || '') !== setorDestino) return;
+        recebidas.push({
+          origemSetor: inspOrigem.setor,
+          origemLocal: localLabel(inspOrigem),
+          origemData: inspOrigem.data,
+          origemPeriodo: inspOrigem.periodo || '',
+          tecnico: inspOrigem.tecnico,
+          senso: s.nome,
+          criterioIndice: ci + 1,
+          criterioTexto: s.criterios[ci],
+          nota: cr.nota,
+          obs: cr.obs || ''
+        });
+      });
+    });
+  });
+  return recebidas;
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  NOVA INSPEÃ‡ÃƒO
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+function showNewInspModal() {
+  if (!currentTec) { openTecModal(); return; }
+
+  const setorSelect = document.getElementById('nova-setor-select');
+  setorSelect.innerHTML = '<option value="">— Selecione um setor —</option>' +
+    SETORES.map(s => `<option value="${s.nome}">${s.nome}</option>`).join('');
+
+  const now = new Date();
+  document.getElementById('nova-periodo').value = now.toISOString().slice(0,7);
+
+  setorSelect.onchange = () => {
+    populateSubareaSelect();
+    checkInspAnterior();
+  };
+  document.getElementById('nova-subarea-select').onchange = checkInspAnterior;
+
+  populateSubareaSelect(); // PopulaÃ§Ã£o inicial
+  checkInspAnterior(); // VerificaÃ§Ã£o inicial
+
+  document.getElementById('modal-nova-insp').classList.add('open');
+}
+
+function populateSubareaSelect() {
+  const setorSelect = document.getElementById('nova-setor-select');
+  const subareaSelect = document.getElementById('nova-subarea-select');
+  const subareaGroup = document.getElementById('nova-subarea-group');
+  const selectedSectorName = setorSelect.value;
+  const selectedSector = SETORES.find(s => s.nome === selectedSectorName);
+
+  subareaSelect.innerHTML = '<option value="">— Selecione o local —</option>';
+  if (selectedSector && selectedSector.subareas.length > 0) {
+    subareaSelect.innerHTML += selectedSector.subareas.map(sa => `<option value="${sa}">${sa}</option>`).join('');
+    subareaGroup.style.display = 'block';
+  } else {
+    subareaGroup.style.display = 'none';
+  }
+}
+
+function checkInspAnterior() {
+  const setor = document.getElementById('nova-setor-select').value;
+  const subarea = document.getElementById('nova-subarea-select').value;
+  const selectedSector = SETORES.find(s => s.nome === setor);
+  const wrap = document.getElementById('nova-insp-anterior-wrap');
+  const baseSel = document.getElementById('nova-base-select');
+
+  if (!setor) {
+    wrap.style.display = 'none';
+    return;
+  }
+
+  if (selectedSector && selectedSector.subareas.length > 0 && !subarea) {
+    wrap.style.display = 'none';
+    return;
+  }
+
+  const subareaNorm = subarea || '';
+  const anteriores = APP.inspecoes.filter(i => i.setor === setor && (i.subarea || '') === subareaNorm);
+
+  if (anteriores.length > 0) {
+    wrap.style.display = 'block';
+    baseSel.innerHTML = '<option value="">Nenhuma (inspeção nova)</option>' +
+      anteriores.map(i => `<option value="${i.id}">${i.periodo || formatDate(i.data)} — ${formatDate(i.data)} — nota ${i.notaGeral ? i.notaGeral.toFixed(2) : '?'}</option>`).join('');
+    baseSel.value = anteriores[anteriores.length - 1].id;
+  } else {
+    wrap.style.display = 'none';
+  }
+}
+
+function iniciarInspecao() {
+  const setor = document.getElementById('nova-setor-select').value;
+  const subarea = document.getElementById('nova-subarea-select').value;
+  const periodo = document.getElementById('nova-periodo').value;
+  const baseId = document.getElementById('nova-base-select').value;
+  const selectedSector = SETORES.find(s => s.nome === setor);
+
+  document.getElementById('modal-nova-insp').classList.remove('open');
+
+  if (!setor) { toast('Selecione um setor para iniciar a inspeção.'); return; }
+  if (selectedSector && selectedSector.subareas.length > 0 && !subarea) {
+    toast('Selecione o local para iniciar a inspeção.');
+    return;
+  }
+  const baseSel = baseId ? APP.inspecoes.find(i => i.id === baseId) : null;
+  const validBaseId = sameLocal({ setor, subarea: subarea || null }, baseSel) ? baseId : null;
+  if (baseId && !validBaseId) {
+    toast('Base de comparação ignorada por ser de outro local.');
+  }
+  currentInsp = {
+    id: 'i' + Date.now(),
+    setor, periodo, baseId: validBaseId,
+    tecnico: currentTec,
+    data: new Date().toISOString(),
+    sensos: {},
+    notaGeral: null,
+    subarea: subarea || null
+  };
+  SENSOS.forEach(s => {
+    currentInsp.sensos[s.id] = s.criterios.map(() => ({ nota: null, obs: '', sugestao: '', fotos: [], encaminharSetor: '' }));
+  });
+
+  saveDraftNow();
+  renderInspecaoForm();
+  navTo('inspecao');
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  FORMULÃRIO DE INSPEÃ‡ÃƒO
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+function renderInspecaoForm() {
+  document.getElementById('insp-header-setor').textContent = currentInsp.setor;
+  document.getElementById('insp-header-sub').textContent = `${currentInsp.subarea ? currentInsp.subarea + ' · ' : ''}${currentInsp.periodo || ''}`;
+  document.getElementById('insp-date-txt').textContent = new Date().toLocaleDateString('pt-BR');
+
+  // se tem base, carrega para mostrar notas anteriores
+  const baseRef = currentInsp.baseId ? APP.inspecoes.find(i => i.id === currentInsp.baseId) : null;
+  const base = sameLocal(currentInsp, baseRef) ? baseRef : null;
+
+  const body = document.getElementById('insp-form-body');
+  body.innerHTML = SENSOS.map((s, si) => `
+    <div style="border-bottom:1px solid var(--border)">
+      <div class="s-section-header" onclick="toggleS('s-body-${si}')">
+        <div class="s-num orange" style="background:rgba(0,0,0,0.15);border-color:${s.cor}33;color:${s.cor}">${si+1}</div>
+        <div>
+          <div class="s-title">${s.nome}</div>
+          ${base ? `<div style="font-size:11px;color:var(--text2)">Nota anterior: ${calcMediaSFinal(base, s.id).toFixed(2)}</div>` : ''}
+        </div>
+        <div class="s-score-mini" id="score-mini-${s.id}" style="color:var(--text2)">—</div>
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="var(--text2)" stroke-width="2" style="flex-shrink:0"><path d="M5 8l5 5 5-5"/></svg>
+      </div>
+      <div class="s-body" id="s-body-${si}" ${si===0?'style="display:block"':''}>
+        ${s.criterios.map((cr, ci) => criterioHTML(s, si, cr, ci, base)).join('')}
+      </div>
+    </div>
+  `).join('');
+
+  updateProgresso();
+}
+
+function criterioHTML(s, si, cr, ci, base) {
+  const baseNota = base ? (base.sensos[s.id][ci]?.nota ?? null) : null;
+  const baseObs = base ? (base.sensos[s.id][ci]?.obs || '') : '';
+  const item = currentInsp.sensos[s.id][ci];
+  const setorOptions = getAllSetorNames()
+    .filter(nome => nome !== currentInsp.setor)
+    .map(nome => `<option value="${nome}" ${item.encaminharSetor === nome ? 'selected' : ''}>${nome}</option>`)
+    .join('');
+  const baseHint = baseNota !== null
+    ? `<div style="font-size:11px;color:var(--text2);margin-bottom:6px;padding:6px 8px;background:rgba(255,255,255,0.03);border-radius:6px;border-left:2px solid ${s.cor}">
+        Anterior: nota <strong style="color:${notaCor(baseNota)}">${baseNota}</strong>${baseObs ? ` - "${baseObs.slice(0,60)}${baseObs.length>60?'...':''}"` : ''}
+       </div>`
+    : '';
+
+  return `<div class="criterio-item" id="cr-${s.id}-${ci}">
+    <div class="criterio-nome">${cr}</div>
+    ${baseHint}
+    <div class="nota-row">
+      ${[0,1,2,3,4].map(n => `<button class="nota-btn" id="nb-${s.id}-${ci}-${n}" onclick="setNota('${s.id}',${ci},${n})">${n}</button>`).join('')}
+    </div>
+    <div class="criterio-obs" style="margin-top:8px">
+      <textarea class="form-textarea" placeholder="Observação / não conformidade (obrigatório para notas 0-1)..." rows="2"
+        id="obs-${s.id}-${ci}" oninput="setObs('${s.id}',${ci},this.value)"
+        style="font-size:13px;min-height:52px">${item.obs || ''}</textarea>
+    </div>
+    <div class="criterio-obs" style="margin-top:8px">
+      <textarea class="form-textarea" placeholder="Sugestão de melhoria..." rows="2"
+        id="sug-${s.id}-${ci}" oninput="setSugestao('${s.id}',${ci},this.value)"
+        style="font-size:13px;min-height:52px">${item.sugestao || ''}</textarea>
+    </div>
+    <div class="criterio-obs" style="margin-top:8px">
+      <label class="form-label" style="margin-bottom:6px">Encaminhar para outro setor</label>
+      <select class="form-select" id="resp-${s.id}-${ci}" onchange="setResponsavelSetor('${s.id}',${ci},this.value)" style="font-size:13px">
+        <option value="">— Nenhuma (Responsabilidade local) —</option>
+        ${setorOptions}
+      </select>
+    </div>
+    <div>
+      <div class="foto-area" onclick="triggerFoto('${s.id}',${ci})" style="margin-top:8px">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="var(--text2)" stroke-width="1.8"><rect x="2" y="5" width="16" height="12" rx="2"/><circle cx="10" cy="11" r="3"/><path d="M7 5l1.5-2h3L13 5"/></svg>
+        <span style="font-size:12px;color:var(--text2)">Adicionar foto</span>
+        <input type="file" accept="image/*" multiple capture="environment" style="display:none" id="foto-inp-camera-${s.id}-${ci}" onchange="addFotos('${s.id}',${ci},this)">
+        <input type="file" accept="image/*" multiple style="display:none" id="foto-inp-gallery-${s.id}-${ci}" onchange="addFotos('${s.id}',${ci},this)">
+      </div>
+      <div class="foto-grid" id="foto-grid-${s.id}-${ci}"></div>
+    </div>
+  </div>`;
+}
+
+function toggleS(id) {
+  const el = document.getElementById(id);
+  el.style.display = el.style.display === 'block' ? 'none' : 'block';
+}
+
+function setNota(sId, ci, nota) {
+  currentInsp.sensos[sId][ci].nota = nota;
+  [0,1,2,3,4].forEach(n => {
+    const btn = document.getElementById(`nb-${sId}-${ci}-${n}`);
+    btn.className = 'nota-btn' + (n === nota ? ` sel-${n}` : '');
+  });
+  // obrigatÃ³rio obs se < 2
+  if (nota >= 2) {
+    const obs = document.getElementById(`obs-${sId}-${ci}`);
+    obs.style.borderColor = '';
+    currentInsp.sensos[sId][ci].encaminharSetor = '';
+    const respSel = document.getElementById(`resp-${sId}-${ci}`);
+    if (respSel) respSel.value = '';
+  }
+  updateScoreMini(sId);
+  updateProgresso();
+  updateNotaGeral();
+  scheduleDraftSave();
+}
+
+function setObs(sId, ci, val) {
+  currentInsp.sensos[sId][ci].obs = val;
+  scheduleDraftSave();
+}
+
+function setSugestao(sId, ci, val) {
+  currentInsp.sensos[sId][ci].sugestao = val;
+  scheduleDraftSave();
+}
+
+function setResponsavelSetor(sId, ci, val) {
+  currentInsp.sensos[sId][ci].encaminharSetor = val;
+  scheduleDraftSave();
+}
+
+let pendingFotoTarget = null;
+
+function triggerFoto(sId, ci) {
+  pendingFotoTarget = { sId, ci };
+  document.getElementById('modal-foto-opcao').classList.add('open');
+}
+
+function closeFotoModal() {
+  pendingFotoTarget = null;
+  document.getElementById('modal-foto-opcao').classList.remove('open');
+}
+
+function escolherFonteFoto(source) {
+  if (!pendingFotoTarget) return;
+  const { sId, ci } = pendingFotoTarget;
+  const inputId = source === 'camera' ? `foto-inp-camera-${sId}-${ci}` : `foto-inp-gallery-${sId}-${ci}`;
+  document.getElementById('modal-foto-opcao').classList.remove('open');
+  pendingFotoTarget = null;
+  const inp = document.getElementById(inputId);
+  if (inp) inp.click();
+}
+
+// Comprime imagem para base64 (máx 800px, qualidade 0.65) — cabe no Firestore sem Storage pago
+function comprimirImagem(file, maxPx = 800, quality = 0.65) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const ratio = Math.min(maxPx / img.width, maxPx / img.height, 1);
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * ratio);
+        canvas.height = Math.round(img.height * ratio);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function addFotos(sId, ci, inp) {
+  const files = Array.from(inp.files);
+  for (const file of files) {
+    try {
+      toast('Processando foto...');
+      const fotoSrc = await comprimirImagem(file);
+      currentInsp.sensos[sId][ci].fotos.push(fotoSrc);
+      renderFotoGrid(sId, ci);
+      scheduleDraftSave();
+    } catch (e) {
+      console.error("Erro ao processar foto:", e);
+      toast('Erro ao processar foto');
+    }
+  }
+  inp.value = '';
+  toast('Fotos adicionadas!');
+}
+
+function renderFotoGrid(sId, ci) {
+  const fotos = currentInsp.sensos[sId][ci].fotos;
+  const grid = document.getElementById(`foto-grid-${sId}-${ci}`);
+  grid.innerHTML = fotos.map((f, fi) => `
+    <div class="foto-thumb">
+      <img src="${f}" alt="foto">
+      <button class="rm-foto" onclick="removeFoto('${sId}',${ci},${fi})">×</button>
+    </div>`).join('');
+}
+
+function removeFoto(sId, ci, fi) {
+  currentInsp.sensos[sId][ci].fotos.splice(fi, 1);
+  renderFotoGrid(sId, ci);
+  scheduleDraftSave();
+}
+
+function calcMediaS(criterios) {
+  if (!criterios) return 0;
+  const notas = criterios.map(c => c.nota).filter(n => n !== null);
+  if (!notas.length) return 0;
+  return notas.reduce((a,b)=>a+b,0) / notas.length;
+}
+
+function isNotaNC(nota) {
+  return nota !== null && nota < 2;
+}
+
+function getInspecaoAnteriorMesmoLocal(insp) {
+  if (!insp) return null;
+  const dataAtual = new Date(insp.data).getTime();
+  return [...APP.inspecoes]
+    .filter(i => i.id !== insp.id && sameLocal(i, insp) && new Date(i.data).getTime() < dataAtual)
+    .sort((a, b) => new Date(b.data) - new Date(a.data))[0] || null;
+}
+
+function getPenalidadeS(insp, sId, inspAnterior = null) {
+  const anterior = inspAnterior || getInspecaoAnteriorMesmoLocal(insp);
+  if (!anterior || !anterior.sensos?.[sId] || !insp.sensos?.[sId]) return 0;
+
+  let penalidade = 0;
+  for (let ci = 0; ci < insp.sensos[sId].length; ci++) {
+    const notaAtual = insp.sensos[sId][ci]?.nota ?? null;
+    const notaAnterior = anterior.sensos[sId][ci]?.nota ?? null;
+    if (isNotaNC(notaAnterior) && isNotaNC(notaAtual)) penalidade += 1;
+  }
+
+  return penalidade;
+}
+
+function calcMediaSFinal(insp, sId, inspAnterior = null) {
+  const mediaBase = calcMediaS(insp?.sensos?.[sId]);
+  const penalidade = getPenalidadeS(insp, sId, inspAnterior);
+  return Math.max(0, mediaBase - penalidade);
+}
+
+function calcNotaGeralFinal(insp, inspAnterior = null) {
+  let total = 0;
+  let count = 0;
+  SENSOS.forEach(s => {
+    const notas = (insp.sensos[s.id] || []).filter(c => c.nota !== null);
+    if (!notas.length) return;
+    total += calcMediaSFinal(insp, s.id, inspAnterior);
+    count += 1;
+  });
+  if (!count) return null;
+  return total / count;
+}
+
+function updateScoreMini(sId) {
+  const el = document.getElementById(`score-mini-${sId}`);
+  if (!el) return;
+  const notas = currentInsp.sensos[sId].filter(c => c.nota !== null);
+  if (notas.length === 0) { el.textContent = '—'; el.style.color = 'var(--text2)'; return; }
+  const media = calcMediaSFinal(currentInsp, sId);
+  el.textContent = media.toFixed(2);
+  el.style.color = notaCor(media);
+}
+
+function updateNotaGeral() {
+  const ng = calcNotaGeralFinal(currentInsp);
+  if (ng !== null) {
+    currentInsp.notaGeral = ng;
+    document.getElementById('insp-nota-geral').textContent = ng.toFixed(2);
+    document.getElementById('insp-nota-geral').style.color = notaCor(ng);
+  }
+}
+
+function updateProgresso() {
+  let avaliados = 0;
+  SENSOS.forEach(s => {
+    const todasDadas = currentInsp.sensos[s.id].every(c => c.nota !== null);
+    if (todasDadas) avaliados++;
+  });
+  const pct = (avaliados / SENSOS.length) * 100;
+  document.getElementById('insp-progress').style.width = pct + '%';
+  document.getElementById('insp-progress-txt').textContent = `${avaliados} de ${SENSOS.length} sensos avaliados`;
+}
+
+function setSalvarButtonState(isSaving) {
+  const btn = document.getElementById('btn-salvar-insp');
+  if (!btn) return;
+  btn.disabled = isSaving;
+  btn.style.opacity = isSaving ? '0.7' : '1';
+  btn.style.pointerEvents = isSaving ? 'none' : 'auto';
+  btn.innerHTML = isSaving
+    ? `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2v4M10 14v4M4.34 4.34l2.83 2.83M12.83 12.83l2.83 2.83M2 10h4M14 10h4M4.34 15.66l2.83-2.83M12.83 7.17l2.83-2.83"/></svg>Salvando...`
+    : `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 13l4 4L16 7"/></svg>Finalizar e Salvar`;
+}
+
+async function salvarInspecao() {
+  if (!currentInsp) {
+    toast('Não há inspeção em andamento.');
+    return;
+  }
+  if (isSavingInspecao) return;
+
+  // validaÃ§Ã£o
+  let ok = true;
+  let faltamObs = [];
+  SENSOS.forEach(s => {
+    currentInsp.sensos[s.id].forEach((cr, ci) => {
+      if (cr.nota === null) { ok = false; return; }
+      if (cr.nota < 2 && !cr.obs.trim()) {
+        faltamObs.push(`${s.nome} - Critério ${ci+1}`);
+      }
+    });
+  });
+  if (!ok) { toast('Preencha todas as notas antes de salvar'); return; }
+  if (faltamObs.length > 0) {
+    toast('Adicione observação nos itens com nota 0 ou 1');
+    return;
+  }
+
+  isSavingInspecao = true;
+  setSalvarButtonState(true);
+
+  try {
+    if (APP.inspecoes.some(i => i.id === currentInsp.id)) {
+      toast('Essa inspeção já foi salva.');
+      navTo('home');
+      return;
+    }
+
+    const inspAnterior = getInspecaoAnteriorMesmoLocal(currentInsp);
+    const penalidadesS = {};
+    SENSOS.forEach(s => {
+      penalidadesS[s.id] = getPenalidadeS(currentInsp, s.id, inspAnterior);
+    });
+    currentInsp.penalidadesS = penalidadesS;
+    currentInsp.notaGeral = calcNotaGeralFinal(currentInsp, inspAnterior);
+
+    APP.inspecoes.push(currentInsp);
+    enqueueSyncInspection(currentInsp.id);
+    clearDraft();
+    await saveData(APP);
+
+    if (!navigator.onLine || !hasFirebaseConfig()) {
+      toast('Inspeção salva no aparelho. Sincroniza quando houver internet.');
+    } else {
+      toast('Inspeção salva com sucesso!');
+    }
+
+    currentInsp = null;
+    navTo('home');
+  } catch (e) {
+    console.error('Erro ao salvar inspeção:', e);
+    toast('Erro ao salvar. Tente novamente.');
+  } finally {
+    isSavingInspecao = false;
+    setSalvarButtonState(false);
+  }
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  HISTÃ“RICO
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+function renderHistorico() {
+  const list = document.getElementById('hist-list');
+  if (APP.inspecoes.length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:40px 16px;color:var(--text2);font-size:13px">Nenhuma inspeção registrada ainda.</div>';
+    return;
+  }
+
+  // Obtém os nomes dos setores únicos que possuem inspeções
+  const setoresComInsp = [...new Set(APP.inspecoes.map(i => i.setor))].sort();
+
+  list.innerHTML = setoresComInsp.map(setor => {
+    const inspecoesSetor = APP.inspecoes
+      .filter(i => i.setor === setor)
+      .sort((a, b) => new Date(b.data) - new Date(a.data));
+
+    const ultimaSetor = inspecoesSetor[0];
+    const resumoSetor = `${inspecoesSetor.length} inspeção(ões) registrada(s)`;
+
+    const areasHtml = inspecoesSetor.map(insp => {
+      const score = insp.notaGeral;
+      const statusClass = score >= 3.5 ? 'status-green' : score >= 2.5 ? 'status-gold' : score >= 1.5 ? 'status-orange' : 'status-red';
+      const labelArea = insp.subarea || 'Área geral do setor';
+      
+      return `
+        <div class="sector-area-item ${statusClass}" onclick="openDetalhe('${insp.id}')">
+          <div class="sector-area-top">
+            <div style="flex:1">
+              <div class="sector-area-name">${labelArea}</div>
+              <div class="sector-area-meta">${formatDate(insp.data)} · ${insp.periodo || ''} · ${insp.tecnico}</div>
+            </div>
+            <div style="font-family:var(--font-display); font-weight:700; color:${notaCor(score)}">${score != null ? score.toFixed(2) : '—'}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="sector-card">
+        <div class="sector-card-head">
+          <div>
+            <div class="sector-title">${setor}</div>
+            <div class="sector-sub">${resumoSetor}</div>
+          </div>
+          ${ultimaSetor ? notaBadge(ultimaSetor.notaGeral) : ''}
+        </div>
+        <div class="sector-area-list">${areasHtml}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  DETALHE / COMPARAÃ‡ÃƒO
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+function openDetalhe(id) {
+  const insp = APP.inspecoes.find(i => i.id === id);
+  if (!insp) return;
+  const baseRef = insp.baseId ? APP.inspecoes.find(i => i.id === insp.baseId) : null;
+  const base = sameLocal(insp, baseRef) ? baseRef : null;
+  const recebidas = getPendenciasRecebidas(insp.setor, insp.data);
+
+  let html = `<div class="modal-handle"></div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
+      <div>
+        <div class="modal-title" style="margin-bottom:4px">${insp.setor}${insp.subarea ? ' - ' + insp.subarea : ''}</div>
+        <div style="font-size:12px;color:var(--text2)">${formatDate(insp.data)} · ${insp.periodo || ''} · ${insp.tecnico}</div>
+      </div>
+      ${notaBadge(insp.notaGeral)}
+    </div>
+    <div class="divider" style="margin:14px 0"></div>`;
+
+  // comparaÃ§Ã£o por S
+  if (base) {
+    html += `<div style="font-size:12px;color:var(--gold);margin-bottom:10px;display:flex;gap:6px;align-items:center">
+      <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10h12M14 6l4 4-4 4"/></svg>
+      Comparado com: ${formatDate(base.data)} (nota ${base.notaGeral?.toFixed(2) || '?'})
+    </div>`;
+    html += `<div style="margin-bottom:16px">`;
+    SENSOS.forEach(s => {
+      const novaMedia = calcMediaSFinal(insp, s.id);
+      const baseMedia = calcMediaSFinal(base, s.id);
+      const diff = novaMedia - baseMedia;
+      const arrow = diff > 0.05 ? '↑' : diff < -0.05 ? '↓' : '=';
+      const cls = diff > 0.05 ? 'comp-up' : diff < -0.05 ? 'comp-down' : 'comp-eq';
+      html += `<div class="comp-row">
+        <div class="comp-s-name">${s.nome}</div>
+        <div class="comp-nota" style="color:${notaCor(baseMedia)}">${baseMedia.toFixed(2)}</div>
+        <div class="comp-arrow ${cls}">${arrow}</div>
+        <div class="comp-nota" style="color:${notaCor(novaMedia)}">${novaMedia.toFixed(2)}</div>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  // pendÃªncias desta inspeÃ§Ã£o
+  let pendHTML = '';
+  SENSOS.forEach(s => {
+    insp.sensos[s.id].forEach((cr, ci) => {
+      if ((cr.nota || 0) < 2) {
+        const resolvida = base && (base.sensos[s.id][ci]?.nota || 0) < 2 && (cr.nota || 0) >= 2;
+        const reinc = getReincidenciaCount(insp, s.id, ci);
+        const reincTxt = (!resolvida && reinc > 1) ? ` <span style="color:var(--orange2);font-weight:700">[REINCIDÊNCIA: ${reinc}ª vez]</span>` : '';
+        pendHTML += `<div class="pend-item ${resolvida?'resolvida':''}">
+          <div class="pend-setor">${s.nome} · Critério ${ci+1}</div>
+          <div class="pend-desc">${SENSOS.find(x=>x.id===s.id).criterios[ci]}</div>
+          <div class="pend-status" style="color:${resolvida?'var(--green)':'var(--red)'}">
+            ${resolvida ? '✓ Resolvida nesta inspeção' : `Nota: ${cr.nota} - ${cr.obs || 'Sem observação'}${reincTxt}`}
+          </div>
+          ${cr.encaminharSetor ? `<div style="font-size:11px;color:var(--gold);margin-top:4px">Encaminhada para: ${cr.encaminharSetor}</div>` : ''}
+        </div>`;
+      }
+    });
+  });
+
+  if (pendHTML) {
+    html += `<div style="font-family:var(--font-display);font-size:14px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Não conformidades</div>${pendHTML}`;
+  }
+
+  if (recebidas.length) {
+    html += `<div style="font-family:var(--font-display);font-size:14px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin:16px 0 10px">Pendências recebidas de outros setores</div>`;
+    recebidas.forEach(item => {
+      html += `<div class="pend-item">
+        <div class="pend-setor">${item.origemSetor} · ${item.origemLocal}</div>
+        <div class="pend-desc">${item.senso} · Critério ${item.criterioIndice}</div>
+        <div class="pend-desc" style="margin-top:4px">${item.criterioTexto}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:4px">${formatDate(item.origemData)} · ${item.origemPeriodo || 'sem período'} · ${item.tecnico}</div>
+        <div class="pend-status" style="color:var(--red)">Nota ${item.nota} - ${item.obs || 'Sem observação'}</div>
+      </div>`;
+    });
+  }
+
+  html += `<div style="margin-top:16px;display:flex;gap:8px">
+    <button class="btn-secondary" onclick="iniciarNovaComBase('${insp.id}')" style="flex:1">
+      <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="8"/><path d="M10 6v8M6 10h8"/></svg>
+      Nova inspeção aqui
+    </button>
+  </div>`;
+
+  document.getElementById('modal-detalhe-body').innerHTML = html;
+  document.getElementById('modal-detalhe').classList.add('open');
+}
+
+function iniciarNovaComBase(baseId) {
+  const base = APP.inspecoes.find(i => i.id === baseId);
+  if (!base) return;
+  document.getElementById('modal-detalhe').classList.remove('open');
+  document.getElementById('modal-nova-insp').classList.remove('open');
+
+  currentInsp = {
+    id: 'i' + Date.now(),
+    setor: base.setor,
+    subarea: base.subarea,
+    periodo: new Date().toISOString().slice(0,7),
+    baseId,
+    tecnico: currentTec,
+    data: new Date().toISOString(),
+    sensos: {},
+    notaGeral: null
+  };
+  SENSOS.forEach(s => {
+    currentInsp.sensos[s.id] = s.criterios.map(() => ({ nota: null, obs: '', sugestao: '', fotos: [], encaminharSetor: '' }));
+  });
+
+  saveDraftNow();
+  renderInspecaoForm();
+  navTo('inspecao');
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  PENDÃŠNCIAS
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+function renderPendencias() {
+  const chips = document.getElementById('pend-filter-chips');
+  chips.innerHTML = `<div class="chip active" onclick="filterPend('todas',this)">Todas</div>
+    <div class="chip" onclick="filterPend('abertas',this)">Abertas</div>
+    <div class="chip" onclick="filterPend('resolvidas',this)">Resolvidas</div>`;
+
+  renderPendList('todas');
+}
+
+function filterPend(tipo, el) {
+  document.querySelectorAll('#pend-filter-chips .chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderPendList(tipo);
+}
+
+function renderPendList(tipo) {
+  const list = document.getElementById('pend-list');
+  let html = '';
+  const ord = [...APP.inspecoes].reverse();
+
+  ord.forEach(insp => {
+    SENSOS.forEach(s => {
+      insp.sensos[s.id].forEach((cr, ci) => {
+        const isNC = (cr.nota || 0) < 2;
+        const baseRef = insp.baseId ? APP.inspecoes.find(i => i.id === insp.baseId) : null;
+        const base = sameLocal(insp, baseRef) ? baseRef : null;
+        const wasNC = base && (base.sensos[s.id][ci]?.nota || 0) < 2;
+        const isResolvida = wasNC && !isNC;
+
+        if (!isNC && !isResolvida) return;
+        if (tipo === 'abertas' && !isNC) return;
+        if (tipo === 'resolvidas' && !isResolvida) return;
+
+        const reinc = getReincidenciaCount(insp, s.id, ci);
+        const reincTxt = (isNC && reinc > 1) ? ` <span style="color:var(--orange2);font-weight:700">[REINCIDÊNCIA: ${reinc}ª vez]</span>` : '';
+
+        html += `<div class="pend-item ${isResolvida?'resolvida':''}">
+          <div class="pend-setor">${insp.setor} · ${s.nome}</div>
+          <div class="pend-desc">${SENSOS.find(x=>x.id===s.id).criterios[ci]}</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:4px">${formatDate(insp.data)} · ${insp.tecnico}</div>
+          ${isNC ? `<div class="pend-status" style="color:var(--red)">Nota ${cr.nota} - ${cr.obs || 'Sem observação'}${reincTxt}</div>` : ''}
+          ${isResolvida ? `<div class="pend-status" style="color:var(--green)">✓ Resolvida em ${formatDate(insp.data)}</div>` : ''}
+        </div>`;
+      });
+    });
+  });
+
+  if (!html) {
+    html = `<div style="text-align:center;padding:40px 16px;color:var(--text2);font-size:13px">Nenhuma pendência ${tipo === 'todas' ? '' : tipo} encontrada.</div>`;
+  }
+
+  list.innerHTML = html;
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  RELATÃ“RIOS
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+function renderRelatorios() {
+  const setorOpts = '<option value="">— Escolha —</option>' +
+    getAllSetorNames().map(setor => `<option value="${setor}">${setor}</option>`).join('');
+  document.getElementById('rel-insp-select').innerHTML = setorOpts;
+}
+
+function getReincidenciaCount(insp, sId, ci) {
+  const historicoLocal = APP.inspecoes
+    .filter(i => i.setor === insp.setor && (i.subarea || '') === (insp.subarea || ''))
+    .sort((a, b) => new Date(b.data) - new Date(a.data));
+  const idx = historicoLocal.findIndex(i => i.id === insp.id);
+  if (idx === -1) return 0;
+  let count = 0;
+  for (let i = idx; i < historicoLocal.length; i++) {
+    const nota = historicoLocal[i].sensos[sId][ci]?.nota;
+    if (nota !== null && nota < 2) count++;
+    else break;
+  }
+  return count;
+}
+
+function compararInspecoes() {
+  const aId = document.getElementById('rel-comp-a').value;
+  const bId = document.getElementById('rel-comp-b').value;
+  if (!aId || !bId || aId === bId) { toast('Selecione duas inspeções diferentes'); return; }
+  const a = APP.inspecoes.find(i => i.id === aId);
+  const b = APP.inspecoes.find(i => i.id === bId);
+  if (!sameLocal(a, b)) {
+    toast('A comparação só é permitida para o mesmo local.');
+    return;
+  }
+
+  let html = `<div style="font-family:var(--font-display);font-size:14px;font-weight:600;margin-bottom:10px">
+    Nota geral: <span style="color:${notaCor(a.notaGeral)}">${a.notaGeral?.toFixed(2)||'?'}</span>
+    → <span style="color:${notaCor(b.notaGeral)}">${b.notaGeral?.toFixed(2)||'?'}</span>
+    <span style="color:${b.notaGeral > a.notaGeral ? 'var(--green)' : 'var(--red)'}">
+      (${b.notaGeral > a.notaGeral ? '↑' : '↓'} ${Math.abs(b.notaGeral - a.notaGeral).toFixed(2)})
+    </span>
+  </div>`;
+
+  SENSOS.forEach(s => {
+    const ma = calcMediaSFinal(a, s.id);
+    const mb = calcMediaSFinal(b, s.id);
+    const diff = mb - ma;
+    const arrow = diff > 0.05 ? '↑' : diff < -0.05 ? '↓' : '=';
+    const cls = diff > 0.05 ? 'comp-up' : diff < -0.05 ? 'comp-down' : 'comp-eq';
+    html += `<div class="comp-row">
+      <div class="comp-s-name" style="font-size:12px">${s.nome}</div>
+      <div class="comp-nota" style="color:${notaCor(ma)};font-size:14px">${ma.toFixed(2)}</div>
+      <div class="comp-arrow ${cls}">${arrow}</div>
+      <div class="comp-nota" style="color:${notaCor(mb)};font-size:14px">${mb.toFixed(2)}</div>
+    </div>`;
+  });
+
+  document.getElementById('comp-result').innerHTML = html;
+}
+
+function gerarPDF() {
+  const setor = document.getElementById('rel-insp-select').value;
+  if (!setor) { toast('Selecione um setor'); return; }
+  gerarPDFSetorial(setor);
+}
+
+function getLatestInspecoesBySetor(setor) {
+  const latestMap = {};
+  APP.inspecoes
+    .filter(i => i.setor === setor)
+    .forEach(insp => {
+      const key = localKey(insp);
+      if (!latestMap[key] || new Date(insp.data) > new Date(latestMap[key].data)) {
+        latestMap[key] = insp;
+      }
+    });
+  return Object.values(latestMap);
+}
+
+async function gerarPDFSetorial(setor) {
+  toast('Gerando relatório setorial...');
+  const { jsPDF } = window.jspdf;
+  // Gera PDF em modo paisagem (horizontal)
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' });
+  const W = 297, H = 210, margin = 20;
+  const now = new Date();
+  const mesAtual = now.toLocaleDateString('pt-BR', { month: 'long' });
+  const anoAtual = now.getFullYear();
+  const mesAnoAtual = `${mesAtual.charAt(0).toUpperCase() + mesAtual.slice(1)} de ${anoAtual}`;
+
+  doc.setFillColor(255, 255, 255);
+  doc.rect(0, 0, W, H, 'F');
+  doc.setTextColor(15, 23, 42);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(17);
+  doc.text(`Housekeeping (${setor})`, margin, 34);
+
+  doc.setFontSize(14);
+  doc.text('Segurança do trabalho', margin, 44);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(12);
+  doc.text(mesAnoAtual, margin, 54);
+
+  const textoObjetivo = `Este relatório tem como objetivo fornecer informações do Housekeeping realizado durante o mês de ${mesAtual} no setor de ${setor}, buscando identificar pontos de melhoria, promover a eficiência operacional, garantir a segurança no local de trabalho e cultivar uma cultura organizacional centrada na ordem, limpeza e eficácia, para todos os operadores e visitantes da área.`;
+  const objetivoLines = doc.splitTextToSize(textoObjetivo, W - (margin * 2));
+  doc.setFontSize(11);
+  doc.text(objetivoLines, margin, 72);
+
+  let y = 72 + (objetivoLines.length * 5) + 12;
+  const setorCfg = SETORES.find(s => s.nome === setor);
+  const areasDoSetor = (setorCfg?.subareas || []).length
+    ? setorCfg.subareas
+    : [...new Set(APP.inspecoes
+      .filter(i => i.setor === setor)
+      .map(i => i.subarea || 'Área geral do setor'))];
+
+  // Adiciona título para áreas observadas
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.text('Áreas observadas', margin, y);
+  y += 8;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  if (!areasDoSetor.length) {
+    doc.text('• Área geral do setor', margin, y);
+    y += 6;
+  } else {
+    const maxAreas = 10;
+    areasDoSetor.slice(0, maxAreas).forEach(area => {
+      const linhasArea = doc.splitTextToSize(`• ${area}`, W - (margin * 2));
+      doc.text(linhasArea, margin, y);
+      y += (linhasArea.length * 6);
+    });
+  }
+
+  function addNewPage() {
+    doc.addPage();
+    doc.setFillColor(255, 255, 255);
+    doc.rect(0, 0, W, H, 'F');
+  }
+
+  function ensureY(need) {
+    if (y + need > 280) {
+      addNewPage();
+      y = 18;
+    }
+  }
+
+  async function toDataUrl(url) {
+    if (!url) return null;
+    if (typeof url === 'string' && url.startsWith('data:image/')) return url;
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) return null;
+      const blob = await resp.blob();
+      return await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch {
+      return null;
+    }
+  }
+
+  const inspsMes = APP.inspecoes.filter(i => {
+    if (i.setor !== setor) return false;
+    const d = new Date(i.data);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  });
+
+  const ncList = [];
+  inspsMes.forEach(insp => {
+    SENSOS.forEach(s => {
+      (insp.sensos[s.id] || []).forEach((cr, ci) => {
+        if ((cr.nota ?? 0) >= 2) return;
+        ncList.push({
+          data: insp.data,
+          local: localLabel(insp),
+          senso: s.nome,
+          criterio: s.criterios[ci],
+          obs: cr.obs || 'Sem observação.',
+          sugestao: cr.sugestao || 'Não informada.',
+          fotos: Array.isArray(cr.fotos) ? cr.fotos : []
+        });
+      });
+    });
+  });
+
+  addNewPage();
+  y = 18;
+  doc.setTextColor(15, 23, 42);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.text('Relatório de não conformidades', margin, y);
+  y += 8;
+
+  if (!ncList.length) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(71, 85, 105);
+    doc.text('Não foram encontradas não conformidades no mês atual para este setor.', margin, y + 4);
+  } else {
+    for (let idx = 0; idx < ncList.length; idx++) {
+      const nc = ncList[idx];
+      const fotoDataUrl = await toDataUrl(nc.fotos[0] || null);
+      const criterioLines = doc.splitTextToSize(`Critério: ${nc.criterio}`, W - (margin * 2) - 6);
+      const obsLines = doc.splitTextToSize(`Observação: ${nc.obs}`, W - (margin * 2) - 6);
+      const sugLines = doc.splitTextToSize(`Sugestão: ${nc.sugestao}`, W - (margin * 2) - 6);
+      const textH = 16 + (criterioLines.length * 4.5) + (obsLines.length * 4.5) + (sugLines.length * 4.5);
+      const imgH = fotoDataUrl ? 55 : 0;
+      const blockH = textH + imgH + 8;
+      ensureY(blockH + 6);
+
+      doc.setDrawColor(226, 232, 240);
+      doc.setFillColor(248, 250, 252);
+      doc.roundedRect(margin, y, W - (margin * 2), blockH, 2, 2, 'FD');
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(15, 23, 42);
+      doc.text(`${idx + 1}. ${nc.senso} · ${nc.local} · ${formatDate(nc.data)}`, margin + 3, y + 6);
+
+      let textY = y + 12;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(51, 65, 85);
+      doc.text(criterioLines, margin + 3, textY); textY += criterioLines.length * 4.5 + 1;
+      doc.text(obsLines, margin + 3, textY); textY += obsLines.length * 4.5 + 1;
+      doc.text(sugLines, margin + 3, textY); textY += sugLines.length * 4.5 + 2;
+
+      if (fotoDataUrl) {
+        try {
+          const props = doc.getImageProperties(fotoDataUrl);
+          const ratio = props.width / props.height;
+          const maxW = W - (margin * 2) - 8;
+          const maxH = 50;
+          let drawW = maxW;
+          let drawH = drawW / ratio;
+          if (drawH > maxH) {
+            drawH = maxH;
+            drawW = drawH * ratio;
+          }
+          const x = margin + ((W - (margin * 2)) - drawW) / 2;
+          const imgY = textY + 1;
+          const fmt = fotoDataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+          doc.addImage(fotoDataUrl, fmt, x, imgY, drawW, drawH, undefined, 'FAST');
+        } catch {
+          doc.setTextColor(148, 163, 184);
+          doc.text('Foto não pôde ser renderizada.', margin + 3, textY + 4);
+        }
+      } else {
+        doc.setTextColor(148, 163, 184);
+        doc.text('Foto: não anexada.', margin + 3, textY + 4);
+      }
+
+      y += blockH + 6;
+    }
+  }
+
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(120, 120, 120);
+  doc.setFontSize(9);
+  doc.text(`Gerado em ${now.toLocaleString('pt-BR')}`, W / 2, 285, { align: 'center' });
+
+  doc.save(`Housekeeping_${setor.replace(/[^a-zA-Z0-9]/g, '_')}_${anoAtual}_${String(now.getMonth()+1).padStart(2,'0')}.pdf`);
+  toast('Relatório setorial gerado com sucesso!');
+}
+
+async function gerarPDFInsp(id) {
+  const insp = APP.inspecoes.find(i => i.id === id);
+  if (!insp) return;
+  toast('Gerando PDF...');
+  const baseRef = insp.baseId ? APP.inspecoes.find(i => i.id === insp.baseId) : null;
+  const base = sameLocal(insp, baseRef) ? baseRef : null;
+  const pendenciasRecebidas = getPendenciasRecebidas(insp.setor, insp.data);
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const W = 210, margin = 14;
+  let y = 0;
+
+  async function imageUrlToDataURL(url) {
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const blob = await resp.blob();
+      return await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (err) {
+      console.warn('Falha ao carregar imagem para PDF:', err);
+      return null;
+    }
+  }
+
+  function addPage() { doc.addPage(); y = 14; }
+  function checkY(need) { if (y + need > 280) addPage(); }
+
+  // CAPA
+  doc.setFillColor(255, 255, 255);
+  doc.rect(0, 0, W, 297, 'F');
+  doc.setFillColor(71, 85, 105);
+  doc.rect(0, 0, W, 4, 'F');
+  doc.setTextColor(15, 23, 42);
+  doc.setFontSize(28); doc.setFont('helvetica', 'bold');
+  doc.text('INSPEÇÃO 5S', W/2, 60, { align: 'center' });
+  doc.setTextColor(51, 65, 85);
+  doc.setFontSize(16); doc.setFont('helvetica', 'normal');
+  doc.text('Relatório de inspeção', W/2, 72, { align: 'center' });
+  doc.setFontSize(20); doc.setFont('helvetica', 'bold'); // Ajustado para acomodar subárea
+  doc.setTextColor(15, 23, 42);
+  doc.text(insp.setor, W/2, 100, { align: 'center', maxWidth: 180 });
+  doc.setFontSize(14); doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 116, 139);
+  doc.text(`Período: ${insp.periodo || '—'}`, W/2, 118, { align: 'center' });
+  doc.text(`Data: ${formatDate(insp.data)}`, W/2, 127, { align: 'center' });
+  doc.text(`Técnico: ${insp.tecnico}`, W/2, 136, { align: 'center' });
+
+  if (insp.subarea) {
+    doc.text(`Subárea: ${insp.subarea}`, W/2, 145, { align: 'center' });
+  }
+  // nota geral
+  const ng = insp.notaGeral;
+  const ngCor = ng >= 3.5 ? [46,204,113] : ng >= 2.5 ? [240,165,0] : ng >= 1.5 ? [232,96,28] : [231,76,60];
+  doc.setFillColor(...ngCor);
+  doc.roundedRect(W/2 - 22, 148, 44, 26, 4, 4, 'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(20); doc.setFont('helvetica', 'bold');
+  doc.text(ng?.toFixed(2) || '—', W/2, 162, { align: 'center' });
+  doc.setFontSize(9);
+  doc.text('NOTA GERAL', W/2, 170, { align: 'center' });
+
+  if (base) {
+    doc.setTextColor(100,116,139); doc.setFontSize(11); doc.setFont('helvetica', 'normal');
+    doc.text(`Comparativo com inspeção de ${formatDate(base.data)} (nota ${base.notaGeral?.toFixed(2)||'?'})`, W/2, 185, { align:'center' });
+  }
+
+  doc.setTextColor(120,120,120); doc.setFontSize(9);
+  doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, W/2, 285, { align: 'center' });
+  doc.addPage();
+
+  // RESULTADOS POR SENSO
+  y = 14;
+  doc.setFillColor(255,255,255); doc.rect(0,0,W,297,'F');
+  doc.setFillColor(71,85,105); doc.rect(0,0,W,1,'F');
+  doc.setTextColor(15,23,42); doc.setFontSize(14); doc.setFont('helvetica','bold');
+  doc.text('RESULTADO POR SENSO', margin, y+8); y += 20;
+
+  SENSOS.forEach(s => {
+    checkY(22);
+    const media = calcMediaSFinal(insp, s.id);
+    const cor = media >= 3.5 ? [46,204,113] : media >= 2.5 ? [240,165,0] : media >= 1.5 ? [232,96,28] : [231,76,60];
+    doc.setFillColor(241,245,249); doc.roundedRect(margin, y, W-margin*2, 16, 3, 3, 'F');
+    doc.setTextColor(30,41,59); doc.setFontSize(11); doc.setFont('helvetica','bold');
+    doc.text(s.nome, margin+4, y+10);
+    doc.setFillColor(...cor);
+    doc.roundedRect(W-margin-20, y+3, 18, 10, 2, 2, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(10);
+    doc.text(media.toFixed(2), W-margin-11, y+10, { align:'center' });
+
+    if (base) {
+      const bMedia = calcMediaSFinal(base, s.id);
+      doc.setTextColor(100,116,139); doc.setFontSize(8); doc.setFont('helvetica','normal');
+      doc.text(`ant: ${bMedia.toFixed(2)}`, W-margin-42, y+10);
+    }
+    y += 20;
+
+    s.criterios.forEach((cr, ci) => {
+      checkY(14);
+      const item = insp.sensos[s.id][ci];
+      const nota = item.nota;
+      const notC = nota >= 3.5 ? [46,204,113] : nota >= 2.5 ? [240,165,0] : nota >= 1.5 ? [232,96,28] : [231,76,60];
+      doc.setTextColor(51,65,85); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+      const crLines = doc.splitTextToSize(`${ci+1}. ${cr}`, W-margin*2-25);
+      doc.text(crLines, margin+4, y);
+      doc.setFillColor(...notC);
+      doc.roundedRect(W-margin-14, y-5, 12, 8, 2, 2, 'F');
+      doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','bold');
+      doc.text(`${nota}`, W-margin-8, y, { align:'center' });
+      y += crLines.length * 4.5 + 1;
+      if (item.obs) {
+        checkY(8);
+        doc.setTextColor(120,120,120); doc.setFontSize(8); doc.setFont('helvetica','italic');
+        const reinc = getReincidenciaCount(insp, s.id, ci);
+        const reincTxt = reinc > 1 ? ` (REINCIDÊNCIA: ${reinc}ª vez consecutiva)` : '';
+        const obsLines = doc.splitTextToSize(`-> ${item.obs}${reincTxt}`, W-margin*2-10);
+        doc.text(obsLines, margin+8, y);
+        y += obsLines.length * 4 + 1;
+      }
+      if (item.encaminharSetor) {
+        checkY(8);
+        doc.setTextColor(240,165,0); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+        doc.text(`Encaminhada para: ${item.encaminharSetor}`, margin+8, y);
+        y += 5;
+      }
+    });
+    y += 6;
+  });
+
+  // PENDÃŠNCIAS
+  let hasPend = false;
+  SENSOS.forEach(s => insp.sensos[s.id].forEach(cr => { if ((cr.nota||0)<2) hasPend=true; }));
+
+  if (hasPend) {
+    doc.addPage();
+    doc.setFillColor(255,255,255); doc.rect(0,0,W,297,'F');
+    doc.setFillColor(148,163,184); doc.rect(0,0,W,1,'F');
+    y = 14;
+    doc.setTextColor(15,23,42); doc.setFontSize(14); doc.setFont('helvetica','bold');
+    doc.text('NÃO CONFORMIDADES / PENDÊNCIAS', margin, y+8); y += 22;
+
+    SENSOS.forEach(s => {
+      insp.sensos[s.id].forEach((cr, ci) => {
+        if ((cr.nota||0) >= 2) return;
+        checkY(20);
+        doc.setFillColor(254,242,242); doc.roundedRect(margin, y, W-margin*2, 16, 3, 3, 'F');
+        doc.setFillColor(231,76,60); doc.rect(margin, y+2, 2, 12, 'F');
+        doc.setTextColor(153,27,27); doc.setFontSize(9); doc.setFont('helvetica','bold');
+        doc.text(s.nome, margin+6, y+7);
+        doc.setFillColor(231,76,60);
+        doc.roundedRect(W-margin-14, y+4, 12, 8, 2, 2, 'F');
+        doc.setTextColor(255,255,255); doc.setFontSize(9);
+        doc.text(`${cr.nota}`, W-margin-8, y+10, { align:'center' });
+        doc.setTextColor(51,65,85); doc.setFontSize(8); doc.setFont('helvetica','normal');
+        const crText = doc.splitTextToSize(SENSOS.find(x=>x.id===s.id).criterios[ci], W-margin*2-20);
+        doc.text(crText, margin+6, y+13);
+        y += Math.max(16, crText.length * 4 + 14);
+        if (cr.obs) {
+          checkY(10);
+          doc.setTextColor(120,120,120); doc.setFontSize(7.5); doc.setFont('helvetica','italic');
+          const reinc = getReincidenciaCount(insp, s.id, ci);
+          const reincTxt = reinc > 1 ? ` [REINCIDÊNCIA: ${reinc}ª vez]` : '';
+          const obsL = doc.splitTextToSize(`Obs: ${cr.obs}${reincTxt}`, W-margin*2-10);
+          doc.text(obsL, margin+8, y);
+          y += obsL.length * 4 + 4;
+        }
+        if (cr.encaminharSetor) {
+          checkY(8);
+          doc.setTextColor(240,165,0); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+          doc.text(`Encaminhada para: ${cr.encaminharSetor}`, margin+8, y);
+          y += 6;
+        }
+      });
+    });
+  }
+
+  if (pendenciasRecebidas.length) {
+    doc.addPage();
+    doc.setFillColor(255,255,255); doc.rect(0,0,W,297,'F');
+    doc.setFillColor(148,163,184); doc.rect(0,0,W,1,'F');
+    y = 14;
+    doc.setTextColor(15,23,42); doc.setFontSize(14); doc.setFont('helvetica','bold');
+    doc.text('PENDÊNCIAS RECEBIDAS DE OUTROS SETORES', margin, y+8); y += 22;
+
+    pendenciasRecebidas.forEach(item => {
+      const origemLines = doc.splitTextToSize(`${item.origemSetor} · ${item.origemLocal}`, W - margin * 2 - 8);
+      const critLines = doc.splitTextToSize(`${item.senso} · Critério ${item.criterioIndice} - ${item.criterioTexto}`, W - margin * 2 - 8);
+      const obsLines = item.obs ? doc.splitTextToSize(`Obs: ${item.obs}`, W - margin * 2 - 8) : [];
+      const blocoH = 16 + origemLines.length * 4 + critLines.length * 4 + obsLines.length * 4;
+
+      if (y + blocoH > 280) {
+        doc.addPage();
+        doc.setFillColor(255,255,255); doc.rect(0,0,W,297,'F');
+        doc.setFillColor(148,163,184); doc.rect(0,0,W,1,'F');
+        y = 14;
+      }
+
+      doc.setFillColor(248,250,252); doc.roundedRect(margin, y, W-margin*2, blocoH, 3, 3, 'F');
+      doc.setTextColor(30,41,59); doc.setFontSize(9); doc.setFont('helvetica','bold');
+      doc.text(origemLines, margin+4, y+7);
+      doc.setTextColor(51,65,85); doc.setFontSize(8); doc.setFont('helvetica','normal');
+      doc.text(critLines, margin+4, y+13);
+      let blocoY = y + 13 + critLines.length * 4;
+      doc.setTextColor(100,116,139); doc.setFontSize(7.5);
+      doc.text(`${formatDate(item.origemData)} · ${item.origemPeriodo || 'sem período'} · ${item.tecnico} · Nota ${item.nota}`, margin+4, blocoY);
+      blocoY += 5;
+      if (obsLines.length) {
+        doc.setTextColor(120,120,120); doc.setFont('helvetica','italic');
+        doc.text(obsLines, margin+4, blocoY);
+      }
+
+      y += blocoH + 6;
+    });
+  }
+
+  // REGISTRO FOTOGRÃFICO
+  const registrosFotos = [];
+  SENSOS.forEach(s => {
+    insp.sensos[s.id].forEach((cr, ci) => {
+      if (!Array.isArray(cr.fotos) || cr.fotos.length === 0) return;
+      cr.fotos.forEach((url, fi) => {
+        registrosFotos.push({
+          url,
+          senso: s.nome,
+          criterioNumero: ci + 1,
+          criterioTexto: s.criterios[ci],
+          nota: cr.nota,
+          obs: cr.obs || '',
+          indiceFoto: fi + 1,
+          totalFotos: cr.fotos.length
+        });
+      });
+    });
+  });
+
+  if (registrosFotos.length) {
+    const imgBoxH = 58;
+
+    function addFotoPage() {
+      doc.addPage();
+      doc.setFillColor(255,255,255); doc.rect(0,0,W,297,'F');
+      doc.setFillColor(148,163,184); doc.rect(0,0,W,1,'F');
+      y = 14;
+      doc.setTextColor(15,23,42); doc.setFontSize(14); doc.setFont('helvetica','bold');
+      doc.text('REGISTRO FOTOGRÁFICO', margin, y+8);
+      y += 22;
+    }
+
+    addFotoPage();
+
+    for (const reg of registrosFotos) {
+      const isNC = (reg.nota ?? 0) < 2;
+      const statusEmoji = isNC ? '👎' : '👍';
+      const statusTxt = isNC ? 'NÃO CONFORME' : 'CONFORME';
+      const statusCol = isNC ? [231, 76, 60] : [46, 204, 113];
+
+      const titulo = `${reg.senso} | Critério ${reg.criterioNumero} | Nota ${reg.nota ?? '-'} | Foto ${reg.indiceFoto}/${reg.totalFotos}`;
+      const tituloLines = doc.splitTextToSize(titulo, W - margin * 2);
+      const critLines = doc.splitTextToSize(reg.criterioTexto, W - margin * 2);
+      const obsLines = reg.obs ? doc.splitTextToSize(`Obs: ${reg.obs}`, W - margin * 2) : [];
+      const blocoH = 8 + (tituloLines.length * 4) + (critLines.length * 4) + (obsLines.length * 4) + imgBoxH + 18;
+
+      if (y + blocoH > 280) addFotoPage();
+
+      // Badge de Status (Joinha visual)
+      doc.setFillColor(...statusCol);
+      doc.roundedRect(margin, y, 44, 5, 1, 1, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(7);
+      doc.text(`${statusEmoji} ${statusTxt}`, margin + 22, y + 3.8, { align: 'center' });
+      y += 8;
+
+      doc.setTextColor(30,41,59); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+      doc.text(tituloLines, margin, y);
+      y += tituloLines.length * 4 + 1;
+
+      doc.setTextColor(51,65,85); doc.setFontSize(8); doc.setFont('helvetica','normal');
+      doc.text(critLines, margin, y);
+      y += critLines.length * 4 + 1;
+
+      if (obsLines.length) {
+        doc.setTextColor(120,120,120); doc.setFontSize(7.5); doc.setFont('helvetica','italic');
+        doc.text(obsLines, margin, y);
+        y += obsLines.length * 4 + 2;
+      }
+
+      doc.setFillColor(241,245,249); doc.roundedRect(margin, y, W - margin * 2, imgBoxH, 2, 2, 'F');
+
+      const dataUrl = await imageUrlToDataURL(reg.url);
+      if (dataUrl) {
+        try {
+          const props = doc.getImageProperties(dataUrl);
+          const ratio = props.width / props.height;
+          const maxW = (W - margin * 2) - 4;
+          const maxH = imgBoxH - 4;
+          let drawW = maxW;
+          let drawH = drawW / ratio;
+          if (drawH > maxH) {
+            drawH = maxH;
+            drawW = drawH * ratio;
+          }
+          const x = margin + ((W - margin * 2) - drawW) / 2;
+          const imgY = y + (imgBoxH - drawH) / 2;
+          const format = dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+          doc.addImage(dataUrl, format, x, imgY, drawW, drawH, undefined, 'FAST');
+        } catch (err) {
+          doc.setTextColor(231,76,60); doc.setFontSize(9); doc.setFont('helvetica','bold');
+          doc.text('Falha ao renderizar imagem no PDF', margin + 4, y + 12);
+        }
+      } else {
+        doc.setTextColor(231,76,60); doc.setFontSize(9); doc.setFont('helvetica','bold');
+        doc.text('Não foi possível carregar esta imagem.', margin + 4, y + 12);
+      }
+
+      y += imgBoxH + 8;
+    }
+  }
+
+  doc.save(`5S_${insp.setor.replace(/[^a-zA-Z0-9]/g,'_')}_${insp.periodo||'sem-periodo'}.pdf`);
+  toast('PDF gerado com sucesso!');
+}
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  UTILS
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+function toggleTheme() {
+  document.body.classList.toggle('light-mode');
+  const isLight = document.body.classList.contains('light-mode');
+  localStorage.setItem('aa5s_theme', isLight ? 'light' : 'dark');
+  updateThemeIcon();
+}
+
+function updateThemeIcon() {
+  const isLight = document.body.classList.contains('light-mode');
+  const icon = document.getElementById('theme-icon');
+  if (isLight) {
+    icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>'; // Lua
+  } else {
+    icon.innerHTML = '<circle cx="12" cy="12" r="5"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M19.78 4.22l-1.42 1.42"/>'; // Sol
+  }
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// Fechar modals ao clicar fora
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => {
+    if (e.target === m) m.classList.remove('open');
+  });
+});
+
+// Offline detection
+function checkOnline() {
+  const banner = document.getElementById('offline-banner');
+  if (!navigator.onLine) banner.classList.add('show');
+  else banner.classList.remove('show');
+}
+window.addEventListener('online', () => {
+  checkOnline();
+  scheduleSyncQueue(0);
+});
+window.addEventListener('offline', checkOnline);
+checkOnline();
+
+function resumeDraftIfExists() {
+  const draft = loadDraft();
+  if (!draft || !draft.id || !draft.sensos) return false;
+  currentInsp = draft;
+  renderInspecaoForm();
+  navTo('inspecao');
+  toast('Rascunho recuperado automaticamente.');
+  return true;
+}
+
+// INIT
+window.addEventListener('load', () => {
+  if (currentTec) document.getElementById('home-tec-name').textContent = currentTec;
+  
+  const savedTheme = localStorage.getItem('aa5s_theme');
+  if (savedTheme === 'light') document.body.classList.add('light-mode');
+  updateThemeIcon();
+
+  renderHome();
+  const resumedDraft = resumeDraftIfExists();
+  if (APP.tecnicos.length === 0 && !resumedDraft) {
+    setTimeout(() => openTecModal(), 500);
+  }
+  syncFromCloud(); // Tenta sincronizar com a nuvem assim que abre
+  scheduleSyncQueue(0);
+
+  // Registrar Service Worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+});
+</script>
+</body>
+</html>
