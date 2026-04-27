@@ -18,35 +18,35 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 :root {
-  --navy: #020617; /* Deepest blue */
-  --navy2: #0f172a; /* Card background */
-  --navy3: #1e293b; /* Borders and accents */
-  --orange: #4f46e5; /* Main Indigo */
-  --orange2: #818cf8;
+  --navy: #0f172a; 
+  --navy2: #1e293b; 
+  --navy3: #334155; 
+  --orange: #6366f1; 
+  --orange2: #a5b4fc;
   --gold: #f59e0b;
   --green: #10b981;
   --red: #f43f5e;
   --yellow: #eab308;
   --text: #f8fafc;
   --text2: #64748b;
-  --border: rgba(255, 255, 255, 0.08);
-  --card: rgba(30, 41, 59, 0.5);
-  --radius: 20px;
-  --font-display: 'Barlow Condensed', sans-serif;
+  --border: rgba(255, 255, 255, 0.06);
+  --card: #1e293b;
+  --radius: 16px;
+  --font-display: 'Barlow', sans-serif;
   --font-body: 'Barlow', sans-serif;
-  --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
-  --glass: rgba(2, 6, 23, 0.8);
+  --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+  --glass: rgba(15, 23, 42, 0.9);
 }
 body.light-mode {
   --navy: #f8fafc;
   --navy2: #ffffff;
-  --navy3: #f1f5f9;
+  --navy3: #e2e8f0;
   --text: #0f172a;
-  --text2: #64748b;
-  --border: rgba(15, 23, 42, 0.08);
+  --text2: #475569;
+  --border: rgba(15, 23, 42, 0.1);
   --card: #ffffff;
   --glass: rgba(255, 255, 255, 0.9);
-  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -83,15 +83,15 @@ html, body {
   flex-shrink: 0; z-index: 10;
 }
 .app-header .logo {
-  width: 32px; height: 32px;
+  width: 36px; height: 36px;
   background: var(--orange);
   border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-weight: 700; font-size: 14px; color: white;
   flex-shrink: 0;
 }
-.app-header h1 { font-family: var(--font-display); font-size: 18px; font-weight: 700; letter-spacing: 0.5px; }
+.app-header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; }
 .app-header .sub { font-size: 11px; color: var(--text2); margin-top: 1px; }
 .app-header .spacer { flex: 1; }
 .btn-icon { background: none; border: 1px solid var(--border); border-radius: 8px; color: var(--text2); width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
@@ -124,19 +124,18 @@ html, body {
 
 /* â”€â”€ CARDS â”€â”€ */
 .card {
-  background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+  background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 16px;
-  margin: 12px 16px;
+  padding: 20px;
+  margin: 8px 16px;
   box-shadow: var(--shadow);
-  backdrop-filter: blur(8px);
   animation: cardAppear 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: all 0.2s ease;
 }
 .card:active { transform: scale(0.98); }
 .card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-.card-title { font-family: var(--font-display); font-size: 16px; font-weight: 600; letter-spacing: 0.3px; }
+.card-title { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
 .card-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
 
 /* â”€â”€ BUTTONS â”€â”€ */
@@ -144,7 +143,7 @@ html, body {
   background: var(--orange); color: white;
   border: none; border-radius: 14px;
   padding: 16px 24px; font-size: 15px; font-weight: 600;
-  font-family: var(--font-body); cursor: pointer;
+  cursor: pointer;
   display: flex; align-items: center; justify-content: center; gap: 8px;
   box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
   transition: all 0.2s ease;
@@ -164,7 +163,7 @@ html, body {
 /* â”€â”€ BADGE â”€â”€ */
 .badge {
   display: inline-flex; align-items: center; justify-content: center;
-  padding: 2px 8px; border-radius: 100px; font-size: 11px; font-weight: 600;
+  padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 700;
 }
 .badge-green { background: rgba(46,204,113,0.15); color: var(--green); border: 1px solid rgba(46,204,113,0.3); }
 .badge-orange { background: rgba(14, 165, 233, 0.15); color: var(--orange2); border: 1px solid rgba(14, 165, 233, 0.3); }
@@ -176,7 +175,7 @@ html, body {
 .score-ring { position: relative; width: 72px; height: 72px; }
 .score-ring svg { transform: rotate(-90deg); }
 .score-ring .score-val {
-  position: absolute; inset: 0; display: flex; flex-direction: column;
+  position: absolute; inset: 0; display: flex;
   align-items: center; justify-content: center;
   font-family: var(--font-display); font-size: 20px; font-weight: 700;
 }
@@ -187,13 +186,13 @@ html, body {
 .form-label { font-size: 12px; color: var(--text2); margin-bottom: 6px; display: block; text-transform: uppercase; letter-spacing: 0.5px; }
 .form-select, .form-input {
   width: 100%; background: var(--navy2); border: 1px solid var(--border);
-  border-radius: 8px; color: var(--text); padding: 10px 12px;
+  border-radius: 12px; color: var(--text); padding: 12px 14px;
   font-size: 14px; font-family: var(--font-body);
   appearance: none; -webkit-appearance: none;
 }
 .form-select:focus, .form-input:focus { outline: none; border-color: var(--orange); }
 .form-textarea {
-  width: 100%; background: var(--navy2); border: 1px solid var(--border);
+  width: 100%; background: var(--navy2); border: 1px solid var(--border); 
   border-radius: 8px; color: var(--text); padding: 10px 12px;
   font-size: 14px; font-family: var(--font-body); resize: none; min-height: 72px;
 }
@@ -202,10 +201,10 @@ html, body {
 /* â”€â”€ NOTA SLIDER â”€â”€ */
 .nota-row { display: flex; gap: 6px; margin-top: 6px; }
 .nota-btn {
-  flex: 1; height: 44px; border: 1px solid var(--border); border-radius: 10px;
+  flex: 1; height: 48px; border: 1px solid var(--border); border-radius: 12px;
   background: var(--navy3); color: var(--text2);
-  font-size: 16px; font-weight: 700; font-family: var(--font-display);
-  cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 16px; font-weight: 700;
+  cursor: pointer; transition: all 0.2s ease;
 }
 .nota-btn.sel-0 { background: var(--red); border-color: var(--red); color: white; box-shadow: 0 0 15px rgba(244, 63, 94, 0.3); }
 .nota-btn.sel-1 { background: #ea580c; border-color: #ea580c; color: white; }
@@ -219,8 +218,8 @@ html, body {
 
 /* â”€â”€ FOTO AREA â”€â”€ */
 .foto-area {
-  border: 1.5px dashed var(--border); border-radius: 10px;
-  padding: 14px; display: flex; flex-direction: column; align-items: center; gap: 8px;
+  border: 2px dashed var(--border); border-radius: 12px;
+  padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 8px;
   cursor: pointer; transition: border-color 0.15s;
 }
 .foto-area:active { border-color: var(--orange); }
@@ -246,14 +245,14 @@ html, body {
   padding: 12px 16px; cursor: pointer; user-select: none;
 }
 .s-num {
-  width: 32px; height: 32px; border-radius: 8px;
+  width: 36px; height: 36px; border-radius: 10px;
   background: var(--navy3); display: flex; align-items: center; justify-content: center; 
   font-family: var(--font-display); font-weight: 700; font-size: 16px;
   flex-shrink: 0;
 }
 .s-num.orange { background: rgba(232,96,28,0.2); color: var(--orange2); border: 1px solid rgba(232,96,28,0.3); }
-.s-title { font-family: var(--font-display); font-size: 16px; font-weight: 600; flex: 1; }
-.s-score-mini { font-family: var(--font-display); font-size: 18px; font-weight: 700; }
+.s-title { font-size: 16px; font-weight: 700; flex: 1; }
+.s-score-mini { font-size: 18px; font-weight: 800; }
 .s-body { padding: 0 16px 12px; display: none; }
 .s-body.open { display: block; }
 
@@ -281,7 +280,7 @@ html, body {
 }
 .home-hero-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
 .greeting { font-size: 14px; color: var(--text2); }
-.greeting strong { color: var(--text); font-size: 20px; font-family: var(--font-display); font-weight: 700; display: block; margin-top: 2px; }
+.greeting strong { color: var(--text); font-size: 22px; font-weight: 800; display: block; margin-top: 4px; letter-spacing: -0.02em; }
 .tech-badge {
   background: rgba(79, 70, 229, 0.1); border: 1px solid rgba(79, 70, 229, 0.2);
   border-radius: 20px; padding: 6px 12px; font-size: 12px; color: var(--orange);
@@ -294,7 +293,7 @@ html, body {
   background: var(--navy3); border: 1px solid var(--border); border-radius: 16px;
   padding: 12px;
 }
-.stat-val { font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--orange2); }
+.stat-val { font-size: 24px; font-weight: 800; color: var(--orange2); }
 .stat-lbl { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
 .home-actions { padding: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .home-actions .btn-primary, .home-actions .btn-secondary { width: 100%; }
@@ -304,7 +303,7 @@ html, body {
 }
 
 .section-title {
-  font-family: var(--font-display); font-size: 13px; font-weight: 600;
+  font-size: 13px; font-weight: 700;
   color: var(--text2); text-transform: uppercase; letter-spacing: 1px;
   padding: 16px 16px 8px;
 }
@@ -313,22 +312,25 @@ html, body {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  margin: 0 16px 12px;
+  margin: 0 16px 16px;
   padding: 4px;
   overflow: hidden;
   box-shadow: var(--shadow);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
-.light-mode .sector-card { background: #ffffff; border-color: rgba(0,0,0,0.05); }
+.sector-card.expanded { border-color: var(--orange2); }
+.light-mode .sector-card { background: #ffffff; border-color: rgba(15, 23, 42, 0.08); }
+
 .sector-card-head {
   padding: 16px 16px 12px;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+  cursor: pointer;
 }
 .sector-title {
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-size: 18px;
   font-weight: 700;
 }
@@ -337,12 +339,22 @@ html, body {
   color: var(--text2);
   margin-top: 4px;
 }
+.sector-chevron {
+  width: 20px; height: 20px;
+  color: var(--text2);
+  transition: transform 0.3s ease;
+}
+.sector-card.expanded .sector-chevron { transform: rotate(180deg); color: var(--orange); }
+
 .sector-area-list {
-  padding: 0 12px 12px;
+  padding: 4px 12px 12px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  display: none; /* Escondido por padrão */
 }
+.sector-card.expanded .sector-area-list { display: flex; }
+
 .sector-area-item {
   background: var(--navy3);
   border: 1px solid var(--border);
@@ -350,6 +362,7 @@ html, body {
   border-radius: 12px;
   padding: 14px;
   cursor: pointer;
+  animation: cardAppear 0.2s ease-out;
   transition: all 0.2s ease;
 }
 .sector-area-item.status-green { border-left-color: var(--green); }
@@ -357,7 +370,7 @@ html, body {
 .sector-area-item.status-orange { border-left-color: var(--orange2); }
 .sector-area-item.status-red { border-left-color: var(--red); }
 
-.sector-area-item:hover { transform: translateX(2px); background: rgba(129, 140, 248, 0.1); }
+.sector-area-item:hover { background: rgba(129, 140, 248, 0.05); }
 .light-mode .sector-area-item { 
   background: #f1f5f9; 
   border-top-color: rgba(0,0,0,0.05);
@@ -387,7 +400,7 @@ html, body {
 
 /* ── HISTORY SPECIFIC ── */
 .hist-sector-header {
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-size: 14px;
   font-weight: 700;
   color: var(--orange2);
@@ -417,7 +430,7 @@ html, body {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 .insp-card:active { transform: scale(0.98); }
-.insp-card:hover { transform: translateY(-2px); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.4); }
+.insp-card:hover { transform: translateY(-2px); border-color: var(--orange); }
 .insp-card-header {
   padding: 12px 14px; display: flex; align-items: center; gap: 12px;
   border-bottom: 1px solid var(--border);
@@ -435,12 +448,12 @@ html, body {
 }
 .modal-overlay.open { display: flex; }
 .modal-sheet {
-  background: var(--navy2); border-radius: 24px 24px 0 0;
+  background: var(--navy2); border-radius: 32px 32px 0 0;
   width: 100%; max-height: 85vh; overflow-y: auto;
   padding: 20px 16px 32px; border-top: 1px solid var(--border);
 }
 .modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 16px; }
-.modal-title { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin-bottom: 16px; }
+.modal-title { font-size: 20px; font-weight: 800; margin-bottom: 16px; letter-spacing: -0.02em; }
 
 /* â”€â”€ COMPARACAO â”€â”€ */
 .comp-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); }
@@ -452,19 +465,100 @@ html, body {
 .comp-down { color: var(--red); }
 .comp-eq { color: var(--text2); }
 
+/* SEARCH BAR */
+.search-container {
+  padding: 0 16px 12px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--navy);
+}
+.light-mode .search-container { background: var(--navy); }
+.search-input-wrapper { position: relative; }
+.search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text2); pointer-events: none; }
+.search-input { padding-left: 38px !important; }
+
 /* â”€â”€ PENDENCIAS â”€â”€ */
 .pend-item {
   background: rgba(231,76,60,0.07); border: 1px solid rgba(231,76,60,0.2);
   border-left: 3px solid var(--red); border-radius: 8px;
   padding: 10px 12px; margin-bottom: 8px;
+  transition: transform 0.1s ease;
 }
+.pend-item:active { transform: scale(0.98); }
 .pend-item.resolvida {
-  background: rgba(46,204,113,0.07); border: 1px solid rgba(46,204,113,0.2);
+  background: rgba(46,204,113,0.05); border: 1px solid rgba(46,204,113,0.15);
   border-left-color: var(--green);
 }
+
+.pend-evolution {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 10px 0;
+  position: relative;
+}
+.evo-step {
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  border-left: 3px solid transparent;
+}
+.evo-step.nc { background: rgba(244, 63, 94, 0.08); border-left-color: var(--red); }
+.evo-step.ok { background: rgba(16, 185, 129, 0.08); border-left-color: var(--green); }
+.evo-label {
+  display: block;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+  opacity: 0.7;
+}
+.evo-connector { margin-left: 12px; color: var(--text2); opacity: 0.3; font-size: 10px; }
+
 .pend-setor { font-size: 11px; color: var(--text2); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.4px; }
 .pend-desc { font-size: 13px; line-height: 1.4; }
 .pend-status { font-size: 11px; margin-top: 4px; }
+
+.pend-sector-group { margin-bottom: 12px; }
+.pend-sector-toggle {
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+}
+.pend-sector-title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+}
+.pend-sector-meta { font-size: 12px; color: var(--text2); }
+.pend-sector-body { display: none; padding: 10px 2px 2px; }
+.pend-sector-group.open .pend-sector-body { display: block; }
+.pend-open-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 24px;
+  border-radius: 100px;
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(244, 63, 94, 0.16);
+  color: var(--red);
+  border: 1px solid rgba(244, 63, 94, 0.35);
+}
+body.accessible-mode .pend-sector-title { font-size: 18px; }
+body.accessible-mode .pend-sector-meta { font-size: 14px; }
+body.accessible-mode .pend-open-count { min-width: 30px; height: 28px; font-size: 14px; }
 
 /* â”€â”€ CHIPS â”€â”€ */
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
@@ -507,7 +601,7 @@ html, body {
     </div>
     <div class="spacer"></div>
   <button class="btn-icon" onclick="toggleTheme()" style="margin-right:6px">
-    <svg id="theme-icon" width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
+    <svg class="theme-icon" width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
       <!-- Sun Icon -->
       <circle cx="10" cy="10" r="4"/>
       <path d="M10 2v2m0 12v2M2 10h2m12 0h2M4.3 4.3l1.5 1.5m8.4 8.4l1.5 1.5M4.3 15.7l1.5-1.5m8.4-8.4l1.5-1.5"/>
@@ -554,7 +648,15 @@ html, body {
       </button>
     </div>
 
-    <div class="section-title">Setores e áreas</div>
+    <div class="section-title">Setores e locais</div>
+    <div class="search-container">
+      <div class="search-input-wrapper">
+        <div class="search-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        </div>
+        <input type="text" class="form-input search-input" id="sector-search" placeholder="Buscar setor ou local..." oninput="filterSectors(this.value)">
+      </div>
+    </div>
     <div id="home-sector-list"></div>
 
     <div class="section-title">Últimos registros</div>
@@ -631,7 +733,9 @@ html, body {
     </div>
   <div class="spacer"></div>
   <button class="btn-icon" onclick="toggleTheme()" style="margin-right:12px">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-11.314l.707.707m11.314 11.314l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z"/></svg>
+    <svg class="theme-icon" width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
+      <circle cx="10" cy="10" r="4"/><path d="M10 2v2m0 12v2M2 10h2m12 0h2M4.3 4.3l1.5 1.5m8.4 8.4l1.5 1.5M4.3 15.7l1.5-1.5m8.4-8.4l1.5-1.5"/>
+    </svg>
   </button>
   </div>
   <div class="scroll-body" style="padding-top:8px">
@@ -669,9 +773,6 @@ html, body {
     </div>
   </div>
   <div class="scroll-body" style="padding-top:8px">
-    <div style="padding: 0 16px 8px">
-      <div class="chips" id="pend-filter-chips"></div>
-    </div>
     <div id="pend-list" style="padding:0 16px 80px"></div>
   </div>
   <div class="bottom-nav">
@@ -1431,6 +1532,24 @@ function goToLatestInspection() {
   openDetalhe(ultima.id);
 }
 
+function toggleSectorCard(el) {
+  const card = el.closest('.sector-card');
+  card.classList.toggle('expanded');
+}
+
+function filterSectors(query) {
+  const q = query.toLowerCase().trim();
+  const cards = document.querySelectorAll('.sector-card');
+  
+  cards.forEach(card => {
+    const text = card.innerText.toLowerCase();
+    const match = text.includes(q);
+    card.style.display = match ? 'block' : 'none';
+    if (q.length > 1 && match) card.classList.add('expanded');
+    else if (q.length <= 1) card.classList.remove('expanded');
+  });
+}
+
 function sectorCardListHTML() {
   const setoresOrdenados = [...SETORES.map(s => s.nome)];
   APP.inspecoes.forEach(insp => {
@@ -1460,17 +1579,21 @@ function sectorCardListHTML() {
       const score = ultima.notaGeral;
       const statusClass = score >= 3.5 ? 'status-green' : score >= 2.5 ? 'status-gold' : score >= 1.5 ? 'status-orange' : 'status-red';
 
-      return `
-        <div class="sector-area-item ${statusClass}" onclick="openDetalhe('${ultima.id}')">
-          <div class="sector-area-top">
-            <div style="flex:1">
-              <div class="sector-area-name">${labelArea}</div>
-              <div class="sector-area-meta"><strong>${totalArea}</strong> inspeções · Última: ${formatDate(ultima.data)}</div>
+      // Filtro para mostrar apenas subáreas que combinem com a busca (se houver busca ativa)
+      const searchQuery = document.getElementById('sector-search')?.value.toLowerCase() || '';
+      const areaMatch = labelArea.toLowerCase().includes(searchQuery) || setor.toLowerCase().includes(searchQuery);
+      
+      if (!areaMatch && searchQuery !== '') return '';
+
+      return `<div class="sector-area-item ${statusClass}" onclick="openDetalhe('${ultima.id}')">
+            <div class="sector-area-top">
+              <div style="flex:1">
+                <div class="sector-area-name">${labelArea}</div>
+                <div class="sector-area-meta"><strong>${totalArea}</strong> inspeções · Última: ${formatDate(ultima.data)}</div>
+              </div>
+              <div style="font-family:var(--font-display); font-weight:700; color:${notaCor(score)}">${score.toFixed(2)}</div>
             </div>
-            <div style="font-family:var(--font-display); font-weight:700; color:${notaCor(score)}">${score.toFixed(2)}</div>
-          </div>
-        </div>
-      `;
+          </div>`;
     }).join('') : `
       <div class="sector-area-item" style="cursor:default">
         <div class="sector-area-name">Nenhum registro neste setor</div>
@@ -1479,13 +1602,15 @@ function sectorCardListHTML() {
     `;
 
     return `
-      <div class="sector-card">
-        <div class="sector-card-head">
+      <div class="sector-card" data-sector="${setor}">
+        <div class="sector-card-head" onclick="toggleSectorCard(this)">
           <div>
             <div class="sector-title">${setor}</div>
             <div class="sector-sub">${resumoSetor}</div>
           </div>
-          ${ultimaSetor ? notaBadge(ultimaSetor.notaGeral) : '<span class="badge badge-orange">Sem registros</span>'}
+          <div class="sector-chevron">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
         </div>
         <div class="sector-area-list">${areasHtml}</div>
       </div>
@@ -1598,6 +1723,37 @@ function getPendenciasRecebidas(setorDestino, limitDateIso = null) {
     });
   });
   return recebidas;
+}
+
+function getPendenciasResolvidas(insp, baseComparativa = null) {
+  if (!insp) return [];
+  const baseRef = baseComparativa || getInspecaoAnteriorMesmoLocal(insp);
+  if (!baseRef || !sameLocal(insp, baseRef)) return [];
+
+  const resolvidas = [];
+  SENSOS.forEach(s => {
+    (insp.sensos[s.id] || []).forEach((crAtual, ci) => {
+      const crAnterior = baseRef.sensos?.[s.id]?.[ci] || {};
+      const notaAnterior = crAnterior.nota ?? null;
+      const notaAtual = crAtual?.nota ?? null;
+      const isResolvida = notaAnterior !== null && notaAnterior < 2 && notaAtual !== null && notaAtual >= 2;
+      if (!isResolvida) return;
+
+      resolvidas.push({
+        senso: s.nome,
+        criterioIndice: ci + 1,
+        criterioTexto: s.criterios[ci],
+        notaAnterior,
+        obsAnterior: crAnterior.obs || '',
+        notaAtual,
+        obsAtual: crAtual?.obs || '',
+        fotosAtual: Array.isArray(crAtual?.fotos) ? crAtual.fotos : [],
+        dataBase: baseRef.data
+      });
+    });
+  });
+
+  return resolvidas;
 }
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -2106,12 +2262,17 @@ function renderHistorico() {
 
     return `
       <div class="sector-card">
-        <div class="sector-card-head">
+        <div class="sector-card-head" onclick="toggleSectorCard(this)">
           <div>
             <div class="sector-title">${setor}</div>
             <div class="sector-sub">${resumoSetor}</div>
           </div>
-          ${ultimaSetor ? notaBadge(ultimaSetor.notaGeral) : ''}
+          <div style="display:flex; align-items:center; gap:8px">
+            ${ultimaSetor ? notaBadge(ultimaSetor.notaGeral) : ''}
+            <div class="sector-chevron">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+            </div>
+          </div>
         </div>
         <div class="sector-area-list">${areasHtml}</div>
       </div>
@@ -2240,57 +2401,92 @@ function iniciarNovaComBase(baseId) {
 //  PENDÃŠNCIAS
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function renderPendencias() {
-  const chips = document.getElementById('pend-filter-chips');
-  chips.innerHTML = `<div class="chip active" onclick="filterPend('todas',this)">Todas</div>
-    <div class="chip" onclick="filterPend('abertas',this)">Abertas</div>
-    <div class="chip" onclick="filterPend('resolvidas',this)">Resolvidas</div>`;
-
-  renderPendList('todas');
+  renderPendList();
 }
 
-function filterPend(tipo, el) {
-  document.querySelectorAll('#pend-filter-chips .chip').forEach(c => c.classList.remove('active'));
-  el.classList.add('active');
-  renderPendList(tipo);
+function togglePendSetor(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.toggle('open');
 }
 
-function renderPendList(tipo) {
+function renderPendList() {
   const list = document.getElementById('pend-list');
-  let html = '';
-  const ord = [...APP.inspecoes].reverse();
+  const itens = [];
+  const ord = [...APP.inspecoes].sort((a, b) => new Date(b.data) - new Date(a.data));
+  const latestPendKeys = new Set();
 
   ord.forEach(insp => {
     SENSOS.forEach(s => {
       insp.sensos[s.id].forEach((cr, ci) => {
+        const pendKey = `${localKey(insp)}||${s.id}||${ci}`;
+        if (latestPendKeys.has(pendKey)) return;
+
         const isNC = (cr.nota || 0) < 2;
-        const baseRef = insp.baseId ? APP.inspecoes.find(i => i.id === insp.baseId) : null;
-        const base = sameLocal(insp, baseRef) ? baseRef : null;
-        const wasNC = base && (base.sensos[s.id][ci]?.nota || 0) < 2;
+        const inspAnterior = getInspecaoAnteriorMesmoLocal(insp);
+        const wasNC = inspAnterior && (inspAnterior.sensos?.[s.id]?.[ci]?.nota || 0) < 2;
         const isResolvida = wasNC && !isNC;
 
         if (!isNC && !isResolvida) return;
-        if (tipo === 'abertas' && !isNC) return;
-        if (tipo === 'resolvidas' && !isResolvida) return;
+        latestPendKeys.add(pendKey);
 
         const reinc = getReincidenciaCount(insp, s.id, ci);
         const reincTxt = (isNC && reinc > 1) ? ` <span style="color:var(--orange2);font-weight:700">[REINCIDÊNCIA: ${reinc}ª vez]</span>` : '';
+        const reincResolvida = isResolvida ? getReincidenciasAteConclusao(insp, s.id, ci) : null;
+        const fotoResolucao = isResolvida && Array.isArray(cr.fotos) ? (cr.fotos[0] || null) : null;
 
-        html += `<div class="pend-item ${isResolvida?'resolvida':''}">
+        const itemHtml = `<div class="pend-item ${isResolvida?'resolvida':''}">
           <div class="pend-setor">${insp.setor} · ${s.nome}</div>
           <div class="pend-desc">${SENSOS.find(x=>x.id===s.id).criterios[ci]}</div>
           <div style="font-size:11px;color:var(--text2);margin-top:4px">${formatDate(insp.data)} · ${insp.tecnico}</div>
           ${isNC ? `<div class="pend-status" style="color:var(--red)">Nota ${cr.nota} - ${cr.obs || 'Sem observação'}${reincTxt}</div>` : ''}
           ${isResolvida ? `<div class="pend-status" style="color:var(--green)">✓ Resolvida em ${formatDate(insp.data)}</div>` : ''}
+          ${isResolvida ? `<div style="font-size:11px;color:var(--text2);margin-top:3px">Reincidências até concluir: <strong style="color:var(--green)">${reincResolvida?.reincidencias ?? 0}</strong> <span style="color:var(--text2)">(${reincResolvida?.ocorrenciasNC ?? 0} ocorrências NC consecutivas)</span></div>` : ''}
+          ${isResolvida ? `<div style="font-size:11px;color:var(--text2);margin-top:3px">Antes: ${inspAnterior?.sensos?.[s.id]?.[ci]?.obs || 'Sem observação'}<br>Agora: ${cr.obs || 'Sem observação'}</div>` : ''}
+          ${isResolvida && fotoResolucao ? `<div style="margin-top:8px"><img src="${fotoResolucao}" alt="Evidência da resolução" style="width:100%;max-width:220px;border-radius:8px;border:1px solid var(--border);display:block"></div>` : ''}
+          ${isResolvida && !fotoResolucao ? `<div style="font-size:11px;color:var(--text2);margin-top:4px">Foto da resolução: não anexada.</div>` : ''}
+          <div class="pend-status" style="margin-top:6px;color:${isNC ? 'var(--red)' : 'var(--green)'};font-weight:700">
+            ${isNC ? 'Status: Aberta' : 'Status: Resolvida'}
+          </div>
         </div>`;
+
+        itens.push({
+          setor: insp.setor,
+          aberta: isNC,
+          html: itemHtml
+        });
       });
     });
   });
 
-  if (!html) {
-    html = `<div style="text-align:center;padding:40px 16px;color:var(--text2);font-size:13px">Nenhuma pendência ${tipo === 'todas' ? '' : tipo} encontrada.</div>`;
+  if (!itens.length) {
+    list.innerHTML = `<div style="text-align:center;padding:40px 16px;color:var(--text2);font-size:13px">Nenhuma pendência encontrada.</div>`;
+    return;
   }
 
-  list.innerHTML = html;
+  const grupos = {};
+  itens.forEach(item => {
+    if (!grupos[item.setor]) grupos[item.setor] = { total: 0, abertas: 0, itens: [] };
+    grupos[item.setor].total += 1;
+    if (item.aberta) grupos[item.setor].abertas += 1;
+    grupos[item.setor].itens.push(item.html);
+  });
+
+  const setores = Object.keys(grupos).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  list.innerHTML = setores.map((setor, idx) => {
+    const g = grupos[setor];
+    const groupId = `pend-setor-${idx}`;
+    return `<div class="pend-sector-group ${idx === 0 ? 'open' : ''}" id="${groupId}">
+      <button class="pend-sector-toggle" onclick="togglePendSetor('${groupId}')">
+        <div style="text-align:left;flex:1">
+          <div class="pend-sector-title">${setor}</div>
+          <div class="pend-sector-meta">${g.total} pendência(s) · ${g.abertas} aberta(s)</div>
+        </div>
+        <span class="pend-open-count">${g.abertas}</span>
+      </button>
+      <div class="pend-sector-body">${g.itens.join('')}</div>
+    </div>`;
+  }).join('');
 }
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -2315,6 +2511,31 @@ function getReincidenciaCount(insp, sId, ci) {
     else break;
   }
   return count;
+}
+
+function getHistoricoMesmoLocalDesc(insp) {
+  if (!insp) return [];
+  return APP.inspecoes
+    .filter(i => sameLocal(i, insp))
+    .sort((a, b) => new Date(b.data) - new Date(a.data));
+}
+
+function getReincidenciasAteConclusao(inspResolucao, sId, ci) {
+  const historico = getHistoricoMesmoLocalDesc(inspResolucao);
+  const idx = historico.findIndex(i => i.id === inspResolucao.id);
+  if (idx === -1) return { ocorrenciasNC: 0, reincidencias: 0 };
+
+  let ocorrenciasNC = 0;
+  for (let i = idx + 1; i < historico.length; i++) {
+    const nota = historico[i].sensos?.[sId]?.[ci]?.nota ?? null;
+    if (nota !== null && nota < 2) ocorrenciasNC++;
+    else break;
+  }
+
+  return {
+    ocorrenciasNC,
+    reincidencias: Math.max(0, ocorrenciasNC - 1)
+  };
 }
 
 function compararInspecoes() {
@@ -2381,54 +2602,10 @@ async function gerarPDFSetorial(setor) {
   const now = new Date();
   const mesAtual = now.toLocaleDateString('pt-BR', { month: 'long' });
   const anoAtual = now.getFullYear();
+  const periodoAtual = `${anoAtual}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const mesAnoAtual = `${mesAtual.charAt(0).toUpperCase() + mesAtual.slice(1)} de ${anoAtual}`;
-
-  doc.setFillColor(255, 255, 255);
-  doc.rect(0, 0, W, H, 'F');
-  doc.setTextColor(15, 23, 42);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(17);
-  doc.text(`Housekeeping (${setor})`, margin, 34);
-
-  doc.setFontSize(14);
-  doc.text('Segurança do trabalho', margin, 44);
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(12);
-  doc.text(mesAnoAtual, margin, 54);
-
   const textoObjetivo = `Este relatório tem como objetivo fornecer informações do Housekeeping realizado durante o mês de ${mesAtual} no setor de ${setor}, buscando identificar pontos de melhoria, promover a eficiência operacional, garantir a segurança no local de trabalho e cultivar uma cultura organizacional centrada na ordem, limpeza e eficácia, para todos os operadores e visitantes da área.`;
-  const objetivoLines = doc.splitTextToSize(textoObjetivo, W - (margin * 2));
-  doc.setFontSize(11);
-  doc.text(objetivoLines, margin, 72);
-
-  let y = 72 + (objetivoLines.length * 5) + 12;
-  const setorCfg = SETORES.find(s => s.nome === setor);
-  const areasDoSetor = (setorCfg?.subareas || []).length
-    ? setorCfg.subareas
-    : [...new Set(APP.inspecoes
-      .filter(i => i.setor === setor)
-      .map(i => i.subarea || 'Área geral do setor'))];
-
-  // Adiciona título para áreas observadas
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.text('Áreas observadas', margin, y);
-  y += 8;
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(11);
-  if (!areasDoSetor.length) {
-    doc.text('• Área geral do setor', margin, y);
-    y += 6;
-  } else {
-    const maxAreas = 10;
-    areasDoSetor.slice(0, maxAreas).forEach(area => {
-      const linhasArea = doc.splitTextToSize(`• ${area}`, W - (margin * 2));
-      doc.text(linhasArea, margin, y);
-      y += (linhasArea.length * 6);
-    });
-  }
+  let y = 0;
 
   function addNewPage() {
     doc.addPage();
@@ -2462,13 +2639,14 @@ async function gerarPDFSetorial(setor) {
   }
 
   const inspsMes = APP.inspecoes.filter(i => {
-    if (i.setor !== setor) return false;
     const d = new Date(i.data);
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   });
 
+  const inspsMesSetor = inspsMes.filter(i => i.setor === setor);
+
   const ncList = [];
-  inspsMes.forEach(insp => {
+  inspsMesSetor.forEach(insp => {
     SENSOS.forEach(s => {
       (insp.sensos[s.id] || []).forEach((cr, ci) => {
         if ((cr.nota ?? 0) >= 2) return;
@@ -2479,11 +2657,184 @@ async function gerarPDFSetorial(setor) {
           criterio: s.criterios[ci],
           obs: cr.obs || 'Sem observação.',
           sugestao: cr.sugestao || 'Não informada.',
-          fotos: Array.isArray(cr.fotos) ? cr.fotos : []
+          fotos: Array.isArray(cr.fotos) ? cr.fotos : [],
+          origemTipo: 'propria',
+          origemSetor: insp.setor,
+          origemLocal: localLabel(insp)
         });
       });
     });
   });
+
+  // Inclui NCs de outros setores quando foram encaminhadas para o setor deste relatório.
+  inspsMes.forEach(insp => {
+    if (insp.setor === setor) return;
+    SENSOS.forEach(s => {
+      (insp.sensos[s.id] || []).forEach((cr, ci) => {
+        if ((cr.nota ?? 0) >= 2) return;
+        if ((cr.encaminharSetor || '') !== setor) return;
+        ncList.push({
+          data: insp.data,
+          local: localLabel(insp),
+          senso: s.nome,
+          criterio: s.criterios[ci],
+          obs: cr.obs || 'Sem observação.',
+          sugestao: cr.sugestao || 'Não informada.',
+          fotos: Array.isArray(cr.fotos) ? cr.fotos : [],
+          origemTipo: 'encaminhada',
+          origemSetor: insp.setor,
+          origemLocal: localLabel(insp)
+        });
+      });
+    });
+  });
+
+  const resolvidasList = [];
+  inspsMesSetor.forEach(insp => {
+    // Ao mudar de período, não carregar resolvidas do período anterior.
+    if ((insp.periodo || '') !== periodoAtual) return;
+
+    const inspAnterior = getInspecaoAnteriorMesmoLocal(insp);
+    if (!inspAnterior) return;
+    if ((inspAnterior.periodo || '') !== periodoAtual) return;
+
+    SENSOS.forEach(s => {
+      (insp.sensos[s.id] || []).forEach((crAtual, ci) => {
+        const crAnterior = inspAnterior.sensos?.[s.id]?.[ci] || {};
+        const notaAnterior = crAnterior.nota ?? null;
+        const notaAtual = crAtual?.nota ?? null;
+        const resolveuAgora = notaAnterior !== null && notaAnterior < 2 && notaAtual !== null && notaAtual >= 2;
+        if (!resolveuAgora) return;
+
+        const reinc = getReincidenciasAteConclusao(insp, s.id, ci);
+        resolvidasList.push({
+          dataResolucao: insp.data,
+          dataAnterior: inspAnterior.data,
+          local: localLabel(insp),
+          senso: s.nome,
+          criterio: s.criterios[ci],
+          obsAnterior: crAnterior.obs || 'Sem observação.',
+          obsAtual: crAtual?.obs || 'Sem observação.',
+          sugestaoAtual: crAtual?.sugestao || 'Não informada.',
+          fotoResolucao: Array.isArray(crAtual?.fotos) ? (crAtual.fotos[0] || null) : null,
+          ocorrenciasNC: reinc.ocorrenciasNC,
+          reincidencias: reinc.reincidencias
+        });
+      });
+    });
+  });
+
+  // Página 1: Dashboard do setor
+  const totalInspecoes = inspsMesSetor.length;
+  const locaisUnicos = new Set(inspsMesSetor.map(i => localKey(i))).size;
+  const notasValidas = inspsMesSetor.map(i => i.notaGeral).filter(n => typeof n === 'number');
+  const mediaGeral = notasValidas.length
+    ? (notasValidas.reduce((acc, n) => acc + n, 0) / notasValidas.length)
+    : null;
+  const totalNCAbertas = ncList.length;
+  const totalNCRecebidas = ncList.filter(n => n.origemTipo === 'encaminhada').length;
+  const totalResolvidas = resolvidasList.length;
+
+  const rankingLocais = {};
+  inspsMesSetor.forEach(insp => {
+    if (typeof insp.notaGeral !== 'number') return;
+    const lk = localKey(insp);
+    if (!rankingLocais[lk]) rankingLocais[lk] = { label: localLabel(insp), notas: [] };
+    rankingLocais[lk].notas.push(insp.notaGeral);
+  });
+  const rankingMedias = Object.values(rankingLocais)
+    .map(item => ({
+      label: item.label,
+      media: item.notas.reduce((a, b) => a + b, 0) / item.notas.length
+    }))
+    .sort((a, b) => b.media - a.media);
+
+  const melhorLocal = rankingMedias[0] || null;
+  const piorLocal = rankingMedias[rankingMedias.length - 1] || null;
+
+  const setorCfg = SETORES.find(s => s.nome === setor);
+  const areasDoSetor = (setorCfg?.subareas || []).length
+    ? setorCfg.subareas
+    : [...new Set(APP.inspecoes
+      .filter(i => i.setor === setor)
+      .map(i => i.subarea || 'Área geral do setor'))];
+
+  doc.setFillColor(255, 255, 255);
+  doc.rect(0, 0, W, H, 'F');
+  doc.setFillColor(79, 70, 229);
+  doc.rect(0, 0, W, 28, 'F');
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(18);
+  doc.text(`Dashboard Setorial - ${setor}`, margin, 16);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.text(`Período: ${mesAnoAtual}`, margin, 23);
+
+  function drawDashCard(x, yPos, w, h, title, value, subtitle, tone) {
+    const toneColor = tone || [79, 70, 229];
+    doc.setDrawColor(226, 232, 240);
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(x, yPos, w, h, 3, 3, 'FD');
+    doc.setFillColor(...toneColor);
+    doc.rect(x, yPos, 2.5, h, 'F');
+    doc.setTextColor(100, 116, 139);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.text(title, x + 6, yPos + 7);
+    doc.setTextColor(15, 23, 42);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(15);
+    doc.text(String(value), x + 6, yPos + 16);
+    doc.setTextColor(71, 85, 105);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.text(subtitle, x + 6, yPos + 23);
+  }
+
+  const gap = 8;
+  const cardW = (W - margin * 2 - gap * 2) / 3;
+  const cardH = 30;
+  const row1Y = 36;
+  const row2Y = row1Y + cardH + 8;
+
+  drawDashCard(margin, row1Y, cardW, cardH, 'Inspeções', totalInspecoes, 'No mês atual', [79, 70, 229]);
+  drawDashCard(margin + cardW + gap, row1Y, cardW, cardH, 'Média Geral', mediaGeral !== null ? mediaGeral.toFixed(2) : '—', 'Nota média do setor', [14, 165, 233]);
+  drawDashCard(margin + (cardW + gap) * 2, row1Y, cardW, cardH, 'Locais Avaliados', locaisUnicos, 'Subáreas/locais distintos', [100, 116, 139]);
+
+  drawDashCard(margin, row2Y, cardW, cardH, 'NC Abertas', totalNCAbertas, 'Inclui encaminhadas', [244, 63, 94]);
+  drawDashCard(margin + cardW + gap, row2Y, cardW, cardH, 'NC Resolvidas', totalResolvidas, 'Resolvidas no período', [16, 185, 129]);
+  drawDashCard(margin + (cardW + gap) * 2, row2Y, cardW, cardH, 'NC Recebidas', totalNCRecebidas, 'Encaminhadas de outros setores', [245, 158, 11]);
+
+  const boxY = row2Y + cardH + 10;
+  const objetivoLines = doc.splitTextToSize(`Objetivo: ${textoObjetivo}`, W - margin * 2 - 12);
+  const boxH = 34 + (objetivoLines.length * 4.2);
+  doc.setDrawColor(226, 232, 240);
+  doc.setFillColor(248, 250, 252);
+  doc.roundedRect(margin, boxY, W - margin * 2, boxH, 3, 3, 'FD');
+  doc.setTextColor(30, 41, 59);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.text('Destaques de Desempenho', margin + 6, boxY + 8);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(51, 65, 85);
+  const melhorTxt = melhorLocal ? `${melhorLocal.label} (${melhorLocal.media.toFixed(2)})` : 'Sem dados';
+  const piorTxt = piorLocal ? `${piorLocal.label} (${piorLocal.media.toFixed(2)})` : 'Sem dados';
+  doc.text(`Melhor local: ${melhorTxt}`, margin + 6, boxY + 16);
+  doc.text(`Pior local: ${piorTxt}`, margin + 6, boxY + 23);
+
+  const areasTxt = areasDoSetor.length ? areasDoSetor.join(', ') : 'Área geral do setor';
+  const areaLines = doc.splitTextToSize(`Áreas observadas: ${areasTxt}`, W - margin * 2 - 12);
+  doc.text(areaLines, margin + 6, boxY + 30);
+
+  const objetivoY = boxY + 36 + (areaLines.length * 4);
+  doc.setTextColor(71, 85, 105);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.text(objetivoLines, margin + 6, objetivoY);
 
   addNewPage();
   y = 18;
@@ -2517,9 +2868,26 @@ async function gerarPDFSetorial(setor) {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(10);
       doc.setTextColor(15, 23, 42);
-      doc.text(`${idx + 1}. ${nc.senso} · ${nc.local} · ${formatDate(nc.data)}`, margin + 3, y + 6);
+
+      // Ícone decorativo para NC
+      doc.setFillColor(244, 63, 94);
+      doc.circle(margin + 6, y + 5.5, 3, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(7);
+      doc.text('!', margin + 6, y + 6.5, { align: 'center' });
+
+      doc.setTextColor(15, 23, 42);
+      doc.setFontSize(10);
+      doc.text(`${idx + 1}. ${nc.senso} · ${nc.local} · ${formatDate(nc.data)}`, margin + 12, y + 6);
 
       let textY = y + 12;
+      if (nc.origemTipo === 'encaminhada') {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8.5);
+        doc.setTextColor(180, 83, 9);
+        doc.text(`Encaminhada de ${nc.origemSetor} · ${nc.origemLocal}`, margin + 3, textY);
+        textY += 5;
+      }
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
       doc.setTextColor(51, 65, 85);
@@ -2556,6 +2924,103 @@ async function gerarPDFSetorial(setor) {
     }
   }
 
+  addNewPage();
+  y = 18;
+  doc.setTextColor(15, 23, 42);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.text('Relatório de não conformidades resolvidas', margin, y);
+  y += 8;
+
+  if (!resolvidasList.length) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(71, 85, 105);
+    doc.text('Nenhuma não conformidade foi concluída no mês atual para este setor.', margin, y + 4);
+  } else {
+    for (let idx = 0; idx < resolvidasList.length; idx++) {
+      const item = resolvidasList[idx];
+      const fotoDataUrl = await toDataUrl(item.fotoResolucao);
+      const criterioLines = doc.splitTextToSize(`Critério: ${item.criterio}`, W - (margin * 2) - 6);
+      const antesLines = doc.splitTextToSize(`Antes: ${item.obsAnterior}`, W - (margin * 2) - 6);
+      const agoraLines = doc.splitTextToSize(`Agora: ${item.obsAtual}`, W - (margin * 2) - 6);
+      const sugLines = doc.splitTextToSize(`Ação/Sugestão: ${item.sugestaoAtual}`, W - (margin * 2) - 6);
+      const reincTxt = `Reincidências até conclusão: ${item.reincidencias} (ocorrências NC consecutivas: ${item.ocorrenciasNC})`;
+      const reincLines = doc.splitTextToSize(reincTxt, W - (margin * 2) - 6);
+
+      const textH = 18 + (criterioLines.length * 4.5) + (antesLines.length * 4.5) + (agoraLines.length * 4.5) + (sugLines.length * 4.5) + (reincLines.length * 4.5);
+      const imgH = fotoDataUrl ? 55 : 0;
+      const blockH = textH + imgH + 8;
+      ensureY(blockH + 6);
+
+      doc.setDrawColor(187, 247, 208);
+      doc.setFillColor(240, 253, 244);
+      doc.roundedRect(margin, y, W - (margin * 2), blockH, 2, 2, 'FD');
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(21, 128, 61);
+
+      // Ícone decorativo para Resolvido
+      doc.setFillColor(34, 197, 94);
+      doc.circle(margin + 6, y + 5.5, 3, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(7);
+      doc.text('V', margin + 6, y + 6.5, { align: 'center' });
+
+      doc.setTextColor(21, 128, 61);
+      doc.setFontSize(10);
+      doc.text(`${idx + 1}. ${item.senso} · ${item.local} · Resolvido em ${formatDate(item.dataResolucao)}`, margin + 12, y + 6);
+
+      let textY = y + 12;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(51, 65, 85);
+      doc.text(criterioLines, margin + 3, textY); textY += criterioLines.length * 4.5 + 1;
+      doc.setTextColor(120, 120, 120);
+      doc.text(antesLines, margin + 3, textY); textY += antesLines.length * 4.5 + 1;
+      doc.setTextColor(22, 101, 52);
+      doc.text(agoraLines, margin + 3, textY); textY += agoraLines.length * 4.5 + 1;
+      doc.setTextColor(51, 65, 85);
+      doc.text(sugLines, margin + 3, textY); textY += sugLines.length * 4.5 + 1;
+      doc.setTextColor(21, 128, 61);
+      doc.setFont('helvetica', 'bold');
+      doc.text(reincLines, margin + 3, textY); textY += reincLines.length * 4.5 + 2;
+
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Origem da NC: ${formatDate(item.dataAnterior)}`, margin + 3, textY);
+      textY += 5;
+
+      if (fotoDataUrl) {
+        try {
+          const props = doc.getImageProperties(fotoDataUrl);
+          const ratio = props.width / props.height;
+          const maxW = W - (margin * 2) - 8;
+          const maxH = 50;
+          let drawW = maxW;
+          let drawH = drawW / ratio;
+          if (drawH > maxH) {
+            drawH = maxH;
+            drawW = drawH * ratio;
+          }
+          const x = margin + ((W - (margin * 2)) - drawW) / 2;
+          const imgY = textY + 1;
+          const fmt = fotoDataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+          doc.addImage(fotoDataUrl, fmt, x, imgY, drawW, drawH, undefined, 'FAST');
+        } catch {
+          doc.setTextColor(148, 163, 184);
+          doc.text('Foto da resolução não pôde ser renderizada.', margin + 3, textY + 4);
+        }
+      } else {
+        doc.setTextColor(148, 163, 184);
+        doc.text('Foto da resolução: não anexada.', margin + 3, textY + 4);
+      }
+
+      y += blockH + 6;
+    }
+  }
+
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(120, 120, 120);
   doc.setFontSize(9);
@@ -2571,6 +3036,8 @@ async function gerarPDFInsp(id) {
   toast('Gerando PDF...');
   const baseRef = insp.baseId ? APP.inspecoes.find(i => i.id === insp.baseId) : null;
   const base = sameLocal(insp, baseRef) ? baseRef : null;
+  const baseComparativa = base || getInspecaoAnteriorMesmoLocal(insp);
+  const pendenciasResolvidas = getPendenciasResolvidas(insp, baseComparativa);
   const pendenciasRecebidas = getPendenciasRecebidas(insp.setor, insp.data);
 
   const { jsPDF } = window.jspdf;
@@ -2718,7 +3185,16 @@ async function gerarPDFInsp(id) {
         doc.setFillColor(254,242,242); doc.roundedRect(margin, y, W-margin*2, 16, 3, 3, 'F');
         doc.setFillColor(231,76,60); doc.rect(margin, y+2, 2, 12, 'F');
         doc.setTextColor(153,27,27); doc.setFontSize(9); doc.setFont('helvetica','bold');
-        doc.text(s.nome, margin+6, y+7);
+        
+        // Ícone NC
+        doc.setFillColor(231, 76, 60);
+        doc.circle(margin + 7, y + 6.2, 2.5, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(6);
+        doc.text('!', margin + 7, y + 7.2, { align: 'center' });
+
+        doc.setTextColor(153,27,27); doc.setFontSize(9);
+        doc.text(s.nome, margin+11, y+7);
         doc.setFillColor(231,76,60);
         doc.roundedRect(W-margin-14, y+4, 12, 8, 2, 2, 'F');
         doc.setTextColor(255,255,255); doc.setFontSize(9);
@@ -2785,6 +3261,87 @@ async function gerarPDFInsp(id) {
     });
   }
 
+  if (pendenciasResolvidas.length) {
+    doc.addPage();
+    doc.setFillColor(255,255,255); doc.rect(0,0,W,297,'F');
+    doc.setFillColor(148,163,184); doc.rect(0,0,W,1,'F');
+    y = 14;
+    doc.setTextColor(15,23,42); doc.setFontSize(14); doc.setFont('helvetica','bold');
+    doc.text('PENDÊNCIAS RESOLVIDAS COM EVIDÊNCIA', margin, y+8); y += 22;
+
+    if (baseComparativa) {
+      doc.setTextColor(100,116,139); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+      doc.text(`Comparativo com ${formatDate(baseComparativa.data)}`, margin, y);
+      y += 6;
+    }
+
+    for (const item of pendenciasResolvidas) {
+      const titulo = `${item.senso} · Critério ${item.criterioIndice}`;
+      const critLines = doc.splitTextToSize(item.criterioTexto, W - margin * 2 - 8);
+      const antLines = doc.splitTextToSize(`Antes (nota ${item.notaAnterior}): ${item.obsAnterior || 'Sem observação.'}`, W - margin * 2 - 8);
+      const atualLines = doc.splitTextToSize(`Agora (nota ${item.notaAtual}): ${item.obsAtual || 'Sem observação.'}`, W - margin * 2 - 8);
+      const fotoDataUrl = await imageUrlToDataURL(item.fotosAtual[0] || null);
+      const imgH = fotoDataUrl ? 46 : 0;
+      const blocoH = 16 + critLines.length * 4 + antLines.length * 4 + atualLines.length * 4 + imgH + 6;
+
+      if (y + blocoH > 280) {
+        doc.addPage();
+        doc.setFillColor(255,255,255); doc.rect(0,0,W,297,'F');
+        doc.setFillColor(148,163,184); doc.rect(0,0,W,1,'F');
+        y = 14;
+      }
+
+      doc.setFillColor(240,253,244); doc.roundedRect(margin, y, W-margin*2, blocoH, 3, 3, 'F');
+      doc.setFillColor(34,197,94); doc.rect(margin, y+2, 2, blocoH-4, 'F');
+      doc.setTextColor(21,128,61); doc.setFontSize(9.5); doc.setFont('helvetica','bold');
+      
+      // Ícone Resolvido
+      doc.setFillColor(34, 197, 94);
+      doc.circle(margin + 8, y + 6.2, 2.5, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(6);
+      doc.text('V', margin + 8, y + 7.2, { align: 'center' });
+
+      doc.setTextColor(21, 128, 61);
+      doc.text(titulo, margin+12, y+7);
+
+      let by = y + 12;
+      doc.setTextColor(51,65,85); doc.setFontSize(8); doc.setFont('helvetica','normal');
+      doc.text(critLines, margin+5, by); by += critLines.length * 4 + 1;
+
+      doc.setTextColor(120,120,120); doc.setFont('helvetica','italic');
+      doc.text(antLines, margin+5, by); by += antLines.length * 4 + 1;
+
+      doc.setTextColor(22,101,52); doc.setFont('helvetica','bold');
+      doc.text(atualLines, margin+5, by); by += atualLines.length * 4 + 2;
+
+      if (fotoDataUrl) {
+        try {
+          const props = doc.getImageProperties(fotoDataUrl);
+          const ratio = props.width / props.height;
+          const maxW = W - margin * 2 - 10;
+          const maxH = 42;
+          let drawW = maxW;
+          let drawH = drawW / ratio;
+          if (drawH > maxH) {
+            drawH = maxH;
+            drawW = drawH * ratio;
+          }
+          const x = margin + ((W - margin * 2) - drawW) / 2;
+          doc.addImage(fotoDataUrl, fotoDataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG', x, by, drawW, drawH, undefined, 'FAST');
+        } catch {
+          doc.setTextColor(120,120,120); doc.setFont('helvetica','normal');
+          doc.text('Evidência fotográfica não pôde ser renderizada.', margin+5, by+4);
+        }
+      } else {
+        doc.setTextColor(120,120,120); doc.setFont('helvetica','normal');
+        doc.text('Evidência fotográfica: não anexada.', margin+5, by+4);
+      }
+
+      y += blocoH + 6;
+    }
+  }
+
   // REGISTRO FOTOGRÃFICO
   const registrosFotos = [];
   SENSOS.forEach(s => {
@@ -2822,7 +3379,6 @@ async function gerarPDFInsp(id) {
 
     for (const reg of registrosFotos) {
       const isNC = (reg.nota ?? 0) < 2;
-      const statusEmoji = isNC ? '👎' : '👍';
       const statusTxt = isNC ? 'NÃO CONFORME' : 'CONFORME';
       const statusCol = isNC ? [231, 76, 60] : [46, 204, 113];
 
@@ -2834,12 +3390,20 @@ async function gerarPDFInsp(id) {
 
       if (y + blocoH > 280) addFotoPage();
 
-      // Badge de Status (Joinha visual)
+      // Badge de Status com Ícone
       doc.setFillColor(...statusCol);
       doc.roundedRect(margin, y, 44, 5, 1, 1, 'F');
+
+      doc.setFillColor(255, 255, 255);
+      doc.circle(margin + 5, y + 2.5, 1.8, 'F');
+      doc.setTextColor(...statusCol);
+      doc.setFontSize(5);
+      doc.text(isNC ? '!' : 'V', margin + 5, y + 3.2, { align: 'center' });
+
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(7);
-      doc.text(`${statusEmoji} ${statusTxt}`, margin + 22, y + 3.8, { align: 'center' });
+      doc.text(statusTxt, margin + 25, y + 3.8, { align: 'center' });
+
       y += 8;
 
       doc.setTextColor(30,41,59); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
@@ -2904,12 +3468,14 @@ function toggleTheme() {
 
 function updateThemeIcon() {
   const isLight = document.body.classList.contains('light-mode');
-  const icon = document.getElementById('theme-icon');
-  if (isLight) {
-    icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>'; // Lua
-  } else {
-    icon.innerHTML = '<circle cx="12" cy="12" r="5"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M19.78 4.22l-1.42 1.42"/>'; // Sol
-  }
+  const icons = document.querySelectorAll('.theme-icon');
+  icons.forEach(icon => {
+    if (isLight) {
+      icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>'; // Lua
+    } else {
+      icon.innerHTML = '<circle cx="12" cy="12" r="5"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M19.78 4.22l-1.42 1.42"/>'; // Sol
+    }
+  });
 }
 
 function toast(msg) {
