@@ -569,6 +569,230 @@ body.accessible-mode .pend-open-count { min-width: 30px; height: 28px; font-size
 }
 .chip.active { background: rgba(232,96,28,0.15); border-color: var(--orange); color: var(--orange2); }
 
+/* â”€â”€ DASHBOARD LIVE â”€â”€ */
+.dash-live-wrap { padding: 12px 16px 96px; }
+.dash-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.02);
+}
+.dash-topline .left { font-size: 12px; color: var(--text2); }
+.dash-topline .right {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--orange2);
+  white-space: nowrap;
+}
+.dash-live-head {
+  background: radial-gradient(1200px 300px at -10% -120%, rgba(14,165,233,0.28), transparent 60%), linear-gradient(135deg, rgba(79, 70, 229, 0.18), rgba(14, 165, 233, 0.12));
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+.dash-live-title { font-family: var(--font-display); font-size: 20px; font-weight: 700; }
+.dash-live-sub { font-size: 12px; color: var(--text2); margin-top: 4px; }
+.dash-live-badges { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
+.dash-live-badge {
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.05);
+}
+.dash-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.dash-kpi {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 10px 12px;
+  position: relative;
+  overflow: hidden;
+}
+.dash-kpi::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 3px;
+  width: 100%;
+  background: linear-gradient(90deg, var(--orange), var(--orange2));
+  opacity: 0.85;
+}
+.dash-kpi.alert::before { background: linear-gradient(90deg, #ef4444, #f43f5e); }
+.dash-kpi.good::before { background: linear-gradient(90deg, #10b981, #22c55e); }
+.dash-kpi-label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.4px; }
+.dash-kpi-value { font-family: var(--font-display); font-size: 28px; font-weight: 700; margin-top: 4px; }
+.dash-kpi-value.green { color: var(--green); }
+.dash-kpi-value.red { color: var(--red); }
+.dash-kpi-value.gold { color: var(--gold); }
+.dash-kpi-value.blue { color: var(--orange2); }
+.dash-sector-list {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 12px;
+}
+.dash-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+  gap: 12px;
+}
+.dash-side-panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.dash-side-section {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+  background: rgba(255,255,255,0.02);
+}
+.dash-side-title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.dash-mini-list { display: flex; flex-direction: column; gap: 6px; }
+.dash-mini-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: rgba(255,255,255,0.02);
+}
+.dash-mini-name { font-size: 13px; font-weight: 600; }
+.dash-mini-meta { font-size: 12px; color: var(--text2); }
+.dash-mini-pill {
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 3px 8px;
+  border: 1px solid transparent;
+}
+.dash-mini-pill.red { color: var(--red); border-color: rgba(244,63,94,0.35); background: rgba(244,63,94,0.12); }
+.dash-mini-pill.green { color: var(--green); border-color: rgba(16,185,129,0.35); background: rgba(16,185,129,0.12); }
+.dash-chart-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.dash-chart-title { font-family: var(--font-display); font-size: 18px; font-weight: 700; }
+.dash-chart-sub { font-size: 12px; color: var(--text2); }
+.dash-line-wrap {
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.02);
+  border-radius: 12px;
+  padding: 10px;
+}
+.dash-line-scroll { width: 100%; overflow-x: auto; overflow-y: hidden; padding-bottom: 6px; }
+.dash-line-svg { display: block; min-height: 260px; }
+.dash-line-grid { stroke: var(--border); stroke-width: 1; }
+.dash-line-axis { stroke: var(--text2); stroke-width: 1.2; opacity: 0.65; }
+.dash-bar-open { fill: var(--red); opacity: 0.85; }
+.dash-bar-done { fill: var(--green); opacity: 0.85; }
+.dash-line-label { fill: var(--text2); font-size: 12px; font-weight: 600; }
+.dash-line-xlabel { fill: var(--text2); font-size: 11px; }
+.dash-line-legend {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.dash-line-legend-item { font-size: 12px; color: var(--text2); display: inline-flex; align-items: center; gap: 6px; }
+.dash-line-legend-swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.dash-line-empty {
+  text-align: center;
+  font-size: 13px;
+  color: var(--text2);
+  padding: 24px 8px;
+}
+.dash-status-open { color: var(--red); font-weight: 700; }
+.dash-status-ok { color: var(--green); font-weight: 700; }
+.dash-clock {
+  font-family: var(--font-display);
+  font-size: 20px;
+  color: var(--orange2);
+  font-weight: 700;
+  margin-top: 6px;
+}
+@media (max-width: 900px) {
+  .dash-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dash-layout { grid-template-columns: 1fr; }
+  .dash-topline { flex-direction: column; align-items: flex-start; }
+  .dash-topline .right { font-size: 18px; }
+}
+body.dashboard-tv #screen-dashboard .app-header { display: none; }
+body.dashboard-tv #screen-dashboard .bottom-nav { display: none; }
+body.dashboard-tv #screen-dashboard .scroll-body {
+  height: 100vh;
+  overflow: hidden;
+}
+body.dashboard-tv #screen-dashboard .dash-live-wrap {
+  padding: 10px 14px;
+  min-height: 100vh;
+}
+body.dashboard-tv #screen-dashboard .dash-kpi-grid {
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 12px;
+}
+body.dashboard-tv #screen-dashboard .dash-layout {
+  grid-template-columns: minmax(0, 2.3fr) minmax(320px, 1fr);
+  gap: 14px;
+  flex: 1;
+}
+body.dashboard-tv #screen-dashboard .dash-sector-list,
+body.dashboard-tv #screen-dashboard .dash-side-panel {
+  height: 100%;
+}
+body.dashboard-tv #screen-dashboard .dash-kpi-label { font-size: 12px; }
+body.dashboard-tv #screen-dashboard .dash-kpi-value { font-size: 34px; }
+body.dashboard-tv #screen-dashboard .dash-side-title { font-size: 18px; }
+body.dashboard-tv #screen-dashboard .dash-mini-name { font-size: 14px; }
+body.dashboard-tv #screen-dashboard .dash-mini-meta { font-size: 13px; }
+body.dashboard-tv #screen-dashboard .dash-line-svg { min-height: 360px; }
+body.dashboard-tv #screen-dashboard .dash-line-xlabel { font-size: 12px; }
+body.dashboard-tv #screen-dashboard .dash-line-label { font-size: 13px; }
+body.dashboard-tv #screen-dashboard .dash-chart-title { font-size: 20px; }
+body.dashboard-tv #screen-dashboard .dash-chart-sub { font-size: 13px; }
+body.accessible-mode .dash-live-title { font-size: 24px; }
+body.accessible-mode .dash-live-sub { font-size: 14px; }
+body.accessible-mode .dash-kpi-label { font-size: 13px; }
+body.accessible-mode .dash-kpi-value { font-size: 34px; }
+body.accessible-mode .dash-live-badge { font-size: 13px; }
+body.accessible-mode .dash-side-title { font-size: 18px; }
+body.accessible-mode .dash-mini-name { font-size: 15px; }
+body.accessible-mode .dash-mini-meta { font-size: 14px; }
+body.accessible-mode .dash-mini-pill { font-size: 13px; }
+body.accessible-mode .dash-line-label { font-size: 14px; }
+body.accessible-mode .dash-line-xlabel { font-size: 13px; }
+body.accessible-mode .dash-line-legend-item { font-size: 14px; }
+
 /* â”€â”€ OFFLINE BANNER â”€â”€ */
 #offline-banner {
   background: rgba(240,165,0,0.15); border-bottom: 1px solid rgba(240,165,0,0.3);
@@ -579,6 +803,7 @@ body.accessible-mode .pend-open-count { min-width: 30px; height: 28px; font-size
 
 /* â”€â”€ PDF HIDDEN â”€â”€ */
 #pdf-render { position: absolute; left: -9999px; top: 0; width: 794px; font-family: Arial, sans-serif; }
+
 </style>
 </head>
 <body>
@@ -680,6 +905,10 @@ body.accessible-mode .pend-open-count { min-width: 30px; height: 28px; font-size
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 2h7l4 4v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M12 2v4h4M7 9h6M7 12h6M7 15h4"/></svg>
       Relatórios
     </button>
+    <button class="nav-btn" onclick="navTo('dashboard')">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="10" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="15" width="6" height="2" rx="1"/></svg>
+      Dashboard
+    </button>
   </div>
 </div>
 
@@ -758,6 +987,10 @@ body.accessible-mode .pend-open-count { min-width: 30px; height: 28px; font-size
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 2h7l4 4v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M12 2v4h4M7 9h6M7 12h6M7 15h4"/></svg>
       Relatórios
     </button>
+    <button class="nav-btn" onclick="navTo('dashboard')">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="10" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="15" width="6" height="2" rx="1"/></svg>
+      Dashboard
+    </button>
   </div>
 </div>
 
@@ -791,6 +1024,10 @@ body.accessible-mode .pend-open-count { min-width: 30px; height: 28px; font-size
     <button class="nav-btn" onclick="navTo('relatorios')">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 2h7l4 4v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M12 2v4h4M7 9h6M7 12h6M7 15h4"/></svg>
       Relatórios
+    </button>
+    <button class="nav-btn" onclick="navTo('dashboard')">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="10" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="15" width="6" height="2" rx="1"/></svg>
+      Dashboard
     </button>
   </div>
 </div>
@@ -837,6 +1074,52 @@ body.accessible-mode .pend-open-count { min-width: 30px; height: 28px; font-size
     <button class="nav-btn active" onclick="navTo('relatorios')">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 2h7l4 4v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M12 2v4h4M7 9h6M7 12h6M7 15h4"/></svg>
       Relatórios
+    </button>
+    <button class="nav-btn" onclick="navTo('dashboard')">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="10" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="15" width="6" height="2" rx="1"/></svg>
+      Dashboard
+    </button>
+  </div>
+</div>
+
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+     SCREEN: DASHBOARD (AO VIVO)
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+<div class="screen" id="screen-dashboard">
+  <div class="app-header">
+    <div class="logo">5S</div>
+    <div>
+      <div style="font-family:var(--font-display);font-size:17px;font-weight:700">Dashboard</div>
+      <div style="font-size:10px;color:var(--text2)">Acompanhamento em tempo real</div>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn-icon" onclick="toggleDashboardTvMode()" title="Alternar modo TV" aria-label="Alternar modo TV">
+      <span id="tv-mode-btn-label" style="font-family:var(--font-display);font-weight:700;font-size:12px">TV OFF</span>
+    </button>
+  </div>
+  <div class="scroll-body">
+    <div class="dash-live-wrap" id="dashboard-content"></div>
+  </div>
+  <div class="bottom-nav">
+    <button class="nav-btn" onclick="navTo('home')">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9.5L10 3l7 6.5V17a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/></svg>
+      Início
+    </button>
+    <button class="nav-btn" onclick="navTo('historico')">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="14" height="13" rx="1.5"/><path d="M7 2v4M13 2v4M3 9h14"/></svg>
+      Histórico
+    </button>
+    <button class="nav-btn" onclick="navTo('pendencias')">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="7.5"/><path d="M10 6v4.5l3 2"/></svg>
+      Pendências
+    </button>
+    <button class="nav-btn" onclick="navTo('relatorios')">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 2h7l4 4v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M12 2v4h4M7 9h6M7 12h6M7 15h4"/></svg>
+      Relatórios
+    </button>
+    <button class="nav-btn active" onclick="navTo('dashboard')">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="10" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="15" width="6" height="2" rx="1"/></svg>
+      Dashboard
     </button>
   </div>
 </div>
@@ -1215,12 +1498,14 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 // Storage não utilizado: fotos em base64 no Firestore
 
+// === Function: hasFirebaseConfig ===
 function hasFirebaseConfig() {
   return firebaseConfig.apiKey && firebaseConfig.apiKey !== 'COLE_AQUI_SUA_API_KEY' &&
     firebaseConfig.projectId && firebaseConfig.projectId !== 'seu-projeto' &&
     firebaseConfig.storageBucket && firebaseConfig.storageBucket !== 'seu-projeto.appspot.com';
 }
 
+// === Function: fileToDataURL ===
 function fileToDataURL(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -1233,6 +1518,7 @@ function fileToDataURL(file) {
 // Habilita persistÃªncia offline automÃ¡tica
 db.enablePersistence().catch((err) => console.error("Erro offline:", err.code));
 
+// === Function: normalizeAppState ===
 function normalizeAppState(data) {
   const base = data && typeof data === 'object' ? data : {};
   return {
@@ -1242,10 +1528,12 @@ function normalizeAppState(data) {
   };
 }
 
+// === Function: persistLocalApp ===
 function persistLocalApp(data = APP) {
   localStorage.setItem(DB_KEY, JSON.stringify(normalizeAppState(data)));
 }
 
+// === Function: loadData ===
 function loadData() {
   try {
     const raw = localStorage.getItem(DB_KEY);
@@ -1259,6 +1547,7 @@ let syncInProgress = false;
 let syncRetryTimer = null;
 let draftSaveTimer = null;
 
+// === Function: saveData ===
 async function saveData(d) {
   try {
     APP = normalizeAppState(d);
@@ -1269,6 +1558,7 @@ async function saveData(d) {
   }
 }
 
+// === Function: enqueueSyncInspection ===
 function enqueueSyncInspection(inspId) {
   if (!inspId) return;
   APP = normalizeAppState(APP);
@@ -1276,6 +1566,7 @@ function enqueueSyncInspection(inspId) {
   persistLocalApp(APP);
 }
 
+// === Function: loadDraft ===
 function loadDraft() {
   try {
     const raw = localStorage.getItem(DRAFT_KEY);
@@ -1285,6 +1576,7 @@ function loadDraft() {
   }
 }
 
+// === Function: saveDraftNow ===
 function saveDraftNow() {
   if (!currentInsp) return;
   try {
@@ -1294,20 +1586,24 @@ function saveDraftNow() {
   }
 }
 
+// === Function: scheduleDraftSave ===
 function scheduleDraftSave() {
   clearTimeout(draftSaveTimer);
   draftSaveTimer = setTimeout(saveDraftNow, 350);
 }
 
+// === Function: clearDraft ===
 function clearDraft() {
   localStorage.removeItem(DRAFT_KEY);
 }
 
+// === Function: scheduleSyncQueue ===
 function scheduleSyncQueue(delay = 200) {
   clearTimeout(syncRetryTimer);
   syncRetryTimer = setTimeout(() => syncPendingQueue(), delay);
 }
 
+// === Function: syncPendingQueue ===
 async function syncPendingQueue() {
   if (syncInProgress) return;
   if (!navigator.onLine || !hasFirebaseConfig()) return;
@@ -1357,6 +1653,8 @@ async function syncPendingQueue() {
 }
 
 // Função para buscar dados novos do servidor ao iniciar
+
+// === Function: syncFromCloud ===
 async function syncFromCloud() {
   if (!hasFirebaseConfig()) return;
   try {
@@ -1418,28 +1716,57 @@ let APP = loadData();
 let currentTec = localStorage.getItem('aa5s_tec') || '';
 let currentInsp = null; // inspeÃ§Ã£o em andamento
 let isSavingInspecao = false;
+let dashboardRefreshTimer = null;
+let dashboardClockTimer = null;
+let dashboardTvMode = localStorage.getItem('aa5s_dashboard_tv') === 'on';
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  NAVEGAÃ‡ÃƒO
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+// === Function: navTo ===
 function navTo(id) {
   if (currentInsp && id !== 'inspecao') saveDraftNow();
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-' + id).classList.add('active');
+  if (id !== 'dashboard') stopDashboardLive();
+  document.body.classList.remove('dashboard-tv');
   if (id === 'home') renderHome();
   if (id === 'historico') renderHistorico();
   if (id === 'pendencias') renderPendencias();
   if (id === 'relatorios') renderRelatorios();
+  if (id === 'dashboard') {
+    applyDashboardTvMode();
+    startDashboardLive();
+  }
+}
+
+// === Function: applyDashboardTvMode ===
+function applyDashboardTvMode() {
+  document.body.classList.toggle('dashboard-tv', dashboardTvMode);
+  const label = document.getElementById('tv-mode-btn-label');
+  if (label) label.textContent = dashboardTvMode ? 'TV ON' : 'TV OFF';
+}
+
+// === Function: toggleDashboardTvMode ===
+function toggleDashboardTvMode() {
+  dashboardTvMode = !dashboardTvMode;
+  localStorage.setItem('aa5s_dashboard_tv', dashboardTvMode ? 'on' : 'off');
+  applyDashboardTvMode();
+  renderDashboard();
 }
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  TÃ‰CNICOS
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+// === Function: openTecModal ===
 function openTecModal() {
   renderTecSelect();
   document.getElementById('modal-tec').classList.add('open');
 }
 
+// === Function: renderTecSelect ===
 function renderTecSelect() {
   const sel = document.getElementById('tec-select');
   sel.innerHTML = '<option value="">Escolha</option>';
@@ -1451,6 +1778,7 @@ function renderTecSelect() {
   });
 }
 
+// === Function: addTecnico ===
 function addTecnico() {
   const inp = document.getElementById('tec-novo-input');
   const nome = inp.value.trim();
@@ -1464,6 +1792,7 @@ function addTecnico() {
   document.getElementById('tec-select').value = nome;
 }
 
+// === Function: confirmarTecnico ===
 function confirmarTecnico() {
   const v = document.getElementById('tec-select').value;
   if (!v) { toast('Selecione um técnico'); return; }
@@ -1477,6 +1806,8 @@ function confirmarTecnico() {
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  HOME
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+// === Function: renderHome ===
 function renderHome() {
   document.getElementById('home-tec-name').textContent = currentTec || 'Selecionar técnico';
   
@@ -1495,10 +1826,12 @@ function renderHome() {
   list.innerHTML = recentes.map(i => inspCardHTML(i)).join('');
 }
 
+// === Function: getSortedInspecoesDesc ===
 function getSortedInspecoesDesc() {
   return [...APP.inspecoes].sort((a, b) => new Date(b.data) - new Date(a.data));
 }
 
+// === Function: countInspecoesHoje ===
 function countInspecoesHoje() {
   const hoje = new Date();
   const y = hoje.getFullYear();
@@ -1508,9 +1841,10 @@ function countInspecoesHoje() {
   return APP.inspecoes.filter(i => i.data === hojeIso).length;
 }
 
-function countSetoresSemInspecao(dias) {
+// === Function: countSetoresSemInspecaoMeses ===
+function countSetoresSemInspecaoMeses(meses) {
   const limite = new Date();
-  limite.setDate(limite.getDate() - dias);
+  limite.setMonth(limite.getMonth() - meses);
   let semInspecao = 0;
 
   SETORES.forEach(setor => {
@@ -1523,6 +1857,289 @@ function countSetoresSemInspecao(dias) {
   return semInspecao;
 }
 
+// === Function: getSetoresSemInspecaoMeses ===
+function getSetoresSemInspecaoMeses(meses) {
+  const limite = new Date();
+  limite.setMonth(limite.getMonth() - meses);
+  const setores = [];
+  SETORES.forEach(setor => {
+    const ultima = APP.inspecoes
+      .filter(i => i.setor === setor.nome)
+      .sort((a, b) => new Date(b.data) - new Date(a.data))[0];
+    if (!ultima || new Date(ultima.data) < limite) {
+      setores.push({
+        nome: setor.nome,
+        ultimaData: ultima?.data || null
+      });
+    }
+  });
+  return setores.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+}
+
+// === Function: getPendenciasSnapshot ===
+function getPendenciasSnapshot() {
+  const itens = [];
+  const ord = [...APP.inspecoes].sort((a, b) => new Date(b.data) - new Date(a.data));
+  const latestPendKeys = new Set();
+
+  ord.forEach(insp => {
+    SENSOS.forEach(s => {
+      (insp.sensos[s.id] || []).forEach((cr, ci) => {
+        const pendKey = `${localKey(insp)}||${s.id}||${ci}`;
+        if (latestPendKeys.has(pendKey)) return;
+
+        const isNC = (cr.nota || 0) < 2;
+        const inspAnterior = getInspecaoAnteriorMesmoLocal(insp);
+        const wasNC = inspAnterior && (inspAnterior.sensos?.[s.id]?.[ci]?.nota || 0) < 2;
+        const isResolvida = wasNC && !isNC;
+        if (!isNC && !isResolvida) return;
+
+        latestPendKeys.add(pendKey);
+        itens.push({
+          setor: insp.setor,
+          local: localLabel(insp),
+          aberta: isNC,
+          resolvida: isResolvida,
+          data: insp.data,
+          nota: cr.nota ?? null
+        });
+      });
+    });
+  });
+
+  return itens;
+}
+
+// === Function: renderDashboard ===
+function renderDashboard() {
+  const wrap = document.getElementById('dashboard-content');
+  if (!wrap) return;
+
+  const now = new Date();
+  const pendencias = getPendenciasSnapshot();
+  const abertas = pendencias.filter(p => p.aberta);
+  const resolvidas = pendencias.filter(p => p.resolvida);
+  const inspsHoje = APP.inspecoes.filter(i => {
+    const d = new Date(i.data);
+    return d.getFullYear() === now.getFullYear() &&
+      d.getMonth() === now.getMonth() &&
+      d.getDate() === now.getDate();
+  }).length;
+  const ultimas = [...APP.inspecoes].sort((a, b) => new Date(b.data) - new Date(a.data));
+  const ultimaAtualizacao = ultimas[0]?.data ? new Date(ultimas[0].data) : null;
+  const notas = APP.inspecoes.map(i => i.notaGeral).filter(n => typeof n === 'number');
+  const mediaGlobal = notas.length ? (notas.reduce((a, b) => a + b, 0) / notas.length) : null;
+  const setoresSem3m = getSetoresSemInspecaoMeses(3);
+
+  const setoresMap = {};
+  getAllSetorNames().forEach(s => { setoresMap[s] = { setor: s, abertas: 0, resolvidas: 0, ultima: null, media: null, notas: [] }; });
+
+  pendencias.forEach(p => {
+    if (!setoresMap[p.setor]) setoresMap[p.setor] = { setor: p.setor, abertas: 0, resolvidas: 0, ultima: null, media: null, notas: [] };
+    if (p.aberta) setoresMap[p.setor].abertas += 1;
+    if (p.resolvida) setoresMap[p.setor].resolvidas += 1;
+  });
+
+  APP.inspecoes.forEach(i => {
+    if (!setoresMap[i.setor]) setoresMap[i.setor] = { setor: i.setor, abertas: 0, resolvidas: 0, ultima: null, media: null, notas: [] };
+    const row = setoresMap[i.setor];
+    if (!row.ultima || new Date(i.data) > new Date(row.ultima.data)) row.ultima = i;
+    if (typeof i.notaGeral === 'number') row.notas.push(i.notaGeral);
+  });
+
+  const setores = Object.values(setoresMap).map(r => ({
+    ...r,
+    media: r.notas.length ? (r.notas.reduce((a, b) => a + b, 0) / r.notas.length) : null
+  })).sort((a, b) => a.setor.localeCompare(b.setor, 'pt-BR'));
+  const setoresCriticos = [...setores]
+    .sort((a, b) => (b.abertas - a.abertas) || a.setor.localeCompare(b.setor, 'pt-BR'))
+    .slice(0, 5);
+  const setoresMelhores = [...setores]
+    .filter(s => s.media !== null)
+    .sort((a, b) => b.media - a.media)
+    .slice(0, 5);
+
+  const perSectorW = 90;
+  const chartH = 320;
+  const padL = 52;
+  const padR = 20;
+  const padT = 20;
+  const padB = 68;
+  const plotH = chartH - padT - padB;
+  const maxY = Math.max(1, ...setores.map(s => Math.max(s.abertas, s.resolvidas)));
+  const toY = (val) => padT + ((maxY - val) / maxY) * plotH;
+  const yTicks = [0, 0.25, 0.5, 0.75, 1].map(frac => Math.ceil(maxY * frac));
+  const uniqYTicks = [...new Set(yTicks)].sort((a, b) => a - b);
+
+  const metadeSetores = Math.ceil(setores.length / 2);
+  const setoresParte1 = setores.slice(0, metadeSetores);
+  const setoresParte2 = setores.slice(metadeSetores);
+  const totalGraficosSetor = setoresParte2.length ? 2 : 1;
+
+  const renderPendenciasSetorChart = (setoresChart, parte, inicioIdx) => {
+    const chartW = Math.max(1100, 140 + Math.max(1, setoresChart.length - 1) * perSectorW);
+    const plotW = chartW - padL - padR;
+    const stepX = setoresChart.length > 1 ? plotW / (setoresChart.length - 1) : 0;
+    const toX = (idx) => padL + (setoresChart.length > 1 ? idx * stepX : plotW / 2);
+    const barW = setoresChart.length > 1 ? (stepX * 0.7) / 2 : 18;
+    const fimIdx = inicioIdx + setoresChart.length;
+
+    return `
+      <div class="dash-line-wrap" ${parte > 1 ? 'style="margin-top:18px"' : ''}>
+        <div class="dash-chart-sub" style="margin:0 0 8px">Gráfico ${parte}/${totalGraficosSetor} · Setores ${inicioIdx + 1} a ${fimIdx}</div>
+        <div class="dash-line-scroll">
+          <svg class="dash-line-svg" viewBox="0 0 ${chartW} ${chartH}" width="${chartW}" height="${chartH}" preserveAspectRatio="xMinYMin meet" role="img" aria-label="Gráfico de pendências por setor - parte ${parte} de ${totalGraficosSetor}">
+            ${uniqYTicks.map(v => `
+              <line class="dash-line-grid" x1="${padL}" y1="${toY(v).toFixed(1)}" x2="${chartW - padR}" y2="${toY(v).toFixed(1)}"></line>
+              <text class="dash-line-label" x="${padL - 8}" y="${(toY(v) + 4).toFixed(1)}" text-anchor="end">${v}</text>
+            `).join('')}
+            <line class="dash-line-axis" x1="${padL}" y1="${padT}" x2="${padL}" y2="${chartH - padB}"></line>
+            <line class="dash-line-axis" x1="${padL}" y1="${chartH - padB}" x2="${chartW - padR}" y2="${chartH - padB}"></line>
+
+            ${setoresChart.map((s, i) => `
+              <rect class="dash-bar-open" x="${toX(i) - barW}" y="${toY(s.abertas)}" width="${barW - 1}" height="${Math.max(1, (chartH - padB) - toY(s.abertas))}" rx="2"></rect>
+              <rect class="dash-bar-done" x="${toX(i)}" y="${toY(s.resolvidas)}" width="${barW - 1}" height="${Math.max(1, (chartH - padB) - toY(s.resolvidas))}" rx="2"></rect>
+              <text class="dash-line-xlabel" x="${toX(i)}" y="${chartH - padB + 10}" text-anchor="end" transform="rotate(-30 ${toX(i)} ${chartH - padB + 10})">
+                ${s.setor.length > 16 ? s.setor.slice(0, 16) + '...' : s.setor}
+              </text>
+            `).join('')}
+          </svg>
+        </div>
+      </div>
+    `;
+  };
+
+  wrap.innerHTML = `
+    <div class="dash-topline">
+      <div class="left">Última inspeção registrada: ${ultimaAtualizacao ? ultimaAtualizacao.toLocaleString('pt-BR') : 'sem dados'}</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn-secondary" onclick="toggleDashboardTvMode()" style="width:auto;padding:8px 14px;font-size:12px">${dashboardTvMode ? 'Desativar Modo TV' : 'Ativar Modo TV'}</button>
+        <div class="right">${now.toLocaleString('pt-BR')}</div>
+      </div>
+    </div>
+    <div class="dash-kpi-grid">
+      <div class="dash-kpi">
+        <div class="dash-kpi-label">Inspeções Totais</div>
+        <div class="dash-kpi-value blue">${APP.inspecoes.length}</div>
+      </div>
+      <div class="dash-kpi">
+        <div class="dash-kpi-label">Inspeções Hoje</div>
+        <div class="dash-kpi-value">${inspsHoje}</div>
+      </div>
+      <div class="dash-kpi alert">
+        <div class="dash-kpi-label">Pendências Abertas</div>
+        <div class="dash-kpi-value red">${abertas.length}</div>
+      </div>
+      <div class="dash-kpi good">
+        <div class="dash-kpi-label">Pendências Resolvidas</div>
+        <div class="dash-kpi-value green">${resolvidas.length}</div>
+      </div>
+      <div class="dash-kpi">
+        <div class="dash-kpi-label">Setores com Abertas</div>
+        <div class="dash-kpi-value gold">${new Set(abertas.map(a => a.setor)).size}</div>
+      </div>
+      <div class="dash-kpi">
+        <div class="dash-kpi-label">Média Geral</div>
+        <div class="dash-kpi-value">${mediaGlobal !== null ? mediaGlobal.toFixed(2) : '—'}</div>
+      </div>
+      <div class="dash-kpi">
+        <div class="dash-kpi-label">Setores Cadastrados</div>
+        <div class="dash-kpi-value">${getAllSetorNames().length}</div>
+      </div>
+      <div class="dash-kpi alert">
+        <div class="dash-kpi-label">Sem inspeção > 3 meses</div>
+        <div class="dash-kpi-value">${setoresSem3m.length}</div>
+      </div>
+    </div>
+
+    <div class="dash-layout">
+      <div class="dash-sector-list">
+        <div class="dash-chart-head">
+          <div class="dash-chart-title">Pendências por Setor</div>
+          <div class="dash-chart-sub">Comparativo de pendências abertas vs. resolvidas</div>
+        </div>
+        ${setores.length === 0 ? `<div class="dash-line-empty">Sem dados de setor para exibir no momento.</div>` : `
+          ${renderPendenciasSetorChart(setoresParte1, 1, 0)}
+          ${setoresParte2.length ? renderPendenciasSetorChart(setoresParte2, 2, setoresParte1.length) : ''}
+          <div class="dash-line-legend">
+            <span class="dash-line-legend-item"><span class="dash-line-legend-swatch" style="background:var(--red)"></span>Abertas</span>
+            <span class="dash-line-legend-item"><span class="dash-line-legend-swatch" style="background:var(--green)"></span>Resolvidas</span>
+          </div>
+        `}
+      </div>
+
+      <div class="dash-side-panel">
+        <div class="dash-side-section">
+          <div class="dash-side-title">Setores Críticos (Abertas)</div>
+          <div class="dash-mini-list">
+            ${setoresCriticos.length === 0 ? `<div class="dash-mini-meta">Sem dados.</div>` : setoresCriticos.map(s => `
+              <div class="dash-mini-item">
+                <div>
+                  <div class="dash-mini-name">${s.setor}</div>
+                  <div class="dash-mini-meta">Média ${s.media !== null ? s.media.toFixed(2) : '—'}</div>
+                </div>
+                <span class="dash-mini-pill red">${s.abertas}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="dash-side-section">
+          <div class="dash-side-title">Top Desempenho</div>
+          <div class="dash-mini-list">
+            ${setoresMelhores.length === 0 ? `<div class="dash-mini-meta">Sem dados de média.</div>` : setoresMelhores.map(s => `
+              <div class="dash-mini-item">
+                <div>
+                  <div class="dash-mini-name">${s.setor}</div>
+                  <div class="dash-mini-meta">Abertas ${s.abertas} · Resolvidas ${s.resolvidas}</div>
+                </div>
+                <span class="dash-mini-pill green">${s.media.toFixed(2)}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="dash-side-section">
+          <div class="dash-side-title">Sem Inspeção > 3 Meses</div>
+          <div class="dash-mini-list">
+            ${setoresSem3m.length === 0 ? `<div class="dash-mini-meta">Nenhum setor nessa condição.</div>` : setoresSem3m.slice(0, 8).map(s => `
+              <div class="dash-mini-item">
+                <div>
+                  <div class="dash-mini-name">${s.nome}</div>
+                  <div class="dash-mini-meta">${s.ultimaData ? `Última: ${formatDate(s.ultimaData)}` : 'Sem histórico de inspeção'}</div>
+                </div>
+              </div>
+            `).join('')}
+            ${setoresSem3m.length > 8 ? `<div class="dash-mini-meta">+${setoresSem3m.length - 8} setor(es) não exibidos</div>` : ''}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// === Function: startDashboardLive ===
+function startDashboardLive() {
+  stopDashboardLive();
+  renderDashboard();
+  dashboardRefreshTimer = setInterval(() => {
+    if (document.getElementById('screen-dashboard')?.classList.contains('active')) renderDashboard();
+  }, 15000);
+  dashboardClockTimer = setInterval(() => {
+    const el = document.querySelector('#screen-dashboard .dash-topline .right');
+    if (el) el.textContent = new Date().toLocaleString('pt-BR');
+  }, 1000);
+}
+
+// === Function: stopDashboardLive ===
+function stopDashboardLive() {
+  clearInterval(dashboardRefreshTimer);
+  clearInterval(dashboardClockTimer);
+  dashboardRefreshTimer = null;
+  dashboardClockTimer = null;
+}
+
+// === Function: goToLatestInspection ===
 function goToLatestInspection() {
   const ultima = getSortedInspecoesDesc()[0];
   if (!ultima) {
@@ -1532,11 +2149,13 @@ function goToLatestInspection() {
   openDetalhe(ultima.id);
 }
 
+// === Function: toggleSectorCard ===
 function toggleSectorCard(el) {
   const card = el.closest('.sector-card');
   card.classList.toggle('expanded');
 }
 
+// === Function: filterSectors ===
 function filterSectors(query) {
   const q = query.toLowerCase().trim();
   const cards = document.querySelectorAll('.sector-card');
@@ -1550,6 +2169,7 @@ function filterSectors(query) {
   });
 }
 
+// === Function: sectorCardListHTML ===
 function sectorCardListHTML() {
   const setoresOrdenados = [...SETORES.map(s => s.nome)];
   APP.inspecoes.forEach(insp => {
@@ -1618,6 +2238,7 @@ function sectorCardListHTML() {
   }).join('');
 }
 
+// === Function: contarPendencias ===
 function contarPendencias() {
   let c = 0;
   APP.inspecoes.forEach(insp => {
@@ -1630,6 +2251,7 @@ function contarPendencias() {
   return c;
 }
 
+// === Function: inspCardHTML ===
 function inspCardHTML(insp) {
   const cor = notaCor(insp.notaGeral);
   const badge = notaBadge(insp.notaGeral);
@@ -1648,6 +2270,7 @@ function inspCardHTML(insp) {
   </div>`;
 }
 
+// === Function: notaCor ===
 function notaCor(n) {
   if (n == null) return 'var(--text2)';
   if (n >= 3.5) return 'var(--green)';
@@ -1656,37 +2279,44 @@ function notaCor(n) {
   return 'var(--red)';
 }
 
+// === Function: notaBadge ===
 function notaBadge(n) {
   if (n == null) return '<span class="badge badge-orange">Em andamento</span>';
   const cor = n >= 3.5 ? 'green' : n >= 2.5 ? 'gold' : n >= 1.5 ? 'orange' : 'red';
   return `<span class="badge badge-${cor}" style="font-size:14px;padding:4px 10px">${n.toFixed(2)}</span>`;
 }
 
+// === Function: formatDate ===
 function formatDate(iso) {
   if (!iso) return '—';
   const d = new Date(iso);
   return d.toLocaleDateString('pt-BR', { day:'2-digit', month:'short', year:'numeric' });
 }
 
+// === Function: localLabel ===
 function localLabel(insp) {
   return insp.subarea || insp.setor;
 }
 
+// === Function: localKey ===
 function localKey(insp) {
   return `${insp.setor}||${insp.subarea || ''}`;
 }
 
+// === Function: sameLocal ===
 function sameLocal(a, b) {
   if (!a || !b) return false;
   return a.setor === b.setor && (a.subarea || '') === (b.subarea || '');
 }
 
+// === Function: getAllSetorNames ===
 function getAllSetorNames() {
   const nomes = new Set(SETORES.map(s => s.nome));
   APP.inspecoes.forEach(insp => nomes.add(insp.setor));
   return Array.from(nomes).sort((a, b) => a.localeCompare(b, 'pt-BR'));
 }
 
+// === Function: getLatestInspecoesByLocal ===
 function getLatestInspecoesByLocal(limitDateIso = null) {
   const latestMap = {};
   APP.inspecoes.forEach(insp => {
@@ -1699,6 +2329,7 @@ function getLatestInspecoesByLocal(limitDateIso = null) {
   return Object.values(latestMap);
 }
 
+// === Function: getPendenciasRecebidas ===
 function getPendenciasRecebidas(setorDestino, limitDateIso = null) {
   const recebidas = [];
   getLatestInspecoesByLocal(limitDateIso).forEach(inspOrigem => {
@@ -1725,6 +2356,7 @@ function getPendenciasRecebidas(setorDestino, limitDateIso = null) {
   return recebidas;
 }
 
+// === Function: getPendenciasResolvidas ===
 function getPendenciasResolvidas(insp, baseComparativa = null) {
   if (!insp) return [];
   const baseRef = baseComparativa || getInspecaoAnteriorMesmoLocal(insp);
@@ -1759,6 +2391,8 @@ function getPendenciasResolvidas(insp, baseComparativa = null) {
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  NOVA INSPEÃ‡ÃƒO
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+// === Function: showNewInspModal ===
 function showNewInspModal() {
   if (!currentTec) { openTecModal(); return; }
 
@@ -1781,6 +2415,7 @@ function showNewInspModal() {
   document.getElementById('modal-nova-insp').classList.add('open');
 }
 
+// === Function: populateSubareaSelect ===
 function populateSubareaSelect() {
   const setorSelect = document.getElementById('nova-setor-select');
   const subareaSelect = document.getElementById('nova-subarea-select');
@@ -1797,6 +2432,7 @@ function populateSubareaSelect() {
   }
 }
 
+// === Function: checkInspAnterior ===
 function checkInspAnterior() {
   const setor = document.getElementById('nova-setor-select').value;
   const subarea = document.getElementById('nova-subarea-select').value;
@@ -1806,32 +2442,38 @@ function checkInspAnterior() {
 
   if (!setor) {
     wrap.style.display = 'none';
+    baseSel.disabled = false;
     return;
   }
 
   if (selectedSector && selectedSector.subareas.length > 0 && !subarea) {
     wrap.style.display = 'none';
+    baseSel.disabled = false;
     return;
   }
 
   const subareaNorm = subarea || '';
-  const anteriores = APP.inspecoes.filter(i => i.setor === setor && (i.subarea || '') === subareaNorm);
+  const anteriores = APP.inspecoes
+    .filter(i => i.setor === setor && (i.subarea || '') === subareaNorm)
+    .sort((a, b) => new Date(b.data) - new Date(a.data));
 
   if (anteriores.length > 0) {
+    const ultima = anteriores[0];
     wrap.style.display = 'block';
-    baseSel.innerHTML = '<option value="">Nenhuma (inspeção nova)</option>' +
-      anteriores.map(i => `<option value="${i.id}">${i.periodo || formatDate(i.data)} — ${formatDate(i.data)} — nota ${i.notaGeral ? i.notaGeral.toFixed(2) : '?'}</option>`).join('');
-    baseSel.value = anteriores[anteriores.length - 1].id;
+    baseSel.innerHTML = `<option value="${ultima.id}">Base automática: ${ultima.periodo || formatDate(ultima.data)} — ${formatDate(ultima.data)} — nota ${ultima.notaGeral ? ultima.notaGeral.toFixed(2) : '?'}</option>`;
+    baseSel.value = ultima.id;
+    baseSel.disabled = true;
   } else {
     wrap.style.display = 'none';
+    baseSel.disabled = false;
   }
 }
 
+// === Function: iniciarInspecao ===
 function iniciarInspecao() {
   const setor = document.getElementById('nova-setor-select').value;
   const subarea = document.getElementById('nova-subarea-select').value;
   const periodo = document.getElementById('nova-periodo').value;
-  const baseId = document.getElementById('nova-base-select').value;
   const selectedSector = SETORES.find(s => s.nome === setor);
 
   document.getElementById('modal-nova-insp').classList.remove('open');
@@ -1841,11 +2483,14 @@ function iniciarInspecao() {
     toast('Selecione o local para iniciar a inspeção.');
     return;
   }
-  const baseSel = baseId ? APP.inspecoes.find(i => i.id === baseId) : null;
-  const validBaseId = sameLocal({ setor, subarea: subarea || null }, baseSel) ? baseId : null;
-  if (baseId && !validBaseId) {
-    toast('Base de comparação ignorada por ser de outro local.');
-  }
+
+  // Regra: se já existir inspeção no mesmo local, sempre usa a última como base.
+  const subareaNorm = subarea || '';
+  const ultimaMesmoLocal = APP.inspecoes
+    .filter(i => i.setor === setor && (i.subarea || '') === subareaNorm)
+    .sort((a, b) => new Date(b.data) - new Date(a.data))[0] || null;
+  const validBaseId = ultimaMesmoLocal ? ultimaMesmoLocal.id : null;
+
   currentInsp = {
     id: 'i' + Date.now(),
     setor, periodo, baseId: validBaseId,
@@ -1867,6 +2512,8 @@ function iniciarInspecao() {
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  FORMULÃRIO DE INSPEÃ‡ÃƒO
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+// === Function: renderInspecaoForm ===
 function renderInspecaoForm() {
   document.getElementById('insp-header-setor').textContent = currentInsp.setor;
   document.getElementById('insp-header-sub').textContent = `${currentInsp.subarea ? currentInsp.subarea + ' · ' : ''}${currentInsp.periodo || ''}`;
@@ -1897,6 +2544,7 @@ function renderInspecaoForm() {
   updateProgresso();
 }
 
+// === Function: criterioHTML ===
 function criterioHTML(s, si, cr, ci, base) {
   const baseNota = base ? (base.sensos[s.id][ci]?.nota ?? null) : null;
   const baseObs = base ? (base.sensos[s.id][ci]?.obs || '') : '';
@@ -1946,11 +2594,13 @@ function criterioHTML(s, si, cr, ci, base) {
   </div>`;
 }
 
+// === Function: toggleS ===
 function toggleS(id) {
   const el = document.getElementById(id);
   el.style.display = el.style.display === 'block' ? 'none' : 'block';
 }
 
+// === Function: setNota ===
 function setNota(sId, ci, nota) {
   currentInsp.sensos[sId][ci].nota = nota;
   [0,1,2,3,4].forEach(n => {
@@ -1971,16 +2621,19 @@ function setNota(sId, ci, nota) {
   scheduleDraftSave();
 }
 
+// === Function: setObs ===
 function setObs(sId, ci, val) {
   currentInsp.sensos[sId][ci].obs = val;
   scheduleDraftSave();
 }
 
+// === Function: setSugestao ===
 function setSugestao(sId, ci, val) {
   currentInsp.sensos[sId][ci].sugestao = val;
   scheduleDraftSave();
 }
 
+// === Function: setResponsavelSetor ===
 function setResponsavelSetor(sId, ci, val) {
   currentInsp.sensos[sId][ci].encaminharSetor = val;
   scheduleDraftSave();
@@ -1988,16 +2641,19 @@ function setResponsavelSetor(sId, ci, val) {
 
 let pendingFotoTarget = null;
 
+// === Function: triggerFoto ===
 function triggerFoto(sId, ci) {
   pendingFotoTarget = { sId, ci };
   document.getElementById('modal-foto-opcao').classList.add('open');
 }
 
+// === Function: closeFotoModal ===
 function closeFotoModal() {
   pendingFotoTarget = null;
   document.getElementById('modal-foto-opcao').classList.remove('open');
 }
 
+// === Function: escolherFonteFoto ===
 function escolherFonteFoto(source) {
   if (!pendingFotoTarget) return;
   const { sId, ci } = pendingFotoTarget;
@@ -2009,6 +2665,8 @@ function escolherFonteFoto(source) {
 }
 
 // Comprime imagem para base64 (máx 800px, qualidade 0.65) — cabe no Firestore sem Storage pago
+
+// === Function: comprimirImagem ===
 function comprimirImagem(file, maxPx = 800, quality = 0.65) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -2030,6 +2688,7 @@ function comprimirImagem(file, maxPx = 800, quality = 0.65) {
   });
 }
 
+// === Function: addFotos ===
 async function addFotos(sId, ci, inp) {
   const files = Array.from(inp.files);
   for (const file of files) {
@@ -2048,6 +2707,7 @@ async function addFotos(sId, ci, inp) {
   toast('Fotos adicionadas!');
 }
 
+// === Function: renderFotoGrid ===
 function renderFotoGrid(sId, ci) {
   const fotos = currentInsp.sensos[sId][ci].fotos;
   const grid = document.getElementById(`foto-grid-${sId}-${ci}`);
@@ -2058,12 +2718,14 @@ function renderFotoGrid(sId, ci) {
     </div>`).join('');
 }
 
+// === Function: removeFoto ===
 function removeFoto(sId, ci, fi) {
   currentInsp.sensos[sId][ci].fotos.splice(fi, 1);
   renderFotoGrid(sId, ci);
   scheduleDraftSave();
 }
 
+// === Function: calcMediaS ===
 function calcMediaS(criterios) {
   if (!criterios) return 0;
   const notas = criterios.map(c => c.nota).filter(n => n !== null);
@@ -2071,10 +2733,12 @@ function calcMediaS(criterios) {
   return notas.reduce((a,b)=>a+b,0) / notas.length;
 }
 
+// === Function: isNotaNC ===
 function isNotaNC(nota) {
   return nota !== null && nota < 2;
 }
 
+// === Function: getInspecaoAnteriorMesmoLocal ===
 function getInspecaoAnteriorMesmoLocal(insp) {
   if (!insp) return null;
   const dataAtual = new Date(insp.data).getTime();
@@ -2083,6 +2747,7 @@ function getInspecaoAnteriorMesmoLocal(insp) {
     .sort((a, b) => new Date(b.data) - new Date(a.data))[0] || null;
 }
 
+// === Function: getPenalidadeS ===
 function getPenalidadeS(insp, sId, inspAnterior = null) {
   const anterior = inspAnterior || getInspecaoAnteriorMesmoLocal(insp);
   if (!anterior || !anterior.sensos?.[sId] || !insp.sensos?.[sId]) return 0;
@@ -2097,12 +2762,14 @@ function getPenalidadeS(insp, sId, inspAnterior = null) {
   return penalidade;
 }
 
+// === Function: calcMediaSFinal ===
 function calcMediaSFinal(insp, sId, inspAnterior = null) {
   const mediaBase = calcMediaS(insp?.sensos?.[sId]);
   const penalidade = getPenalidadeS(insp, sId, inspAnterior);
   return Math.max(0, mediaBase - penalidade);
 }
 
+// === Function: calcNotaGeralFinal ===
 function calcNotaGeralFinal(insp, inspAnterior = null) {
   let total = 0;
   let count = 0;
@@ -2116,6 +2783,7 @@ function calcNotaGeralFinal(insp, inspAnterior = null) {
   return total / count;
 }
 
+// === Function: updateScoreMini ===
 function updateScoreMini(sId) {
   const el = document.getElementById(`score-mini-${sId}`);
   if (!el) return;
@@ -2126,6 +2794,7 @@ function updateScoreMini(sId) {
   el.style.color = notaCor(media);
 }
 
+// === Function: updateNotaGeral ===
 function updateNotaGeral() {
   const ng = calcNotaGeralFinal(currentInsp);
   if (ng !== null) {
@@ -2135,6 +2804,7 @@ function updateNotaGeral() {
   }
 }
 
+// === Function: updateProgresso ===
 function updateProgresso() {
   let avaliados = 0;
   SENSOS.forEach(s => {
@@ -2146,6 +2816,7 @@ function updateProgresso() {
   document.getElementById('insp-progress-txt').textContent = `${avaliados} de ${SENSOS.length} sensos avaliados`;
 }
 
+// === Function: setSalvarButtonState ===
 function setSalvarButtonState(isSaving) {
   const btn = document.getElementById('btn-salvar-insp');
   if (!btn) return;
@@ -2157,6 +2828,7 @@ function setSalvarButtonState(isSaving) {
     : `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 13l4 4L16 7"/></svg>Finalizar e Salvar`;
 }
 
+// === Function: salvarInspecao ===
 async function salvarInspecao() {
   if (!currentInsp) {
     toast('Não há inspeção em andamento.');
@@ -2224,6 +2896,8 @@ async function salvarInspecao() {
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  HISTÃ“RICO
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+// === Function: renderHistorico ===
 function renderHistorico() {
   const list = document.getElementById('hist-list');
   if (APP.inspecoes.length === 0) {
@@ -2283,6 +2957,8 @@ function renderHistorico() {
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  DETALHE / COMPARAÃ‡ÃƒO
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+// === Function: openDetalhe ===
 function openDetalhe(id) {
   const insp = APP.inspecoes.find(i => i.id === id);
   if (!insp) return;
@@ -2371,6 +3047,7 @@ function openDetalhe(id) {
   document.getElementById('modal-detalhe').classList.add('open');
 }
 
+// === Function: iniciarNovaComBase ===
 function iniciarNovaComBase(baseId) {
   const base = APP.inspecoes.find(i => i.id === baseId);
   if (!base) return;
@@ -2400,16 +3077,20 @@ function iniciarNovaComBase(baseId) {
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  PENDÃŠNCIAS
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+// === Function: renderPendencias ===
 function renderPendencias() {
   renderPendList();
 }
 
+// === Function: togglePendSetor ===
 function togglePendSetor(id) {
   const el = document.getElementById(id);
   if (!el) return;
   el.classList.toggle('open');
 }
 
+// === Function: renderPendList ===
 function renderPendList() {
   const list = document.getElementById('pend-list');
   const itens = [];
@@ -2492,12 +3173,15 @@ function renderPendList() {
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  RELATÃ“RIOS
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+// === Function: renderRelatorios ===
 function renderRelatorios() {
   const setorOpts = '<option value="">— Escolha —</option>' +
     getAllSetorNames().map(setor => `<option value="${setor}">${setor}</option>`).join('');
   document.getElementById('rel-insp-select').innerHTML = setorOpts;
 }
 
+// === Function: getReincidenciaCount ===
 function getReincidenciaCount(insp, sId, ci) {
   const historicoLocal = APP.inspecoes
     .filter(i => i.setor === insp.setor && (i.subarea || '') === (insp.subarea || ''))
@@ -2513,6 +3197,7 @@ function getReincidenciaCount(insp, sId, ci) {
   return count;
 }
 
+// === Function: getHistoricoMesmoLocalDesc ===
 function getHistoricoMesmoLocalDesc(insp) {
   if (!insp) return [];
   return APP.inspecoes
@@ -2520,6 +3205,7 @@ function getHistoricoMesmoLocalDesc(insp) {
     .sort((a, b) => new Date(b.data) - new Date(a.data));
 }
 
+// === Function: getReincidenciasAteConclusao ===
 function getReincidenciasAteConclusao(inspResolucao, sId, ci) {
   const historico = getHistoricoMesmoLocalDesc(inspResolucao);
   const idx = historico.findIndex(i => i.id === inspResolucao.id);
@@ -2538,6 +3224,7 @@ function getReincidenciasAteConclusao(inspResolucao, sId, ci) {
   };
 }
 
+// === Function: compararInspecoes ===
 function compararInspecoes() {
   const aId = document.getElementById('rel-comp-a').value;
   const bId = document.getElementById('rel-comp-b').value;
@@ -2574,12 +3261,14 @@ function compararInspecoes() {
   document.getElementById('comp-result').innerHTML = html;
 }
 
+// === Function: gerarPDF ===
 function gerarPDF() {
   const setor = document.getElementById('rel-insp-select').value;
   if (!setor) { toast('Selecione um setor'); return; }
   gerarPDFSetorial(setor);
 }
 
+// === Function: getLatestInspecoesBySetor ===
 function getLatestInspecoesBySetor(setor) {
   const latestMap = {};
   APP.inspecoes
@@ -2593,6 +3282,7 @@ function getLatestInspecoesBySetor(setor) {
   return Object.values(latestMap);
 }
 
+// === Function: gerarPDFSetorial ===
 async function gerarPDFSetorial(setor) {
   toast('Gerando relatório setorial...');
   const { jsPDF } = window.jspdf;
@@ -2607,12 +3297,14 @@ async function gerarPDFSetorial(setor) {
   const textoObjetivo = `Este relatório tem como objetivo fornecer informações do Housekeeping realizado durante o mês de ${mesAtual} no setor de ${setor}, buscando identificar pontos de melhoria, promover a eficiência operacional, garantir a segurança no local de trabalho e cultivar uma cultura organizacional centrada na ordem, limpeza e eficácia, para todos os operadores e visitantes da área.`;
   let y = 0;
 
+  // === Function: addNewPage ===
   function addNewPage() {
     doc.addPage();
     doc.setFillColor(255, 255, 255);
     doc.rect(0, 0, W, H, 'F');
   }
 
+  // === Function: ensureY ===
   function ensureY(need) {
     if (y + need > 280) {
       addNewPage();
@@ -2620,6 +3312,7 @@ async function gerarPDFSetorial(setor) {
     }
   }
 
+  // === Function: toDataUrl ===
   async function toDataUrl(url) {
     if (!url) return null;
     if (typeof url === 'string' && url.startsWith('data:image/')) return url;
@@ -2772,6 +3465,7 @@ async function gerarPDFSetorial(setor) {
   doc.setFontSize(11);
   doc.text(`Período: ${mesAnoAtual}`, margin, 23);
 
+  // === Function: drawDashCard ===
   function drawDashCard(x, yPos, w, h, title, value, subtitle, tone) {
     const toneColor = tone || [79, 70, 229];
     doc.setDrawColor(226, 232, 240);
@@ -3030,6 +3724,7 @@ async function gerarPDFSetorial(setor) {
   toast('Relatório setorial gerado com sucesso!');
 }
 
+// === Function: gerarPDFInsp ===
 async function gerarPDFInsp(id) {
   const insp = APP.inspecoes.find(i => i.id === id);
   if (!insp) return;
@@ -3045,6 +3740,7 @@ async function gerarPDFInsp(id) {
   const W = 210, margin = 14;
   let y = 0;
 
+  // === Function: imageUrlToDataURL ===
   async function imageUrlToDataURL(url) {
     try {
       const resp = await fetch(url);
@@ -3062,7 +3758,10 @@ async function gerarPDFInsp(id) {
     }
   }
 
+  // === Function: addPage ===
   function addPage() { doc.addPage(); y = 14; }
+
+  // === Function: checkY ===
   function checkY(need) { if (y + need > 280) addPage(); }
 
   // CAPA
@@ -3365,6 +4064,7 @@ async function gerarPDFInsp(id) {
   if (registrosFotos.length) {
     const imgBoxH = 58;
 
+    // === Function: addFotoPage ===
     function addFotoPage() {
       doc.addPage();
       doc.setFillColor(255,255,255); doc.rect(0,0,W,297,'F');
@@ -3459,6 +4159,8 @@ async function gerarPDFInsp(id) {
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  UTILS
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+// === Function: toggleTheme ===
 function toggleTheme() {
   document.body.classList.toggle('light-mode');
   const isLight = document.body.classList.contains('light-mode');
@@ -3466,6 +4168,7 @@ function toggleTheme() {
   updateThemeIcon();
 }
 
+// === Function: updateThemeIcon ===
 function updateThemeIcon() {
   const isLight = document.body.classList.contains('light-mode');
   const icons = document.querySelectorAll('.theme-icon');
@@ -3478,6 +4181,7 @@ function updateThemeIcon() {
   });
 }
 
+// === Function: toast ===
 function toast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -3493,6 +4197,8 @@ document.querySelectorAll('.modal-overlay').forEach(m => {
 });
 
 // Offline detection
+
+// === Function: checkOnline ===
 function checkOnline() {
   const banner = document.getElementById('offline-banner');
   if (!navigator.onLine) banner.classList.add('show');
@@ -3505,6 +4211,7 @@ window.addEventListener('online', () => {
 window.addEventListener('offline', checkOnline);
 checkOnline();
 
+// === Function: resumeDraftIfExists ===
 function resumeDraftIfExists() {
   const draft = loadDraft();
   if (!draft || !draft.id || !draft.sensos) return false;
@@ -3522,6 +4229,7 @@ window.addEventListener('load', () => {
   const savedTheme = localStorage.getItem('aa5s_theme');
   if (savedTheme === 'light') document.body.classList.add('light-mode');
   updateThemeIcon();
+  applyDashboardTvMode();
 
   renderHome();
   const resumedDraft = resumeDraftIfExists();
@@ -3531,11 +4239,20 @@ window.addEventListener('load', () => {
   syncFromCloud(); // Tenta sincronizar com a nuvem assim que abre
   scheduleSyncQueue(0);
 
-  // Registrar Service Worker
+  // Registrar Service Worker apenas em produção para não atrapalhar debug local
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+    const isLocalDebugHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+    if (isLocalDebugHost) {
+      navigator.serviceWorker.getRegistrations()
+        .then(regs => regs.forEach(reg => reg.unregister()))
+        .catch(() => {});
+    } else {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
   }
 });
+
 </script>
 </body>
 </html>
+
