@@ -240,9 +240,21 @@ html, body {
 .divider { height: 1px; background: var(--border); margin: 8px 0; }
 
 /* â”€â”€ S-SECTION â”€â”€ */
+.s-section-card {
+  margin: 0 16px 14px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--senso-color, var(--orange2));
+  border-radius: 16px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
 .s-section-header {
   display: flex; align-items: center; gap: 10px;
-  padding: 12px 16px; cursor: pointer; user-select: none;
+  padding: 14px 14px 10px;
+  cursor: pointer;
+  user-select: none;
+  background: linear-gradient(180deg, var(--senso-soft, rgba(255,255,255,0.04)), transparent);
 }
 .s-num {
   width: 36px; height: 36px; border-radius: 10px;
@@ -252,15 +264,110 @@ html, body {
 }
 .s-num.orange { background: rgba(232,96,28,0.2); color: var(--orange2); border: 1px solid rgba(232,96,28,0.3); }
 .s-title { font-size: 16px; font-weight: 700; flex: 1; }
+.s-desc {
+  margin-top: 5px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px dashed var(--border);
+  background: rgba(255,255,255,0.03);
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--text);
+}
 .s-score-mini { font-size: 18px; font-weight: 800; }
-.s-body { padding: 0 16px 12px; display: none; }
+.s-body { padding: 0 12px 12px; display: none; }
 .s-body.open { display: block; }
 
 /* â”€â”€ ITEM CRITERIO â”€â”€ */
-.criterio-item { padding: 12px 0; border-bottom: 1px solid var(--border); }
-.criterio-item:last-child { border-bottom: none; }
-.criterio-nome { font-size: 13px; margin-bottom: 8px; line-height: 1.4; }
-.criterio-obs { margin-top: 8px; }
+.criterio-item {
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  background: linear-gradient(180deg, rgba(12, 74, 110, 0.34), rgba(15, 23, 42, 0.55));
+}
+.criterio-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.criterio-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(125, 211, 252, 0.35);
+  background: rgba(14, 116, 144, 0.35);
+  color: #bae6fd;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+.criterio-nome {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  line-height: 1.4;
+  color: var(--text);
+}
+.criterio-basehint {
+  font-size: 11px;
+  color: var(--text2);
+  margin-bottom: 10px;
+  padding: 7px 9px;
+  background: rgba(3, 105, 161, 0.16);
+  border-radius: 8px;
+  border-left: 2px solid var(--senso-color, var(--orange2));
+}
+.criterio-section {
+  margin-top: 9px;
+  padding: 9px;
+  border-radius: 10px;
+  border: 1px dashed rgba(103, 232, 249, 0.28);
+  background: rgba(8, 47, 73, 0.35);
+}
+.criterio-section-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text2);
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+.criterio-obs { margin-top: 0; }
+.nota-row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 2px;
+}
+.nota-btn {
+  height: 44px;
+  border-radius: 10px;
+}
+body.light-mode .s-desc {
+  background: rgba(15,23,42,0.03);
+  border-color: rgba(15,23,42,0.18);
+}
+body.light-mode .criterio-item {
+  background: linear-gradient(180deg, rgba(224, 242, 254, 0.92), rgba(240, 249, 255, 0.9));
+  border-color: rgba(14, 116, 144, 0.25);
+}
+body.light-mode .criterio-badge {
+  background: rgba(186, 230, 253, 0.55);
+  border-color: rgba(14, 116, 144, 0.28);
+  color: #0c4a6e;
+}
+body.light-mode .criterio-basehint {
+  background: rgba(224, 242, 254, 0.85);
+}
+body.light-mode .criterio-section {
+  background: rgba(240, 249, 255, 0.9);
+  border-color: rgba(14, 116, 144, 0.22);
+}
 
 /* â”€â”€ TOAST â”€â”€ */
 #toast {
@@ -1266,6 +1373,13 @@ const SENSOS = [
     ]
   }
 ];
+const SENSO_DESCRICOES = {
+  s1: 'Separar o necessário do desnecessário para eliminar excessos na área.',
+  s2: 'Definir lugar certo para cada item e facilitar o acesso rápido e seguro.',
+  s3: 'Manter ambiente e equipamentos limpos, removendo fontes de sujeira.',
+  s4: 'Padronizar boas práticas para manter estabilidade e previsibilidade.',
+  s5: 'Reforçar disciplina e constância para sustentar o 5S no dia a dia.'
+};
 
 const SETORES = [
   {
@@ -2253,19 +2367,37 @@ function contarPendencias() {
 
 // === Function: inspCardHTML ===
 function inspCardHTML(insp) {
-  const cor = notaCor(insp.notaGeral);
-  const badge = notaBadge(insp.notaGeral);
-  return `<div class="insp-card" onclick="openDetalhe('${insp.id}')">
+  const score = insp.notaGeral;
+  const statusClass = score >= 3.5 ? 'status-green' : score >= 2.5 ? 'status-gold' : score >= 1.5 ? 'status-orange' : 'status-red';
+  const badgeScore = notaBadge(score);
+  const comparisonBadge = insp.baseId 
+    ? '<span class="badge badge-orange" style="opacity:0.8;font-size:9px">Comparativa</span>' 
+    : '<span class="badge" style="background:rgba(255,255,255,0.05);color:var(--text2);font-size:9px">Inaugural</span>';
+
+  return `<div class="insp-card ${statusClass}" onclick="openDetalhe('${insp.id}')">
     <div class="insp-card-header">
       <div style="flex:1">
         <div class="insp-setor">${insp.setor}</div>
-        <div class="insp-data">${formatDate(insp.data)} · ${insp.subarea ? insp.subarea + ' · ' : ''}${insp.periodo || ''}</div>
+        <div style="margin-top:4px">${comparisonBadge}</div>
       </div>
-      ${badge}
+      <div style="text-align:right">
+        ${badgeScore}
+      </div>
     </div>
     <div class="insp-card-body">
-      <span class="insp-tec">${insp.tecnico}</span>
-      ${insp.baseId ? '<span style="font-size:11px;color:var(--gold)">Comparativa</span>' : '<span style="font-size:11px;color:var(--text2)">Primeira inspeção</span>'}
+      <div class="insp-meta-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span>${formatDate(insp.data)} ${insp.periodo ? `• ${insp.periodo}` : ''}</span>
+      </div>
+      ${insp.subarea ? `
+      <div class="insp-meta-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        <span>${insp.subarea}</span>
+      </div>` : ''}
+      <div class="insp-meta-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span>${insp.tecnico}</span>
+      </div>
     </div>
   </div>`;
 }
@@ -2525,11 +2657,12 @@ function renderInspecaoForm() {
 
   const body = document.getElementById('insp-form-body');
   body.innerHTML = SENSOS.map((s, si) => `
-    <div style="border-bottom:1px solid var(--border)">
+    <div class="s-section-card" style="--senso-color:${s.cor};--senso-soft:${s.cor}1c">
       <div class="s-section-header" onclick="toggleS('s-body-${si}')">
         <div class="s-num orange" style="background:rgba(0,0,0,0.15);border-color:${s.cor}33;color:${s.cor}">${si+1}</div>
         <div>
           <div class="s-title">${s.nome}</div>
+          <div class="s-desc">${SENSO_DESCRICOES[s.id] || 'Avalie os critérios deste senso com atenção e registre evidências objetivas.'}</div>
           ${base ? `<div style="font-size:11px;color:var(--text2)">Nota anterior: ${calcMediaSFinal(base, s.id).toFixed(2)}</div>` : ''}
         </div>
         <div class="s-score-mini" id="score-mini-${s.id}" style="color:var(--text2)">—</div>
@@ -2549,47 +2682,66 @@ function criterioHTML(s, si, cr, ci, base) {
   const baseNota = base ? (base.sensos[s.id][ci]?.nota ?? null) : null;
   const baseObs = base ? (base.sensos[s.id][ci]?.obs || '') : '';
   const item = currentInsp.sensos[s.id][ci];
+  const totalCriterios = s.criterios.length;
   const setorOptions = getAllSetorNames()
     .filter(nome => nome !== currentInsp.setor)
     .map(nome => `<option value="${nome}" ${item.encaminharSetor === nome ? 'selected' : ''}>${nome}</option>`)
     .join('');
   const baseHint = baseNota !== null
-    ? `<div style="font-size:11px;color:var(--text2);margin-bottom:6px;padding:6px 8px;background:rgba(255,255,255,0.03);border-radius:6px;border-left:2px solid ${s.cor}">
+    ? `<div class="criterio-basehint" style="--senso-color:${s.cor}">
         Anterior: nota <strong style="color:${notaCor(baseNota)}">${baseNota}</strong>${baseObs ? ` - "${baseObs.slice(0,60)}${baseObs.length>60?'...':''}"` : ''}
        </div>`
     : '';
 
-  return `<div class="criterio-item" id="cr-${s.id}-${ci}">
+  return `<div class="criterio-item" id="cr-${s.id}-${ci}" style="--senso-color:${s.cor}">
+    <div class="criterio-head">
+      <span class="criterio-badge">Critério ${ci + 1}/${totalCriterios}</span>
+    </div>
     <div class="criterio-nome">${cr}</div>
     ${baseHint}
-    <div class="nota-row">
-      ${[0,1,2,3,4].map(n => `<button class="nota-btn" id="nb-${s.id}-${ci}-${n}" onclick="setNota('${s.id}',${ci},${n})">${n}</button>`).join('')}
-    </div>
-    <div class="criterio-obs" style="margin-top:8px">
-      <textarea class="form-textarea" placeholder="Observação / não conformidade (obrigatório para notas 0-1)..." rows="2"
-        id="obs-${s.id}-${ci}" oninput="setObs('${s.id}',${ci},this.value)"
-        style="font-size:13px;min-height:52px">${item.obs || ''}</textarea>
-    </div>
-    <div class="criterio-obs" style="margin-top:8px">
-      <textarea class="form-textarea" placeholder="Sugestão de melhoria..." rows="2"
-        id="sug-${s.id}-${ci}" oninput="setSugestao('${s.id}',${ci},this.value)"
-        style="font-size:13px;min-height:52px">${item.sugestao || ''}</textarea>
-    </div>
-    <div class="criterio-obs" style="margin-top:8px">
-      <label class="form-label" style="margin-bottom:6px">Encaminhar para outro setor</label>
-      <select class="form-select" id="resp-${s.id}-${ci}" onchange="setResponsavelSetor('${s.id}',${ci},this.value)" style="font-size:13px">
-        <option value="">— Nenhuma (Responsabilidade local) —</option>
-        ${setorOptions}
-      </select>
-    </div>
-    <div>
-      <div class="foto-area" onclick="triggerFoto('${s.id}',${ci})" style="margin-top:8px">
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="var(--text2)" stroke-width="1.8"><rect x="2" y="5" width="16" height="12" rx="2"/><circle cx="10" cy="11" r="3"/><path d="M7 5l1.5-2h3L13 5"/></svg>
-        <span style="font-size:12px;color:var(--text2)">Adicionar foto</span>
-        <input type="file" accept="image/*" multiple capture="environment" style="display:none" id="foto-inp-camera-${s.id}-${ci}" onchange="addFotos('${s.id}',${ci},this)">
-        <input type="file" accept="image/*" multiple style="display:none" id="foto-inp-gallery-${s.id}-${ci}" onchange="addFotos('${s.id}',${ci},this)">
+    <div class="criterio-section">
+      <div class="criterio-section-title">Nota da Avaliação</div>
+      <div class="nota-row">
+        ${[0,1,2,3,4].map(n => `<button class="nota-btn" id="nb-${s.id}-${ci}-${n}" onclick="setNota('${s.id}',${ci},${n})">${n}</button>`).join('')}
       </div>
-      <div class="foto-grid" id="foto-grid-${s.id}-${ci}"></div>
+    </div>
+    <div class="criterio-section">
+      <div class="criterio-section-title">Observação / Não Conformidade</div>
+      <div class="criterio-obs">
+        <textarea class="form-textarea" placeholder="Observação / não conformidade (obrigatório para notas 0-1)..." rows="2"
+          id="obs-${s.id}-${ci}" oninput="setObs('${s.id}',${ci},this.value)"
+          style="font-size:13px;min-height:52px">${item.obs || ''}</textarea>
+      </div>
+    </div>
+    <div class="criterio-section">
+      <div class="criterio-section-title">Sugestão de Melhoria</div>
+      <div class="criterio-obs">
+        <textarea class="form-textarea" placeholder="Sugestão de melhoria..." rows="2"
+          id="sug-${s.id}-${ci}" oninput="setSugestao('${s.id}',${ci},this.value)"
+          style="font-size:13px;min-height:52px">${item.sugestao || ''}</textarea>
+      </div>
+    </div>
+    <div class="criterio-section">
+      <div class="criterio-section-title">Encaminhamento</div>
+      <div class="criterio-obs">
+        <label class="form-label" style="margin-bottom:6px">Encaminhar para outro setor</label>
+        <select class="form-select" id="resp-${s.id}-${ci}" onchange="setResponsavelSetor('${s.id}',${ci},this.value)" style="font-size:13px">
+          <option value="">— Nenhuma (Responsabilidade local) —</option>
+          ${setorOptions}
+        </select>
+      </div>
+    </div>
+    <div class="criterio-section">
+      <div class="criterio-section-title">Evidências</div>
+      <div>
+        <div class="foto-area" onclick="triggerFoto('${s.id}',${ci})" style="margin-top:2px">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="var(--text2)" stroke-width="1.8"><rect x="2" y="5" width="16" height="12" rx="2"/><circle cx="10" cy="11" r="3"/><path d="M7 5l1.5-2h3L13 5"/></svg>
+          <span style="font-size:12px;color:var(--text2)">Adicionar foto</span>
+          <input type="file" accept="image/*" multiple capture="environment" style="display:none" id="foto-inp-camera-${s.id}-${ci}" onchange="addFotos('${s.id}',${ci},this)">
+          <input type="file" accept="image/*" multiple style="display:none" id="foto-inp-gallery-${s.id}-${ci}" onchange="addFotos('${s.id}',${ci},this)">
+        </div>
+        <div class="foto-grid" id="foto-grid-${s.id}-${ci}"></div>
+      </div>
     </div>
   </div>`;
 }
@@ -4255,4 +4407,3 @@ window.addEventListener('load', () => {
 </script>
 </body>
 </html>
-
