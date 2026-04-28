@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0a1628">
-<title>Inspeção 5S</title>
+<title>Housekeeping</title>
 <link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
@@ -959,12 +959,12 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
       
       <div class="home-stats-grid">
         <div class="stat-item">
-          <div class="stat-val" id="stats-insps">0</div>
-          <div class="stat-lbl">Inspeções Hoje</div>
+          <div class="stat-val" id="stats-missing">0</div>
+          <div class="stat-lbl">Áreas Pendentes</div>
         </div>
         <div class="stat-item">
-          <div class="stat-val" id="stats-pend">0</div>
-          <div class="stat-lbl">Pendências</div>
+          <div class="stat-val" id="stats-progress">0%</div>
+          <div class="stat-lbl">Progresso Mês</div>
         </div>
       </div>
     </div>
@@ -1592,9 +1592,9 @@ const SETORES = [
   }
 ];
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
 //  STORAGE (IndexedDB com fallback localStorage)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
 const DB_KEY = 'aa5s_data';
 const DRAFT_KEY = 'aa5s_draft';
 // ConfiguraÃ§Ã£o do Firebase (Substitua pelos seus dados do console do Firebase)
@@ -1924,9 +1924,10 @@ function confirmarTecnico() {
 // === Function: renderHome ===
 function renderHome() {
   document.getElementById('home-tec-name').textContent = currentTec || 'Selecionar técnico';
-  
-  document.getElementById('stats-insps').textContent = countInspecoesHoje();
-  document.getElementById('stats-pend').textContent = contarPendencias();
+
+  const stats = getMissingStats();
+  document.getElementById('stats-missing').textContent = stats.totalMissing;
+  document.getElementById('stats-progress').textContent = Math.round(stats.percent) + '%';
 
   const sectorList = document.getElementById('home-sector-list');
   const list = document.getElementById('home-insp-list');
@@ -1953,6 +1954,37 @@ function countInspecoesHoje() {
   const d = String(hoje.getDate()).padStart(2, '0');
   const hojeIso = `${y}-${m}-${d}`;
   return APP.inspecoes.filter(i => i.data === hojeIso).length;
+}
+
+// === Function: getMissingStats ===
+function getMissingStats() {
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  let totalAreas = 0;
+  let totalDone = 0;
+  const sectorResults = {};
+
+  SETORES.forEach(s => {
+    const subareas = s.subareas.length > 0 ? s.subareas : [null];
+    const inspecionadas = new Set(
+      APP.inspecoes
+        .filter(i => i.setor === s.nome && i.periodo === currentMonth)
+        .map(i => i.subarea)
+    );
+    
+    const countSub = subareas.length;
+    const countDone = subareas.filter(sa => inspecionadas.has(sa)).length;
+    
+    totalAreas += countSub;
+    totalDone += countDone;
+    
+    sectorResults[s.nome] = { total: countSub, done: countDone, missing: countSub - countDone };
+  });
+
+  return {
+    totalMissing: totalAreas - totalDone,
+    percent: totalAreas > 0 ? (totalDone / totalAreas * 100) : 0,
+    sectorResults
+  };
 }
 
 // === Function: countSetoresSemInspecaoMeses ===
@@ -2009,8 +2041,9 @@ function getPendenciasSnapshot() {
         if (!isNC && !isResolvida) return;
 
         latestPendKeys.add(pendKey);
+        const targetSector = (isNC ? cr.encaminharSetor : inspAnterior?.sensos?.[s.id]?.[ci]?.encaminharSetor) || insp.setor;
         itens.push({
-          setor: insp.setor,
+          setor: targetSector,
           local: localLabel(insp),
           aberta: isNC,
           resolvida: isResolvida,
@@ -2149,10 +2182,6 @@ function renderDashboard() {
         <div class="dash-kpi-value green">${resolvidas.length}</div>
       </div>
       <div class="dash-kpi">
-        <div class="dash-kpi-label">Setores com Abertas</div>
-        <div class="dash-kpi-value gold">${new Set(abertas.map(a => a.setor)).size}</div>
-      </div>
-      <div class="dash-kpi">
         <div class="dash-kpi-label">Média Geral</div>
         <div class="dash-kpi-value">${mediaGlobal !== null ? mediaGlobal.toFixed(2) : '—'}</div>
       </div>
@@ -2285,6 +2314,7 @@ function filterSectors(query) {
 
 // === Function: sectorCardListHTML ===
 function sectorCardListHTML() {
+  const stats = getMissingStats();
   const setoresOrdenados = [...SETORES.map(s => s.nome)];
   APP.inspecoes.forEach(insp => {
     if (!setoresOrdenados.includes(insp.setor)) setoresOrdenados.push(insp.setor);
@@ -2302,9 +2332,16 @@ function sectorCardListHTML() {
 
     const areaKeys = Object.keys(areasMap);
     const ultimaSetor = inspecoesSetor[0];
-    const resumoSetor = areaKeys.length
-      ? `${areaKeys.length} área(s) com registro${ultimaSetor ? ` · Última em ${formatDate(ultimaSetor.data)}` : ''}`
-      : 'Nenhuma área com registro ainda';
+    const sStat = stats.sectorResults[setor];
+    const missingCount = sStat ? sStat.missing : 0;
+
+    const resumoSetor = sStat 
+      ? `${sStat.total - missingCount} de ${sStat.total} áreas concluídas este mês`
+      : (areaKeys.length ? `${areaKeys.length} áreas com registro` : 'Nenhum registro');
+
+    const missingBadge = missingCount > 0 
+      ? `<span class="badge badge-red" style="font-size:10px; padding:2px 8px; margin-left:4px">Faltam ${missingCount}</span>` 
+      : (sStat ? `<span class="badge badge-green" style="font-size:10px; padding:2px 8px; margin-left:4px">OK</span>` : '');
 
     const areasHtml = areaKeys.length ? areaKeys.map(areaKey => {
       const ultima = areasMap[areaKey][0];
@@ -2339,7 +2376,10 @@ function sectorCardListHTML() {
       <div class="sector-card" data-sector="${setor}">
         <div class="sector-card-head" onclick="toggleSectorCard(this)">
           <div>
-            <div class="sector-title">${setor}</div>
+            <div style="display:flex; align-items:center; gap:4px; flex-wrap:wrap">
+              <div class="sector-title">${setor}</div>
+              ${missingBadge}
+            </div>
             <div class="sector-sub">${resumoSetor}</div>
           </div>
           <div class="sector-chevron">
@@ -2633,7 +2673,7 @@ function iniciarInspecao() {
     subarea: subarea || null
   };
   SENSOS.forEach(s => {
-    currentInsp.sensos[s.id] = s.criterios.map(() => ({ nota: null, obs: '', sugestao: '', fotos: [], encaminharSetor: '' }));
+    currentInsp.sensos[s.id] = s.criterios.map(() => ({ nota: null, obs: '', sugestao: '', fotos: [], encaminharSetor: '', ncResolvido: '' }));
   });
 
   saveDraftNow();
@@ -2681,17 +2721,73 @@ function renderInspecaoForm() {
 function criterioHTML(s, si, cr, ci, base) {
   const baseNota = base ? (base.sensos[s.id][ci]?.nota ?? null) : null;
   const baseObs = base ? (base.sensos[s.id][ci]?.obs || '') : '';
+  const baseFotos = base ? (base.sensos[s.id][ci]?.fotos || []) : [];
   const item = currentInsp.sensos[s.id][ci];
   const totalCriterios = s.criterios.length;
   const setorOptions = getAllSetorNames()
     .filter(nome => nome !== currentInsp.setor)
     .map(nome => `<option value="${nome}" ${item.encaminharSetor === nome ? 'selected' : ''}>${nome}</option>`)
     .join('');
+  
+  // Verificar se é reincidência
+  const historico = APP.inspecoes
+    .filter(i => sameLocal(i, currentInsp))
+    .sort((a, b) => new Date(b.data) - new Date(a.data));
+  const historicoFotos = historico
+    .slice(1) // pula a inspeção atual
+    .map(h => ({ nota: h.sensos[s.id][ci]?.nota, fotos: h.sensos[s.id][ci]?.fotos || [] }));
+  
+  let reincidenciasCount = 0;
+  for (const h of historicoFotos) {
+    if ((h.nota ?? 0) < 2) reincidenciasCount++;
+    else break;
+  }
+  
+  const isNCAnterior = baseNota !== null && baseNota < 2;
+  const isAtualNC = (item.nota ?? null) !== null && item.nota < 2;
+  const isReincidencia = isNCAnterior && isAtualNC;
+  
   const baseHint = baseNota !== null
     ? `<div class="criterio-basehint" style="--senso-color:${s.cor}">
         Anterior: nota <strong style="color:${notaCor(baseNota)}">${baseNota}</strong>${baseObs ? ` - "${baseObs.slice(0,60)}${baseObs.length>60?'...':''}"` : ''}
        </div>`
     : '';
+  
+  // HTML para NC anterior com foto e opção de resolução
+  const ncAnteriorHTML = isNCAnterior ? `
+    <div class="criterio-section" style="background:rgba(244,63,94,0.1);border-color:rgba(244,63,94,0.3)">
+      <div class="criterio-section-title" style="color:var(--red)">⚠️ Não Conformidade Anterior</div>
+      ${baseFotos.length > 0 ? `
+        <div style="margin-bottom:10px">
+          <div style="font-size:11px;color:var(--text2);margin-bottom:6px">Foto da não conformidade anterior:</div>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">
+            ${baseFotos.map((foto, idx) => `
+              <div style="border-radius:8px;overflow:hidden;border:1px solid rgba(244,63,94,0.3)">
+                <img src="${foto}" alt="NC anterior ${idx+1}" style="width:100%;height:auto;display:block;object-fit:cover;max-height:120px">
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      ` : ''}
+      
+      <div style="margin-top:8px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px;background:rgba(16,185,129,0.08);border-radius:8px;margin-bottom:6px">
+          <input type="radio" name="ncResolucao-${s.id}-${ci}" value="resolvido" ${item.ncResolvido === 'resolvido' ? 'checked' : ''} onchange="setNCResolucao('${s.id}',${ci},'resolvido')" style="cursor:pointer">
+          <span style="font-size:13px;color:var(--green)">✓ Foi resolvido</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px;background:rgba(244,63,94,0.08);border-radius:8px;margin-bottom:6px">
+          <input type="radio" name="ncResolucao-${s.id}-${ci}" value="reincidente" ${item.ncResolvido === 'reincidente' ? 'checked' : ''} onchange="setNCResolucao('${s.id}',${ci},'reincidente')" style="cursor:pointer">
+          <span style="font-size:13px;color:var(--red)">✗ Não foi resolvido (reincidente)</span>
+        </label>
+      </div>
+      
+      ${reincidenciasCount > 1 ? `
+        <div style="margin-top:8px;padding:8px;background:rgba(245,158,11,0.15);border-left:3px solid var(--gold);border-radius:6px">
+          <span style="font-size:11px;color:var(--gold);font-weight:700">ATENÇÃO: ${reincidenciasCount}ª reincidência consecutiva - Nota será reduzida</span>
+        </div>
+      ` : ''}
+    </div>
+  ` : '';
 
   return `<div class="criterio-item" id="cr-${s.id}-${ci}" style="--senso-color:${s.cor}">
     <div class="criterio-head">
@@ -2699,6 +2795,7 @@ function criterioHTML(s, si, cr, ci, base) {
     </div>
     <div class="criterio-nome">${cr}</div>
     ${baseHint}
+    ${ncAnteriorHTML}
     <div class="criterio-section">
       <div class="criterio-section-title">Nota da Avaliação</div>
       <div class="nota-row">
@@ -2708,7 +2805,7 @@ function criterioHTML(s, si, cr, ci, base) {
     <div class="criterio-section">
       <div class="criterio-section-title">Observação / Não Conformidade</div>
       <div class="criterio-obs">
-        <textarea class="form-textarea" placeholder="Observação / não conformidade (obrigatório para notas 0-1)..." rows="2"
+        <textarea class="form-textarea" placeholder="Observação / não conformidade (obrigatório para notas 0-3)..." rows="2"
           id="obs-${s.id}-${ci}" oninput="setObs('${s.id}',${ci},this.value)"
           style="font-size:13px;min-height:52px">${item.obs || ''}</textarea>
       </div>
@@ -2759,8 +2856,8 @@ function setNota(sId, ci, nota) {
     const btn = document.getElementById(`nb-${sId}-${ci}-${n}`);
     btn.className = 'nota-btn' + (n === nota ? ` sel-${n}` : '');
   });
-  // obrigatÃ³rio obs se < 2
-  if (nota >= 2) {
+  // Limpa avisos e encaminhamentos apenas se a nota for excelente (4)
+  if (nota === 4) {
     const obs = document.getElementById(`obs-${sId}-${ci}`);
     obs.style.borderColor = '';
     currentInsp.sensos[sId][ci].encaminharSetor = '';
@@ -2788,6 +2885,15 @@ function setSugestao(sId, ci, val) {
 // === Function: setResponsavelSetor ===
 function setResponsavelSetor(sId, ci, val) {
   currentInsp.sensos[sId][ci].encaminharSetor = val;
+  scheduleDraftSave();
+}
+
+// === Function: setNCResolucao ===
+function setNCResolucao(sId, ci, status) {
+  currentInsp.sensos[sId][ci].ncResolvido = status;
+  updateScoreMini(sId);
+  updateProgresso();
+  updateNotaGeral();
   scheduleDraftSave();
 }
 
@@ -2994,14 +3100,14 @@ async function salvarInspecao() {
   SENSOS.forEach(s => {
     currentInsp.sensos[s.id].forEach((cr, ci) => {
       if (cr.nota === null) { ok = false; return; }
-      if (cr.nota < 2 && !cr.obs.trim()) {
+      if (cr.nota < 4 && !cr.obs.trim()) {
         faltamObs.push(`${s.nome} - Critério ${ci+1}`);
       }
     });
   });
   if (!ok) { toast('Preencha todas as notas antes de salvar'); return; }
   if (faltamObs.length > 0) {
-    toast('Adicione observação nos itens com nota 0 ou 1');
+    toast('Observação obrigatória para notas de 0 a 3');
     return;
   }
 
@@ -3218,7 +3324,7 @@ function iniciarNovaComBase(baseId) {
     notaGeral: null
   };
   SENSOS.forEach(s => {
-    currentInsp.sensos[s.id] = s.criterios.map(() => ({ nota: null, obs: '', sugestao: '', fotos: [], encaminharSetor: '' }));
+    currentInsp.sensos[s.id] = s.criterios.map(() => ({ nota: null, obs: '', sugestao: '', fotos: [], encaminharSetor: '', ncResolvido: '' }));
   });
 
   saveDraftNow();
@@ -3268,8 +3374,10 @@ function renderPendList() {
         const reincResolvida = isResolvida ? getReincidenciasAteConclusao(insp, s.id, ci) : null;
         const fotoResolucao = isResolvida && Array.isArray(cr.fotos) ? (cr.fotos[0] || null) : null;
 
+        const targetSector = (isNC ? cr.encaminharSetor : inspAnterior?.sensos?.[s.id]?.[ci]?.encaminharSetor) || insp.setor;
+
         const itemHtml = `<div class="pend-item ${isResolvida?'resolvida':''}">
-          <div class="pend-setor">${insp.setor} · ${s.nome}</div>
+          <div class="pend-setor">${targetSector} · ${s.nome}</div>
           <div class="pend-desc">${SENSOS.find(x=>x.id===s.id).criterios[ci]}</div>
           <div style="font-size:11px;color:var(--text2);margin-top:4px">${formatDate(insp.data)} · ${insp.tecnico}</div>
           ${isNC ? `<div class="pend-status" style="color:var(--red)">Nota ${cr.nota} - ${cr.obs || 'Sem observação'}${reincTxt}</div>` : ''}
@@ -3284,7 +3392,7 @@ function renderPendList() {
         </div>`;
 
         itens.push({
-          setor: insp.setor,
+          setor: targetSector,
           aberta: isNC,
           html: itemHtml
         });
@@ -3495,6 +3603,7 @@ async function gerarPDFSetorial(setor) {
     SENSOS.forEach(s => {
       (insp.sensos[s.id] || []).forEach((cr, ci) => {
         if ((cr.nota ?? 0) >= 2) return;
+        if (cr.encaminharSetor && cr.encaminharSetor !== setor) return;
         ncList.push({
           data: insp.data,
           local: localLabel(insp),
