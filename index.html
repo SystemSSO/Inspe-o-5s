@@ -2486,12 +2486,13 @@ function sectorCardListHTML() {
     const areasInspecionadas = new Set(
       areaKeys.map(k => k === '__setor__' ? 'Área geral do setor' : k)
     );
+    const areasFaltantes = areasEsperadas.filter(a => !areasInspecionadas.has(a));
     const faltamAreas = Math.max(0, areasEsperadas.length - [...areasInspecionadas].filter(a => areasEsperadas.includes(a)).length);
     const resumoSetor = areaKeys.length
       ? `<span style="color:var(--green);font-weight:700">${areaKeys.length} área(s) com registro</span> · <span style="color:var(--red);font-weight:700">Faltam ${faltamAreas} área(s)</span>${ultimaSetor ? ` · <span style="color:var(--text2)">Última em ${formatDate(ultimaSetor.data)}</span>` : ''}`
       : 'Nenhuma área com registro ainda';
 
-    const areasHtml = areaKeys.length ? areaKeys.map(areaKey => {
+    const areasInspecionadasHtml = areaKeys.length ? areaKeys.map(areaKey => {
       const ultima = areasMap[areaKey][0];
       const labelArea = areaKey === '__setor__' ? 'Área geral do setor' : areaKey;
       const totalArea = areasMap[areaKey].length;
@@ -2520,6 +2521,23 @@ function sectorCardListHTML() {
       </div>
     `;
 
+    const areasFaltantesHtml = areasFaltantes.map(area => {
+      const searchQuery = document.getElementById('sector-search')?.value.toLowerCase() || '';
+      const areaMatch = area.toLowerCase().includes(searchQuery) || setor.toLowerCase().includes(searchQuery);
+      if (!areaMatch && searchQuery !== '') return '';
+      const setorSafe = setor.replace(/'/g, "\\'");
+      const areaSafe = area.replace(/'/g, "\\'");
+      return `<div class="sector-area-item" onclick="iniciarInspecaoAreaPendente('${setorSafe}','${areaSafe}')" style="cursor:pointer;border-color:rgba(244,63,94,0.35);background:rgba(244,63,94,0.08)">
+        <div class="sector-area-top">
+          <div style="flex:1">
+            <div class="sector-area-name" style="color:var(--red)">${area}</div>
+            <div class="sector-area-meta" style="color:var(--text2)">Área pendente de inspeção · Toque para iniciar</div>
+          </div>
+          <div style="font-family:var(--font-display);font-weight:700;color:var(--red)">Pendente</div>
+        </div>
+      </div>`;
+    }).join('');
+
     return `
       <div class="sector-card" data-sector="${setor}">
         <div class="sector-card-head" onclick="toggleSectorCard(this)">
@@ -2531,7 +2549,10 @@ function sectorCardListHTML() {
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
           </div>
         </div>
-        <div class="sector-area-list">${areasHtml}</div>
+        <div class="sector-area-list">
+          ${areasInspecionadasHtml}
+          ${areasFaltantes.length ? `<div style="font-size:11px;color:var(--red);font-weight:700;padding:6px 2px 2px">Áreas faltantes (${areasFaltantes.length})</div>${areasFaltantesHtml}` : ''}
+        </div>
       </div>
     `;
   }).join('');
@@ -2732,6 +2753,23 @@ function showNewInspModal() {
   checkInspAnterior(); // VerificaÃ§Ã£o inicial
 
   document.getElementById('modal-nova-insp').classList.add('open');
+}
+
+// === Function: iniciarInspecaoAreaPendente ===
+function iniciarInspecaoAreaPendente(setor, subarea = '') {
+  if (!currentTec) {
+    toast('Selecione um técnico antes de iniciar a inspeção.');
+    openTecModal();
+    return;
+  }
+  showNewInspModal();
+  const setorSelect = document.getElementById('nova-setor-select');
+  const subareaSelect = document.getElementById('nova-subarea-select');
+  if (!setorSelect || !subareaSelect) return;
+  setorSelect.value = setor;
+  populateSubareaSelect();
+  if (subarea) subareaSelect.value = subarea;
+  checkInspAnterior();
 }
 
 // === Function: populateSubareaSelect ===
@@ -3627,17 +3665,18 @@ function renderPendList() {
         const fotosNC = isNC ? getFotosValidasCriterio(cr) : [];
         const fotosResolucao = isResolvida ? getFotosValidasCriterio(cr) : [];
 
-        const itemHtml = `<div class="pend-item ${isResolvida?'resolvida':''}">
+        const itemHtml = `<div class="pend-item ${isResolvida?'resolvida':''}" ${isNC ? `onclick="iniciarNovaComBase('${insp.id}')" style="cursor:pointer"` : ''}>
           <div class="pend-setor">${insp.setor} · ${s.nome}</div>
           <div class="pend-desc">${SENSOS.find(x=>x.id===s.id).criterios[ci]}</div>
           <div style="font-size:11px;color:var(--text2);margin-top:4px">${formatDate(insp.data)} · ${insp.tecnico}</div>
           ${isNC ? `<div class="pend-status" style="color:var(--red)">Nota ${cr.nota} - ${cr.obs || 'Sem observação'}${reincTxt}</div>` : ''}
-          ${isNC && fotosNC.length ? `<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:8px">${fotosNC.map((foto, idx) => `<img src="${foto}" alt="Evidência NC ${idx + 1}" onclick="openImageModal('${foto.replace(/'/g, "\\'")}')" style="width:100%;height:68px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer">`).join('')}</div>` : ''}
+          ${isNC ? `<div style="font-size:11px;color:var(--text2);margin-top:3px">Toque para abrir inspeção e corrigir esta pendência.</div>` : ''}
+          ${isNC && fotosNC.length ? `<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:8px">${fotosNC.map((foto, idx) => `<img src="${foto}" alt="Evidência NC ${idx + 1}" onclick="event.stopPropagation();openImageModal('${foto.replace(/'/g, "\\'")}')" style="width:100%;height:68px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer">`).join('')}</div>` : ''}
           ${isNC && !fotosNC.length ? `<div style="font-size:11px;color:var(--text2);margin-top:4px">Foto da NC: não anexada.</div>` : ''}
           ${isResolvida ? `<div class="pend-status" style="color:var(--green)">✓ Resolvida em ${formatDate(insp.data)}</div>` : ''}
           ${isResolvida ? `<div style="font-size:11px;color:var(--text2);margin-top:3px">Reincidências até concluir: <strong style="color:var(--green)">${reincResolvida?.reincidencias ?? 0}</strong> <span style="color:var(--text2)">(${reincResolvida?.ocorrenciasNC ?? 0} ocorrências NC consecutivas)</span></div>` : ''}
           ${isResolvida ? `<div style="font-size:11px;color:var(--text2);margin-top:3px">Antes: ${inspAnterior?.sensos?.[s.id]?.[ci]?.obs || 'Sem observação'}<br>Agora: ${cr.obs || 'Sem observação'}</div>` : ''}
-          ${isResolvida && fotosResolucao.length ? `<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:8px">${fotosResolucao.map((foto, idx) => `<img src="${foto}" alt="Evidência da resolução ${idx + 1}" onclick="openImageModal('${foto.replace(/'/g, "\\'")}')" style="width:100%;height:68px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer">`).join('')}</div>` : ''}
+          ${isResolvida && fotosResolucao.length ? `<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:8px">${fotosResolucao.map((foto, idx) => `<img src="${foto}" alt="Evidência da resolução ${idx + 1}" onclick="event.stopPropagation();openImageModal('${foto.replace(/'/g, "\\'")}')" style="width:100%;height:68px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer">`).join('')}</div>` : ''}
           ${isResolvida && !fotosResolucao.length ? `<div style="font-size:11px;color:var(--text2);margin-top:4px">Foto da resolução: não anexada.</div>` : ''}
           <div class="pend-status" style="margin-top:6px;color:${isNC ? 'var(--red)' : 'var(--green)'};font-weight:700">
             ${isNC ? 'Status: Aberta' : 'Status: Resolvida'}
