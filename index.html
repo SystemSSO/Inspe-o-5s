@@ -2721,6 +2721,11 @@ function checkInspAnterior() {
 
 // === Function: iniciarInspecao ===
 function iniciarInspecao() {
+  if (!currentTec) {
+    toast('Selecione um técnico antes de iniciar a inspeção.');
+    openTecModal();
+    return;
+  }
   const setor = document.getElementById('nova-setor-select').value;
   const subarea = document.getElementById('nova-subarea-select').value;
   const periodo = document.getElementById('nova-periodo').value;
@@ -3282,6 +3287,11 @@ async function salvarInspecao() {
     toast('Não há inspeção em andamento.');
     return;
   }
+  if (!currentTec || !currentInsp.tecnico) {
+    toast('Selecione um técnico antes de salvar a inspeção.');
+    openTecModal();
+    return;
+  }
   if (isSavingInspecao) return;
 
   // validaÃ§Ã£o
@@ -3472,6 +3482,11 @@ function openDetalhe(id) {
 
 // === Function: iniciarNovaComBase ===
 function iniciarNovaComBase(baseId) {
+  if (!currentTec) {
+    toast('Selecione um técnico antes de iniciar a inspeção.');
+    openTecModal();
+    return;
+  }
   const base = APP.inspecoes.find(i => i.id === baseId);
   if (!base) return;
   document.getElementById('modal-detalhe').classList.remove('open');
