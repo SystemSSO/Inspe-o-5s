@@ -2685,10 +2685,13 @@ function getPendenciasRecebidas(setorDestino, limitDateIso = null) {
           origemPeriodo: inspOrigem.periodo || '',
           tecnico: inspOrigem.tecnico,
           senso: s.nome,
+          sensoId: s.id,
           criterioIndice: ci + 1,
+          criterioArrayIndex: ci,
           criterioTexto: s.criterios[ci],
           nota: cr.nota,
-          obs: cr.obs || ''
+          obs: cr.obs || '',
+          fotos: getFotosNCAbertaComFallback(inspOrigem, s.id, ci, cr)
         });
       });
     });
@@ -2952,6 +2955,24 @@ function getFotosValidasCriterio(criterio) {
   return criterio.fotos.filter(f => typeof f === 'string' && f && f !== '__ref__');
 }
 
+// === Function: getFotosNCAbertaComFallback ===
+function getFotosNCAbertaComFallback(insp, sId, ci, crAtual = null) {
+  const fotosDiretas = getFotosValidasCriterio(crAtual || insp?.sensos?.[sId]?.[ci]);
+  if (fotosDiretas.length) return fotosDiretas;
+  if (!insp) return [];
+  const dataLimite = new Date(insp.data).getTime();
+  const historico = APP.inspecoes
+    .filter(i => sameLocal(i, insp) && new Date(i.data).getTime() <= dataLimite)
+    .sort((a, b) => new Date(b.data) - new Date(a.data));
+  for (const h of historico) {
+    const crHist = h?.sensos?.[sId]?.[ci] || null;
+    if (!criterioTemNCAberta(crHist)) continue;
+    const fotosHist = getFotosValidasCriterio(crHist);
+    if (fotosHist.length) return fotosHist;
+  }
+  return [];
+}
+
 // === Function: getUltimaEvidenciaNC ===
 function getUltimaEvidenciaNC(sId, ci) {
   if (!currentInsp) return [];
@@ -3004,6 +3025,8 @@ function criterioHTML(s, si, cr, ci, base) {
   const baseFotos = baseFotosDiretas.length ? baseFotosDiretas : getUltimaEvidenciaNC(s.id, ci);
   const baseTemRefPendente = Array.isArray(baseCr?.fotos) && baseCr.fotos.includes('__ref__');
   const item = currentInsp.sensos[s.id][ci];
+  const correspAtual = item.encaminharSetor && item.encaminharSetor !== currentInsp.setor ? item.encaminharSetor : '';
+  const correspAnterior = baseCr?.encaminharSetor && baseCr.encaminharSetor !== currentInsp.setor ? baseCr.encaminharSetor : '';
   const reincAtual = getReincidenciaFormulario(s.id, ci);
   const totalCriterios = s.criterios.length;
   const setorOptions = getAllSetorNames()
@@ -3029,7 +3052,7 @@ function criterioHTML(s, si, cr, ci, base) {
         Não Conformidade Anterior
       </div>
       <div class="nc-anterior-info">
-        Nota anterior: <strong style="color:${notaCor(baseNota)}">${baseNota}</strong> | Reincidência: <strong>${reincAtual}ª</strong> | Observação: ${baseObs || 'Sem descrição'}
+        Nota anterior: <strong style="color:${notaCor(baseNota)}">${baseNota}</strong> | Reincidência: <strong>${reincAtual}ª</strong>${correspAnterior ? ` | <span style="color:var(--gold);font-weight:700">Corresponsável anterior: ${correspAnterior}</span>` : ''} | Observação: ${baseObs || 'Sem descrição'}
       </div>
       ${baseFotos.length > 0 ? `
         <div class="nc-anterior-images">
@@ -3052,6 +3075,7 @@ function criterioHTML(s, si, cr, ci, base) {
   return `<div class="criterio-item" id="cr-${s.id}-${ci}" style="--senso-color:${s.cor}">
     <div class="criterio-head">
       <span class="criterio-badge">Critério ${ci + 1}/${totalCriterios}</span>
+      ${correspAtual ? `<span class="nc-resolved-badge" style="border-color:rgba(245,158,11,0.4);background:rgba(245,158,11,0.14);color:var(--gold)">Corresponsável: ${correspAtual}</span>` : ''}
       ${isResolved && hasNCAnterior ? `<span class="nc-resolved-badge"><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>Resolvido</span>` : ''}
     </div>
     <div class="criterio-nome">${cr}</div>
@@ -3088,6 +3112,7 @@ function criterioHTML(s, si, cr, ci, base) {
           <option value="">— Nenhuma (Responsabilidade local) —</option>
           ${setorOptions}
         </select>
+        ${correspAtual ? `<div style="font-size:11px;color:var(--gold);margin-top:6px">NC com corresponsável: ${correspAtual}</div>` : ''}
       </div>
     </div>
     <div class="criterio-section">
@@ -3662,7 +3687,7 @@ function renderPendList() {
         const reinc = getReincidenciaCount(insp, s.id, ci);
         const reincTxt = (isNC && reinc > 1) ? ` <span style="color:var(--orange2);font-weight:700">[REINCIDÊNCIA: ${reinc}ª vez]</span>` : '';
         const reincResolvida = isResolvida ? getReincidenciasAteConclusao(insp, s.id, ci) : null;
-        const fotosNC = isNC ? getFotosValidasCriterio(cr) : [];
+        const fotosNC = isNC ? getFotosNCAbertaComFallback(insp, s.id, ci, cr) : [];
         const fotosResolucao = isResolvida ? getFotosValidasCriterio(cr) : [];
 
         const itemHtml = `<div class="pend-item ${isResolvida?'resolvida':''}" ${isNC ? `onclick="iniciarNovaComBase('${insp.id}')" style="cursor:pointer"` : ''}>
@@ -3670,6 +3695,7 @@ function renderPendList() {
           <div class="pend-desc">${SENSOS.find(x=>x.id===s.id).criterios[ci]}</div>
           <div style="font-size:11px;color:var(--text2);margin-top:4px">${formatDate(insp.data)} · ${insp.tecnico}</div>
           ${isNC ? `<div class="pend-status" style="color:var(--red)">Nota ${cr.nota} - ${cr.obs || 'Sem observação'}${reincTxt}</div>` : ''}
+          ${cr.encaminharSetor ? `<div style="font-size:11px;color:var(--gold);margin-top:4px">NC com corresponsável: ${cr.encaminharSetor}</div>` : ''}
           ${isNC ? `<div style="font-size:11px;color:var(--text2);margin-top:3px">Toque para abrir inspeção e corrigir esta pendência.</div>` : ''}
           ${isNC && fotosNC.length ? `<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:8px">${fotosNC.map((foto, idx) => `<img src="${foto}" alt="Evidência NC ${idx + 1}" onclick="event.stopPropagation();openImageModal('${foto.replace(/'/g, "\\'")}')" style="width:100%;height:68px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer">`).join('')}</div>` : ''}
           ${isNC && !fotosNC.length ? `<div style="font-size:11px;color:var(--text2);margin-top:4px">Foto da NC: não anexada.</div>` : ''}
@@ -3913,7 +3939,7 @@ async function gerarPDFSetorial(setor) {
       reincidencia: getReincidenciaCount(insp, s.id, ci),
       obs: cr.obs || 'Sem observação.',
       sugestao: cr.sugestao || 'Não informada.',
-      fotos: Array.isArray(cr.fotos) ? cr.fotos : [],
+      fotos: getFotosNCAbertaComFallback(insp, s.id, ci, cr),
       origemTipo: 'propria',
       origemSetor: insp.setor,
       origemLocal: localLabel(insp),
@@ -3947,7 +3973,7 @@ async function gerarPDFSetorial(setor) {
       reincidencia: getReincidenciaCount(insp, s.id, ci),
       obs: cr.obs || 'Sem observação.',
       sugestao: cr.sugestao || 'Não informada.',
-      fotos: Array.isArray(cr.fotos) ? cr.fotos : [],
+      fotos: getFotosNCAbertaComFallback(insp, s.id, ci, cr),
       origemTipo: 'encaminhada',
       origemSetor: insp.setor,
       origemLocal: localLabel(insp),
@@ -4569,12 +4595,14 @@ async function gerarPDFInsp(id) {
     doc.setTextColor(15,23,42); doc.setFontSize(14); doc.setFont('helvetica','bold');
     doc.text('PENDÊNCIAS RECEBIDAS DE OUTROS SETORES', margin, y+8); y += 22;
 
-    pendenciasRecebidas.forEach(item => {
+    for (const item of pendenciasRecebidas) {
       const origemLines = doc.splitTextToSize(`${item.origemSetor} · ${item.origemLocal}`, W - margin * 2 - 8);
       const correspLines = doc.splitTextToSize(`NC corresponsável - Origem: ${item.origemSetor} · ${item.origemLocal} | Destino: ${insp.setor}`, W - margin * 2 - 8);
       const critLines = doc.splitTextToSize(`${item.senso} · Critério ${item.criterioIndice} - ${item.criterioTexto}`, W - margin * 2 - 8);
       const obsLines = item.obs ? doc.splitTextToSize(`Obs: ${item.obs}`, W - margin * 2 - 8) : [];
-      const blocoH = 20 + origemLines.length * 4 + correspLines.length * 4 + critLines.length * 4 + obsLines.length * 4;
+      const fotoDataUrl = await imageUrlToDataURL(item.fotos?.[0] || null);
+      const imgH = fotoDataUrl ? 40 : 0;
+      const blocoH = 20 + origemLines.length * 4 + correspLines.length * 4 + critLines.length * 4 + obsLines.length * 4 + imgH;
 
       if (y + blocoH > 280) {
         doc.addPage();
@@ -4597,10 +4625,30 @@ async function gerarPDFInsp(id) {
       if (obsLines.length) {
         doc.setTextColor(120,120,120); doc.setFont('helvetica','italic');
         doc.text(obsLines, margin+4, blocoY);
+        blocoY += obsLines.length * 4 + 2;
+      }
+      if (fotoDataUrl) {
+        try {
+          const props = doc.getImageProperties(fotoDataUrl);
+          const ratio = props.width / props.height;
+          const maxW = W - margin * 2 - 10;
+          const maxH = 34;
+          let drawW = maxW;
+          let drawH = drawW / ratio;
+          if (drawH > maxH) {
+            drawH = maxH;
+            drawW = drawH * ratio;
+          }
+          const x = margin + ((W - margin * 2) - drawW) / 2;
+          doc.addImage(fotoDataUrl, fotoDataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG', x, blocoY, drawW, drawH, undefined, 'FAST');
+        } catch {
+          doc.setTextColor(120,120,120); doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
+          doc.text('Evidência fotográfica não pôde ser renderizada.', margin + 4, blocoY + 4);
+        }
       }
 
       y += blocoH + 6;
-    });
+    }
   }
 
   if (pendenciasResolvidas.length) {
