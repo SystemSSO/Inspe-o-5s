@@ -3983,10 +3983,9 @@ async function gerarPDFSetorial(setor) {
   });
 
   const resolvidasList = [];
-  inspsMesSetor.forEach(insp => {
-    // Ao mudar de período, não carregar resolvidas do período anterior.
-    if ((insp.periodo || '') !== periodoAtual) return;
-
+  const latestMesSetorPorLocal = getLatestInspecoesBySetor(setor)
+    .filter(i => (i.periodo || '') === periodoAtual);
+  latestMesSetorPorLocal.forEach(insp => {
     const inspAnterior = getInspecaoAnteriorMesmoLocal(insp);
     if (!inspAnterior) return;
     if ((inspAnterior.periodo || '') !== periodoAtual) return;
@@ -4022,46 +4021,52 @@ async function gerarPDFSetorial(setor) {
     });
   });
 
-  // Resolvidas por corresponsável: entram também no relatório do setor de destino.
-  inspsMes
-    .filter(i => i.setor !== setor)
-    .forEach(inspOrigem => {
-      if ((inspOrigem.periodo || '') !== periodoAtual) return;
-      const inspAnteriorOrigem = getInspecaoAnteriorMesmoLocal(inspOrigem);
-      if (!inspAnteriorOrigem) return;
-      if ((inspAnteriorOrigem.periodo || '') !== periodoAtual) return;
+  // Resolvidas por corresponsável: considerar somente a inspeção mais recente por local de origem no período.
+  const latestOutrosPorLocal = {};
+  APP.inspecoes
+    .filter(i => i.setor !== setor && (i.periodo || '') === periodoAtual)
+    .forEach(i => {
+      const k = localKey(i);
+      if (!latestOutrosPorLocal[k] || new Date(i.data) > new Date(latestOutrosPorLocal[k].data)) {
+        latestOutrosPorLocal[k] = i;
+      }
+    });
+  Object.values(latestOutrosPorLocal).forEach(inspOrigem => {
+    const inspAnteriorOrigem = getInspecaoAnteriorMesmoLocal(inspOrigem);
+    if (!inspAnteriorOrigem) return;
+    if ((inspAnteriorOrigem.periodo || '') !== periodoAtual) return;
 
-      SENSOS.forEach(s => {
-        (inspOrigem.sensos[s.id] || []).forEach((crAtual, ci) => {
-          const crAnterior = inspAnteriorOrigem.sensos?.[s.id]?.[ci] || {};
-          const notaAnterior = crAnterior.nota ?? null;
-          const notaAtual = crAtual?.nota ?? null;
-          const destinoSetor = crAnterior.encaminharSetor || crAtual?.encaminharSetor || '';
-          const resolveuAgora = notaAnterior !== null && notaAnterior <= 3 && notaAtual !== null && notaAtual >= 4;
-          if (!resolveuAgora) return;
-          if (destinoSetor !== setor) return;
+    SENSOS.forEach(s => {
+      (inspOrigem.sensos[s.id] || []).forEach((crAtual, ci) => {
+        const crAnterior = inspAnteriorOrigem.sensos?.[s.id]?.[ci] || {};
+        const notaAnterior = crAnterior.nota ?? null;
+        const notaAtual = crAtual?.nota ?? null;
+        const destinoSetor = crAnterior.encaminharSetor || crAtual?.encaminharSetor || '';
+        const resolveuAgora = notaAnterior !== null && notaAnterior <= 3 && notaAtual !== null && notaAtual >= 4;
+        if (!resolveuAgora) return;
+        if (destinoSetor !== setor) return;
 
-          const reinc = getReincidenciasAteConclusao(inspOrigem, s.id, ci);
-          resolvidasList.push({
-            dataResolucao: inspOrigem.data,
-            dataAnterior: inspAnteriorOrigem.data,
-            local: localLabel(inspOrigem),
-            senso: s.nome,
-            criterio: s.criterios[ci],
-            obsAnterior: crAnterior.obs || 'Sem observação.',
-            obsAtual: crAtual?.obs || 'Sem observação.',
-            sugestaoAtual: crAtual?.sugestao || 'Não informada.',
-            fotoResolucao: Array.isArray(crAtual?.fotos) ? (crAtual.fotos[0] || null) : null,
-            ocorrenciasNC: reinc.ocorrenciasNC,
-            reincidencias: reinc.reincidencias,
-            origemSetor: inspOrigem.setor,
-            origemLocal: localLabel(inspOrigem),
-            destinoSetor,
-            resolvidaPorCorresponsavel: true
-          });
+        const reinc = getReincidenciasAteConclusao(inspOrigem, s.id, ci);
+        resolvidasList.push({
+          dataResolucao: inspOrigem.data,
+          dataAnterior: inspAnteriorOrigem.data,
+          local: localLabel(inspOrigem),
+          senso: s.nome,
+          criterio: s.criterios[ci],
+          obsAnterior: crAnterior.obs || 'Sem observação.',
+          obsAtual: crAtual?.obs || 'Sem observação.',
+          sugestaoAtual: crAtual?.sugestao || 'Não informada.',
+          fotoResolucao: Array.isArray(crAtual?.fotos) ? (crAtual.fotos[0] || null) : null,
+          ocorrenciasNC: reinc.ocorrenciasNC,
+          reincidencias: reinc.reincidencias,
+          origemSetor: inspOrigem.setor,
+          origemLocal: localLabel(inspOrigem),
+          destinoSetor,
+          resolvidaPorCorresponsavel: true
         });
       });
     });
+  });
 
   // Página 1: Dashboard do setor
   const totalInspecoes = inspsMesSetor.length;
