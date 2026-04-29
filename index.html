@@ -322,6 +322,16 @@ html, body {
   border-radius: 8px;
   border-left: 2px solid var(--senso-color, var(--orange2));
 }
+.criterio-auto-ajuste {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fcd34d;
+  margin: -2px 0 10px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.12);
+}
 .criterio-section {
   margin-top: 9px;
   padding: 9px;
@@ -364,9 +374,132 @@ body.light-mode .criterio-badge {
 body.light-mode .criterio-basehint {
   background: rgba(224, 242, 254, 0.85);
 }
+body.light-mode .criterio-auto-ajuste {
+  color: #92400e;
+  background: rgba(245, 158, 11, 0.14);
+}
 body.light-mode .criterio-section {
   background: rgba(240, 249, 255, 0.9);
   border-color: rgba(14, 116, 144, 0.22);
+}
+
+/* ── NC ANTERIOR ── */
+.nc-anterior-section {
+  margin-bottom: 12px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 2px solid rgba(244, 63, 94, 0.3);
+  background: linear-gradient(180deg, rgba(244, 63, 94, 0.08), rgba(244, 63, 94, 0.03));
+}
+.nc-anterior-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-weight: 700;
+  color: var(--red);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.nc-anterior-header svg {
+  width: 16px;
+  height: 16px;
+  color: var(--red);
+}
+.nc-anterior-info {
+  font-size: 12px;
+  color: var(--text);
+  margin-bottom: 8px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  border-left: 2px solid var(--red);
+}
+.nc-anterior-images {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.nc-anterior-img {
+  aspect-ratio: 4 / 3;
+  max-height: 92px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(244, 63, 94, 0.2);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.nc-anterior-img:hover {
+  border-color: var(--red);
+  box-shadow: 0 0 12px rgba(244, 63, 94, 0.3);
+  transform: scale(1.05);
+}
+.nc-anterior-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.nc-anterior-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-start;
+}
+.btn-nc-resolved {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 6px 10px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05));
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 999px;
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.btn-nc-resolved svg { width: 14px; height: 14px; }
+.btn-nc-resolved:hover {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(16, 185, 129, 0.15));
+  border-color: var(--green);
+}
+.btn-nc-resolved.active {
+  background: rgba(16, 185, 129, 0.3);
+  border-color: var(--green);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.3);
+}
+.nc-resolved-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 6px;
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 700;
+}
+.nc-resolved-badge svg {
+  width: 12px;
+  height: 12px;
+}
+
+body.light-mode .nc-anterior-section {
+  background: linear-gradient(180deg, rgba(244, 63, 94, 0.06), rgba(244, 63, 94, 0.01));
+  border-color: rgba(244, 63, 94, 0.25);
+}
+body.light-mode .nc-anterior-info {
+  background: rgba(244, 63, 94, 0.05);
+  border-color: rgba(244, 63, 94, 0.3);
 }
 
 /* â”€â”€ TOAST â”€â”€ */
@@ -928,7 +1061,7 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
   <div class="app-header">
     <div class="logo">5S</div>
     <div>
-      <div class="app-header h1" style="font-family:var(--font-display);font-size:17px;font-weight:700">Inspeção 5S</div>
+      <div class="app-header h1" style="font-family:var(--font-display);font-size:17px;font-weight:700">Housekeeping</div>
       <div class="app-header sub" style="font-size:10px;color:var(--text2)"></div>
     </div>
     <div class="spacer"></div>
@@ -956,17 +1089,6 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
           Trocar
         </div>
       </div>
-      
-      <div class="home-stats-grid">
-        <div class="stat-item">
-          <div class="stat-val" id="stats-missing">0</div>
-          <div class="stat-lbl">Áreas Pendentes</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-val" id="stats-progress">0%</div>
-          <div class="stat-lbl">Progresso Mês</div>
-        </div>
-      </div>
     </div>
 
     <div class="home-actions">
@@ -991,8 +1113,6 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
     </div>
     <div id="home-sector-list"></div>
 
-    <div class="section-title">Últimos registros</div>
-    <div id="home-insp-list" style="padding-bottom:16px"></div>
   </div>
 
   <div class="bottom-nav">
@@ -1075,7 +1195,8 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
   </button>
   </div>
   <div class="scroll-body" style="padding-top:8px">
-    <div id="hist-list" style="padding-bottom:16px"></div>
+    <div class="section-title">Últimos registros</div>
+    <div id="hist-recentes-list" style="padding:0 0 16px"></div>
   </div>
   <div class="bottom-nav">
     <button class="nav-btn" onclick="navTo('home')">
@@ -1592,9 +1713,9 @@ const SETORES = [
   }
 ];
 
-
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  STORAGE (IndexedDB com fallback localStorage)
-
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 const DB_KEY = 'aa5s_data';
 const DRAFT_KEY = 'aa5s_draft';
 // ConfiguraÃ§Ã£o do Firebase (Substitua pelos seus dados do console do Firebase)
@@ -1834,6 +1955,15 @@ let dashboardRefreshTimer = null;
 let dashboardClockTimer = null;
 let dashboardTvMode = localStorage.getItem('aa5s_dashboard_tv') === 'on';
 
+// === Function: ensureCurrentTecInList ===
+function ensureCurrentTecInList() {
+  if (!currentTec) return;
+  if (!APP.tecnicos.includes(currentTec)) {
+    APP.tecnicos.push(currentTec);
+    persistLocalApp(APP);
+  }
+}
+
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //  NAVEGAÃ‡ÃƒO
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -1890,6 +2020,7 @@ function renderTecSelect() {
     if (t === currentTec) o.selected = true;
     sel.appendChild(o);
   });
+  if (currentTec) sel.value = currentTec;
 }
 
 // === Function: addTecnico ===
@@ -1925,20 +2056,8 @@ function confirmarTecnico() {
 function renderHome() {
   document.getElementById('home-tec-name').textContent = currentTec || 'Selecionar técnico';
 
-  const stats = getMissingStats();
-  document.getElementById('stats-missing').textContent = stats.totalMissing;
-  document.getElementById('stats-progress').textContent = Math.round(stats.percent) + '%';
-
   const sectorList = document.getElementById('home-sector-list');
-  const list = document.getElementById('home-insp-list');
   sectorList.innerHTML = sectorCardListHTML();
-
-  const recentes = [...APP.inspecoes].reverse().slice(0, 4);
-  if (recentes.length === 0) {
-    list.innerHTML = '<div style="text-align:center;padding:24px 16px 32px;color:var(--text2);font-size:13px">Nenhuma inspeção registrada ainda.</div>';
-    return;
-  }
-  list.innerHTML = recentes.map(i => inspCardHTML(i)).join('');
 }
 
 // === Function: getSortedInspecoesDesc ===
@@ -1954,37 +2073,6 @@ function countInspecoesHoje() {
   const d = String(hoje.getDate()).padStart(2, '0');
   const hojeIso = `${y}-${m}-${d}`;
   return APP.inspecoes.filter(i => i.data === hojeIso).length;
-}
-
-// === Function: getMissingStats ===
-function getMissingStats() {
-  const currentMonth = new Date().toISOString().slice(0, 7);
-  let totalAreas = 0;
-  let totalDone = 0;
-  const sectorResults = {};
-
-  SETORES.forEach(s => {
-    const subareas = s.subareas.length > 0 ? s.subareas : [null];
-    const inspecionadas = new Set(
-      APP.inspecoes
-        .filter(i => i.setor === s.nome && i.periodo === currentMonth)
-        .map(i => i.subarea)
-    );
-    
-    const countSub = subareas.length;
-    const countDone = subareas.filter(sa => inspecionadas.has(sa)).length;
-    
-    totalAreas += countSub;
-    totalDone += countDone;
-    
-    sectorResults[s.nome] = { total: countSub, done: countDone, missing: countSub - countDone };
-  });
-
-  return {
-    totalMissing: totalAreas - totalDone,
-    percent: totalAreas > 0 ? (totalDone / totalAreas * 100) : 0,
-    sectorResults
-  };
 }
 
 // === Function: countSetoresSemInspecaoMeses ===
@@ -2034,16 +2122,15 @@ function getPendenciasSnapshot() {
         const pendKey = `${localKey(insp)}||${s.id}||${ci}`;
         if (latestPendKeys.has(pendKey)) return;
 
-        const isNC = (cr.nota || 0) < 2;
+        const isNC = criterioTemNCAberta(cr);
         const inspAnterior = getInspecaoAnteriorMesmoLocal(insp);
-        const wasNC = inspAnterior && (inspAnterior.sensos?.[s.id]?.[ci]?.nota || 0) < 2;
+        const wasNC = inspAnterior && criterioTemNCAberta(inspAnterior.sensos?.[s.id]?.[ci]);
         const isResolvida = wasNC && !isNC;
         if (!isNC && !isResolvida) return;
 
         latestPendKeys.add(pendKey);
-        const targetSector = (isNC ? cr.encaminharSetor : inspAnterior?.sensos?.[s.id]?.[ci]?.encaminharSetor) || insp.setor;
         itens.push({
-          setor: targetSector,
+          setor: insp.setor,
           local: localLabel(insp),
           aberta: isNC,
           resolvida: isResolvida,
@@ -2076,7 +2163,6 @@ function renderDashboard() {
   const ultimaAtualizacao = ultimas[0]?.data ? new Date(ultimas[0].data) : null;
   const notas = APP.inspecoes.map(i => i.notaGeral).filter(n => typeof n === 'number');
   const mediaGlobal = notas.length ? (notas.reduce((a, b) => a + b, 0) / notas.length) : null;
-  const setoresSem3m = getSetoresSemInspecaoMeses(3);
 
   const setoresMap = {};
   getAllSetorNames().forEach(s => { setoresMap[s] = { setor: s, abertas: 0, resolvidas: 0, ultima: null, media: null, notas: [] }; });
@@ -2101,17 +2187,25 @@ function renderDashboard() {
   const setoresCriticos = [...setores]
     .sort((a, b) => (b.abertas - a.abertas) || a.setor.localeCompare(b.setor, 'pt-BR'))
     .slice(0, 5);
-  const setoresMelhores = [...setores]
-    .filter(s => s.media !== null)
-    .sort((a, b) => b.media - a.media)
-    .slice(0, 5);
+  const faltantesPorSetor = SETORES.map(setorCfg => {
+    const setor = setorCfg.nome;
+    const areasEsperadas = (setorCfg.subareas && setorCfg.subareas.length)
+      ? [...setorCfg.subareas]
+      : ['Área geral do setor'];
+    const inspsSetor = APP.inspecoes.filter(i => i.setor === setor);
+    const areasInspecionadas = new Set(inspsSetor.map(i => i.subarea || 'Área geral do setor'));
+    const faltantes = Math.max(0, areasEsperadas.length - [...areasInspecionadas].filter(a => areasEsperadas.includes(a)).length);
+    return { setor, faltantes, totalAreas: areasEsperadas.length };
+  })
+    .sort((a, b) => b.faltantes - a.faltantes || a.setor.localeCompare(b.setor, 'pt-BR'))
+    .slice(0, 8);
 
   const perSectorW = 90;
   const chartH = 320;
   const padL = 52;
-  const padR = 20;
+  const padR = 56;
   const padT = 20;
-  const padB = 68;
+  const padB = 84;
   const plotH = chartH - padT - padB;
   const maxY = Math.max(1, ...setores.map(s => Math.max(s.abertas, s.resolvidas)));
   const toY = (val) => padT + ((maxY - val) / maxY) * plotH;
@@ -2124,7 +2218,7 @@ function renderDashboard() {
   const totalGraficosSetor = setoresParte2.length ? 2 : 1;
 
   const renderPendenciasSetorChart = (setoresChart, parte, inicioIdx) => {
-    const chartW = Math.max(1100, 140 + Math.max(1, setoresChart.length - 1) * perSectorW);
+    const chartW = Math.max(680, 180 + Math.max(1, setoresChart.length - 1) * perSectorW);
     const plotW = chartW - padL - padR;
     const stepX = setoresChart.length > 1 ? plotW / (setoresChart.length - 1) : 0;
     const toX = (idx) => padL + (setoresChart.length > 1 ? idx * stepX : plotW / 2);
@@ -2146,7 +2240,7 @@ function renderDashboard() {
             ${setoresChart.map((s, i) => `
               <rect class="dash-bar-open" x="${toX(i) - barW}" y="${toY(s.abertas)}" width="${barW - 1}" height="${Math.max(1, (chartH - padB) - toY(s.abertas))}" rx="2"></rect>
               <rect class="dash-bar-done" x="${toX(i)}" y="${toY(s.resolvidas)}" width="${barW - 1}" height="${Math.max(1, (chartH - padB) - toY(s.resolvidas))}" rx="2"></rect>
-              <text class="dash-line-xlabel" x="${toX(i)}" y="${chartH - padB + 10}" text-anchor="end" transform="rotate(-30 ${toX(i)} ${chartH - padB + 10})">
+              <text class="dash-line-xlabel" x="${toX(i)}" y="${chartH - padB + 14}" text-anchor="middle" transform="rotate(-30 ${toX(i)} ${chartH - padB + 14})">
                 ${s.setor.length > 16 ? s.setor.slice(0, 16) + '...' : s.setor}
               </text>
             `).join('')}
@@ -2182,16 +2276,16 @@ function renderDashboard() {
         <div class="dash-kpi-value green">${resolvidas.length}</div>
       </div>
       <div class="dash-kpi">
+        <div class="dash-kpi-label">Setores com Abertas</div>
+        <div class="dash-kpi-value gold">${new Set(abertas.map(a => a.setor)).size}</div>
+      </div>
+      <div class="dash-kpi">
         <div class="dash-kpi-label">Média Geral</div>
         <div class="dash-kpi-value">${mediaGlobal !== null ? mediaGlobal.toFixed(2) : '—'}</div>
       </div>
       <div class="dash-kpi">
         <div class="dash-kpi-label">Setores Cadastrados</div>
         <div class="dash-kpi-value">${getAllSetorNames().length}</div>
-      </div>
-      <div class="dash-kpi alert">
-        <div class="dash-kpi-label">Sem inspeção > 3 meses</div>
-        <div class="dash-kpi-value">${setoresSem3m.length}</div>
       </div>
     </div>
 
@@ -2228,32 +2322,17 @@ function renderDashboard() {
         </div>
 
         <div class="dash-side-section">
-          <div class="dash-side-title">Top Desempenho</div>
+          <div class="dash-side-title">Áreas Faltantes por Setor</div>
           <div class="dash-mini-list">
-            ${setoresMelhores.length === 0 ? `<div class="dash-mini-meta">Sem dados de média.</div>` : setoresMelhores.map(s => `
+            ${faltantesPorSetor.length === 0 ? `<div class="dash-mini-meta">Sem dados.</div>` : faltantesPorSetor.map(s => `
               <div class="dash-mini-item">
                 <div>
                   <div class="dash-mini-name">${s.setor}</div>
-                  <div class="dash-mini-meta">Abertas ${s.abertas} · Resolvidas ${s.resolvidas}</div>
+                  <div class="dash-mini-meta">Total de áreas: ${s.totalAreas}</div>
                 </div>
-                <span class="dash-mini-pill green">${s.media.toFixed(2)}</span>
+                <span class="dash-mini-pill ${s.faltantes > 0 ? 'red' : 'green'}">${s.faltantes}</span>
               </div>
             `).join('')}
-          </div>
-        </div>
-
-        <div class="dash-side-section">
-          <div class="dash-side-title">Sem Inspeção > 3 Meses</div>
-          <div class="dash-mini-list">
-            ${setoresSem3m.length === 0 ? `<div class="dash-mini-meta">Nenhum setor nessa condição.</div>` : setoresSem3m.slice(0, 8).map(s => `
-              <div class="dash-mini-item">
-                <div>
-                  <div class="dash-mini-name">${s.nome}</div>
-                  <div class="dash-mini-meta">${s.ultimaData ? `Última: ${formatDate(s.ultimaData)}` : 'Sem histórico de inspeção'}</div>
-                </div>
-              </div>
-            `).join('')}
-            ${setoresSem3m.length > 8 ? `<div class="dash-mini-meta">+${setoresSem3m.length - 8} setor(es) não exibidos</div>` : ''}
           </div>
         </div>
       </div>
@@ -2314,7 +2393,6 @@ function filterSectors(query) {
 
 // === Function: sectorCardListHTML ===
 function sectorCardListHTML() {
-  const stats = getMissingStats();
   const setoresOrdenados = [...SETORES.map(s => s.nome)];
   APP.inspecoes.forEach(insp => {
     if (!setoresOrdenados.includes(insp.setor)) setoresOrdenados.push(insp.setor);
@@ -2323,6 +2401,10 @@ function sectorCardListHTML() {
   return setoresOrdenados.map(setor => {
     const inspecoesSetor = APP.inspecoes.filter(i => i.setor === setor).sort((a, b) => new Date(b.data) - new Date(a.data));
     const areasMap = {};
+    const setorCfg = SETORES.find(s => s.nome === setor);
+    const areasEsperadas = (setorCfg?.subareas && setorCfg.subareas.length)
+      ? [...setorCfg.subareas]
+      : ['Área geral do setor'];
 
     inspecoesSetor.forEach(insp => {
       const chave = insp.subarea || '__setor__';
@@ -2332,16 +2414,13 @@ function sectorCardListHTML() {
 
     const areaKeys = Object.keys(areasMap);
     const ultimaSetor = inspecoesSetor[0];
-    const sStat = stats.sectorResults[setor];
-    const missingCount = sStat ? sStat.missing : 0;
-
-    const resumoSetor = sStat 
-      ? `${sStat.total - missingCount} de ${sStat.total} áreas concluídas este mês`
-      : (areaKeys.length ? `${areaKeys.length} áreas com registro` : 'Nenhum registro');
-
-    const missingBadge = missingCount > 0 
-      ? `<span class="badge badge-red" style="font-size:10px; padding:2px 8px; margin-left:4px">Faltam ${missingCount}</span>` 
-      : (sStat ? `<span class="badge badge-green" style="font-size:10px; padding:2px 8px; margin-left:4px">OK</span>` : '');
+    const areasInspecionadas = new Set(
+      areaKeys.map(k => k === '__setor__' ? 'Área geral do setor' : k)
+    );
+    const faltamAreas = Math.max(0, areasEsperadas.length - [...areasInspecionadas].filter(a => areasEsperadas.includes(a)).length);
+    const resumoSetor = areaKeys.length
+      ? `<span style="color:var(--green);font-weight:700">${areaKeys.length} área(s) com registro</span> · <span style="color:var(--red);font-weight:700">Faltam ${faltamAreas} área(s)</span>${ultimaSetor ? ` · <span style="color:var(--text2)">Última em ${formatDate(ultimaSetor.data)}</span>` : ''}`
+      : 'Nenhuma área com registro ainda';
 
     const areasHtml = areaKeys.length ? areaKeys.map(areaKey => {
       const ultima = areasMap[areaKey][0];
@@ -2376,10 +2455,7 @@ function sectorCardListHTML() {
       <div class="sector-card" data-sector="${setor}">
         <div class="sector-card-head" onclick="toggleSectorCard(this)">
           <div>
-            <div style="display:flex; align-items:center; gap:4px; flex-wrap:wrap">
-              <div class="sector-title">${setor}</div>
-              ${missingBadge}
-            </div>
+            <div class="sector-title">${setor}</div>
             <div class="sector-sub">${resumoSetor}</div>
           </div>
           <div class="sector-chevron">
@@ -2398,7 +2474,7 @@ function contarPendencias() {
   APP.inspecoes.forEach(insp => {
     SENSOS.forEach(s => {
       (insp.sensos[s.id] || []).forEach((cr, ci) => {
-        if ((cr.nota || 0) < 2 && cr.obs) c++;
+        if (criterioTemNCAberta(cr) && cr.obs) c++;
       });
     });
   });
@@ -2410,15 +2486,17 @@ function inspCardHTML(insp) {
   const score = insp.notaGeral;
   const statusClass = score >= 3.5 ? 'status-green' : score >= 2.5 ? 'status-gold' : score >= 1.5 ? 'status-orange' : 'status-red';
   const badgeScore = notaBadge(score);
-  const comparisonBadge = insp.baseId 
-    ? '<span class="badge badge-orange" style="opacity:0.8;font-size:9px">Comparativa</span>' 
-    : '<span class="badge" style="background:rgba(255,255,255,0.05);color:var(--text2);font-size:9px">Inaugural</span>';
+  const ordLocal = APP.inspecoes
+    .filter(i => sameLocal(i, insp))
+    .sort((a, b) => new Date(a.data) - new Date(b.data))
+    .findIndex(i => i.id === insp.id) + 1;
+  const ordemBadge = `<span class="badge" style="background:rgba(255,255,255,0.05);color:var(--text2);font-size:9px">${ordLocal}ª inspeção</span>`;
 
   return `<div class="insp-card ${statusClass}" onclick="openDetalhe('${insp.id}')">
     <div class="insp-card-header">
       <div style="flex:1">
         <div class="insp-setor">${insp.setor}</div>
-        <div style="margin-top:4px">${comparisonBadge}</div>
+        <div style="margin-top:4px">${ordemBadge}</div>
       </div>
       <div style="text-align:right">
         ${badgeScore}
@@ -2508,7 +2586,7 @@ function getPendenciasRecebidas(setorDestino, limitDateIso = null) {
     if (inspOrigem.setor === setorDestino) return;
     SENSOS.forEach(s => {
       inspOrigem.sensos[s.id].forEach((cr, ci) => {
-        if ((cr.nota || 0) >= 2) return;
+        if ((cr.nota || 0) >= 4) return;
         if ((cr.encaminharSetor || '') !== setorDestino) return;
         recebidas.push({
           origemSetor: inspOrigem.setor,
@@ -2540,7 +2618,7 @@ function getPendenciasResolvidas(insp, baseComparativa = null) {
       const crAnterior = baseRef.sensos?.[s.id]?.[ci] || {};
       const notaAnterior = crAnterior.nota ?? null;
       const notaAtual = crAtual?.nota ?? null;
-      const isResolvida = notaAnterior !== null && notaAnterior < 2 && notaAtual !== null && notaAtual >= 2;
+      const isResolvida = notaAnterior !== null && notaAnterior <= 3 && notaAtual !== null && notaAtual >= 4;
       if (!isResolvida) return;
 
       resolvidas.push({
@@ -2673,8 +2751,11 @@ function iniciarInspecao() {
     subarea: subarea || null
   };
   SENSOS.forEach(s => {
-    currentInsp.sensos[s.id] = s.criterios.map(() => ({ nota: null, obs: '', sugestao: '', fotos: [], encaminharSetor: '', ncResolvido: '' }));
+    currentInsp.sensos[s.id] = s.criterios.map(() => ({ nota: null, obs: '', sugestao: '', fotos: [], encaminharSetor: '', ncResolvida: false, ncAberta: false, autoReincidenciaFrom: null, autoReincidenciaTo: null }));
   });
+  if (ultimaMesmoLocal && sameLocal(currentInsp, ultimaMesmoLocal)) {
+    aplicarRegraReincidencia(ultimaMesmoLocal);
+  }
 
   saveDraftNow();
   renderInspecaoForm();
@@ -2705,107 +2786,176 @@ function renderInspecaoForm() {
           <div class="s-desc">${SENSO_DESCRICOES[s.id] || 'Avalie os critérios deste senso com atenção e registre evidências objetivas.'}</div>
           ${base ? `<div style="font-size:11px;color:var(--text2)">Nota anterior: ${calcMediaSFinal(base, s.id).toFixed(2)}</div>` : ''}
         </div>
-        <div class="s-score-mini" id="score-mini-${s.id}" style="color:var(--text2)">—</div>
+	        <div class="s-score-mini" id="score-mini-${s.id}" style="color:var(--text2)">—</div>
         <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="var(--text2)" stroke-width="2" style="flex-shrink:0"><path d="M5 8l5 5 5-5"/></svg>
       </div>
       <div class="s-body" id="s-body-${si}" ${si===0?'style="display:block"':''}>
-        ${s.criterios.map((cr, ci) => criterioHTML(s, si, cr, ci, base)).join('')}
-      </div>
-    </div>
-  `).join('');
+	        ${s.criterios.map((cr, ci) => criterioHTML(s, si, cr, ci, base)).join('')}
+	      </div>
+	    </div>
+	  `).join('');
 
+  SENSOS.forEach(s => updateScoreMini(s.id));
+  updateNotaGeral();
   updateProgresso();
+}
+
+// === Function: criterioTemNCAberta ===
+function criterioTemNCAberta(criterio) {
+  if (!criterio) return false;
+  const nota = criterio.nota ?? null;
+  const resolvidaMarcada = criterio.ncResolvida === true;
+  if (nota !== null && nota <= 3) return !resolvidaMarcada;
+  if (nota !== null && nota >= 4) return false;
+  if (typeof criterio.ncAberta === 'boolean') return criterio.ncAberta;
+  return false;
+}
+
+// === Function: hasPendenciaAnterior ===
+function hasPendenciaAnterior(sId, ci) {
+  return !!getNCAnteriorReferencia(sId, ci);
+}
+
+// === Function: getNCAnteriorReferencia ===
+function getNCAnteriorReferencia(sId, ci) {
+  if (!currentInsp) return null;
+  const historico = APP.inspecoes
+    .filter(i => sameLocal(i, currentInsp))
+    .sort((a, b) => new Date(b.data) - new Date(a.data));
+  // Regra correta: considerar apenas o estado mais recente do critério.
+  // Se a inspeção mais recente não está aberta, não existe NC pendente.
+  for (const insp of historico) {
+    const cr = insp?.sensos?.[sId]?.[ci] || null;
+    if (!cr) continue;
+    const nota = cr.nota ?? null;
+    if (nota === null) continue;
+    return criterioTemNCAberta(cr) ? { insp, cr } : null;
+  }
+  return null;
+}
+
+// === Function: getFotosValidasCriterio ===
+function getFotosValidasCriterio(criterio) {
+  if (!criterio || !Array.isArray(criterio.fotos)) return [];
+  return criterio.fotos.filter(f => typeof f === 'string' && f && f !== '__ref__');
+}
+
+// === Function: getUltimaEvidenciaNC ===
+function getUltimaEvidenciaNC(sId, ci) {
+  if (!currentInsp) return [];
+  const historico = APP.inspecoes
+    .filter(i => sameLocal(i, currentInsp))
+    .sort((a, b) => new Date(b.data) - new Date(a.data));
+  for (const insp of historico) {
+    const cr = insp?.sensos?.[sId]?.[ci] || null;
+    if (!criterioTemNCAberta(cr)) continue;
+    const fotos = getFotosValidasCriterio(cr);
+    if (fotos.length) return fotos;
+  }
+  return [];
+}
+
+// === Function: getReincidenciaFormulario ===
+function getReincidenciaFormulario(sId, ci) {
+  const ref = getNCAnteriorReferencia(sId, ci);
+  if (!ref?.insp) return 0;
+  return getReincidenciaCount(ref.insp, sId, ci);
+}
+
+// === Function: aplicarRegraReincidencia ===
+function aplicarRegraReincidencia(baseInsp) {
+  if (!baseInsp || !baseInsp.sensos) return;
+  SENSOS.forEach(s => {
+    const atuais = currentInsp.sensos[s.id] || [];
+    const anteriores = baseInsp.sensos[s.id] || [];
+    atuais.forEach((item, ci) => {
+      if (!item || item.nota !== null) return;
+      const criterioAnterior = anteriores[ci];
+      if (!criterioTemNCAberta(criterioAnterior)) return;
+      const notaAnterior = criterioAnterior?.nota;
+      if (typeof notaAnterior !== 'number') return;
+      const notaAjustada = Math.max(0, notaAnterior - 1);
+      item.nota = notaAjustada;
+      item.autoReincidenciaFrom = notaAnterior;
+      item.autoReincidenciaTo = notaAjustada;
+    });
+  });
 }
 
 // === Function: criterioHTML ===
 function criterioHTML(s, si, cr, ci, base) {
-  const baseNota = base ? (base.sensos[s.id][ci]?.nota ?? null) : null;
-  const baseObs = base ? (base.sensos[s.id][ci]?.obs || '') : '';
-  const baseFotos = base ? (base.sensos[s.id][ci]?.fotos || []) : [];
+  const ncAnteriorRef = getNCAnteriorReferencia(s.id, ci);
+  const baseCr = ncAnteriorRef?.cr || (base ? (base.sensos[s.id][ci] || null) : null);
+  const baseNota = baseCr ? (baseCr.nota ?? null) : null;
+  const baseObs = baseCr ? (baseCr.obs || '') : '';
+  const baseFotosDiretas = getFotosValidasCriterio(baseCr);
+  const baseFotos = baseFotosDiretas.length ? baseFotosDiretas : getUltimaEvidenciaNC(s.id, ci);
+  const baseTemRefPendente = Array.isArray(baseCr?.fotos) && baseCr.fotos.includes('__ref__');
   const item = currentInsp.sensos[s.id][ci];
+  const reincAtual = getReincidenciaFormulario(s.id, ci);
   const totalCriterios = s.criterios.length;
   const setorOptions = getAllSetorNames()
     .filter(nome => nome !== currentInsp.setor)
     .map(nome => `<option value="${nome}" ${item.encaminharSetor === nome ? 'selected' : ''}>${nome}</option>`)
     .join('');
-  
-  // Verificar se é reincidência
-  const historico = APP.inspecoes
-    .filter(i => sameLocal(i, currentInsp))
-    .sort((a, b) => new Date(b.data) - new Date(a.data));
-  const historicoFotos = historico
-    .slice(1) // pula a inspeção atual
-    .map(h => ({ nota: h.sensos[s.id][ci]?.nota, fotos: h.sensos[s.id][ci]?.fotos || [] }));
-  
-  let reincidenciasCount = 0;
-  for (const h of historicoFotos) {
-    if ((h.nota ?? 0) < 2) reincidenciasCount++;
-    else break;
-  }
-  
-  const isNCAnterior = baseNota !== null && baseNota < 2;
-  const isAtualNC = (item.nota ?? null) !== null && item.nota < 2;
-  const isReincidencia = isNCAnterior && isAtualNC;
-  
   const baseHint = baseNota !== null
     ? `<div class="criterio-basehint" style="--senso-color:${s.cor}">
         Anterior: nota <strong style="color:${notaCor(baseNota)}">${baseNota}</strong>${baseObs ? ` - "${baseObs.slice(0,60)}${baseObs.length>60?'...':''}"` : ''}
        </div>`
     : '';
+  const autoHint = (typeof item.autoReincidenciaFrom === 'number' && typeof item.autoReincidenciaTo === 'number')
+    ? `<div class="criterio-auto-ajuste">Reincidência automática: nota ajustada de <strong>${item.autoReincidenciaFrom}</strong> para <strong>${item.autoReincidenciaTo}</strong>.</div>`
+    : '';
   
-  // HTML para NC anterior com foto e opção de resolução
-  const ncAnteriorHTML = isNCAnterior ? `
-    <div class="criterio-section" style="background:rgba(244,63,94,0.1);border-color:rgba(244,63,94,0.3)">
-      <div class="criterio-section-title" style="color:var(--red)">⚠️ Não Conformidade Anterior</div>
-      ${baseFotos.length > 0 ? `
-        <div style="margin-bottom:10px">
-          <div style="font-size:11px;color:var(--text2);margin-bottom:6px">Foto da não conformidade anterior:</div>
-          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">
-            ${baseFotos.map((foto, idx) => `
-              <div style="border-radius:8px;overflow:hidden;border:1px solid rgba(244,63,94,0.3)">
-                <img src="${foto}" alt="NC anterior ${idx+1}" style="width:100%;height:auto;display:block;object-fit:cover;max-height:120px">
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      ` : ''}
-      
-      <div style="margin-top:8px">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px;background:rgba(16,185,129,0.08);border-radius:8px;margin-bottom:6px">
-          <input type="radio" name="ncResolucao-${s.id}-${ci}" value="resolvido" ${item.ncResolvido === 'resolvido' ? 'checked' : ''} onchange="setNCResolucao('${s.id}',${ci},'resolvido')" style="cursor:pointer">
-          <span style="font-size:13px;color:var(--green)">✓ Foi resolvido</span>
-        </label>
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px;background:rgba(244,63,94,0.08);border-radius:8px;margin-bottom:6px">
-          <input type="radio" name="ncResolucao-${s.id}-${ci}" value="reincidente" ${item.ncResolvido === 'reincidente' ? 'checked' : ''} onchange="setNCResolucao('${s.id}',${ci},'reincidente')" style="cursor:pointer">
-          <span style="font-size:13px;color:var(--red)">✗ Não foi resolvido (reincidente)</span>
-        </label>
+  // Seção de não conformidade anterior com imagens
+  const hasNCAnterior = criterioTemNCAberta(baseCr);
+  const isResolved = item.ncResolvida === true || (item.nota !== null && item.nota >= 4);
+  const ncAnteriorSection = hasNCAnterior ? `
+    <div class="nc-anterior-section">
+      <div class="nc-anterior-header">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="8"/><path d="M10 6v8M6 10h8"/></svg>
+        Não Conformidade Anterior
       </div>
-      
-      ${reincidenciasCount > 1 ? `
-        <div style="margin-top:8px;padding:8px;background:rgba(245,158,11,0.15);border-left:3px solid var(--gold);border-radius:6px">
-          <span style="font-size:11px;color:var(--gold);font-weight:700">ATENÇÃO: ${reincidenciasCount}ª reincidência consecutiva - Nota será reduzida</span>
+      <div class="nc-anterior-info">
+        Nota anterior: <strong style="color:${notaCor(baseNota)}">${baseNota}</strong> | Reincidência: <strong>${reincAtual}ª</strong> | Observação: ${baseObs || 'Sem descrição'}
+      </div>
+      ${baseFotos.length > 0 ? `
+        <div class="nc-anterior-images">
+          ${baseFotos.map((foto, idx) => `
+            <div class="nc-anterior-img" onclick="openImageModal('${foto.replace(/'/g, "\\'")}')">
+              <img src="${foto}" alt="Foto ${idx + 1}" style="cursor:pointer">
+            </div>
+          `).join('')}
         </div>
-      ` : ''}
+      ` : `<div style="font-size:11px;color:var(--text2);padding:6px;text-align:center">${baseTemRefPendente ? 'Evidência da NC anterior em sincronização...' : 'Sem fotos registradas da não conformidade anterior'}</div>`}
+      <div class="nc-anterior-actions">
+        <button class="btn-nc-resolved ${isResolved ? 'active' : ''}" onclick="toggleResolved('${s.id}',${ci})" id="btn-resolved-${s.id}-${ci}">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10l4 4L16 6"/></svg>
+          <span>${isResolved ? 'Resolvido ✓' : 'Marcar como resolvido'}</span>
+        </button>
+      </div>
     </div>
   ` : '';
 
   return `<div class="criterio-item" id="cr-${s.id}-${ci}" style="--senso-color:${s.cor}">
     <div class="criterio-head">
       <span class="criterio-badge">Critério ${ci + 1}/${totalCriterios}</span>
+      ${isResolved && hasNCAnterior ? `<span class="nc-resolved-badge"><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>Resolvido</span>` : ''}
     </div>
     <div class="criterio-nome">${cr}</div>
     ${baseHint}
-    ${ncAnteriorHTML}
+    ${autoHint}
+    ${ncAnteriorSection}
     <div class="criterio-section">
       <div class="criterio-section-title">Nota da Avaliação</div>
       <div class="nota-row">
-        ${[0,1,2,3,4].map(n => `<button class="nota-btn" id="nb-${s.id}-${ci}-${n}" onclick="setNota('${s.id}',${ci},${n})">${n}</button>`).join('')}
+        ${[0,1,2,3,4].map(n => `<button class="nota-btn${item.nota === n ? ` sel-${n}` : ''}" id="nb-${s.id}-${ci}-${n}" onclick="setNota('${s.id}',${ci},${n})">${n}</button>`).join('')}
       </div>
     </div>
     <div class="criterio-section">
       <div class="criterio-section-title">Observação / Não Conformidade</div>
       <div class="criterio-obs">
-        <textarea class="form-textarea" placeholder="Observação / não conformidade (obrigatório para notas 0-3)..." rows="2"
+        <textarea class="form-textarea" placeholder="Observação / não conformidade (obrigatório para notas de 0 a 3)..." rows="2"
           id="obs-${s.id}-${ci}" oninput="setObs('${s.id}',${ci},this.value)"
           style="font-size:13px;min-height:52px">${item.obs || ''}</textarea>
       </div>
@@ -2852,17 +3002,32 @@ function toggleS(id) {
 // === Function: setNota ===
 function setNota(sId, ci, nota) {
   currentInsp.sensos[sId][ci].nota = nota;
+  currentInsp.sensos[sId][ci].autoReincidenciaFrom = null;
+  currentInsp.sensos[sId][ci].autoReincidenciaTo = null;
+  const tinhaNCAnterior = hasPendenciaAnterior(sId, ci);
+  const btnResolvido = document.getElementById(`btn-resolved-${sId}-${ci}`);
+  const resolvidoMarcadoManual = !!btnResolvido?.classList.contains('active') || currentInsp.sensos[sId][ci].ncResolvida === true;
+  if (nota <= 3 && tinhaNCAnterior && !resolvidoMarcadoManual) currentInsp.sensos[sId][ci].ncResolvida = false;
+  currentInsp.sensos[sId][ci].ncAberta = nota <= 3 && currentInsp.sensos[sId][ci].ncResolvida !== true;
   [0,1,2,3,4].forEach(n => {
     const btn = document.getElementById(`nb-${sId}-${ci}-${n}`);
     btn.className = 'nota-btn' + (n === nota ? ` sel-${n}` : '');
   });
-  // Limpa avisos e encaminhamentos apenas se a nota for excelente (4)
-  if (nota === 4) {
-    const obs = document.getElementById(`obs-${sId}-${ci}`);
+  // obrigatório obs se <= 3
+  const obs = document.getElementById(`obs-${sId}-${ci}`);
+  if (nota >= 4) {
     obs.style.borderColor = '';
-    currentInsp.sensos[sId][ci].encaminharSetor = '';
-    const respSel = document.getElementById(`resp-${sId}-${ci}`);
-    if (respSel) respSel.value = '';
+    
+    // Marcar automaticamente como resolvido se houver NC anterior e nota >= 4
+    const btn = document.getElementById(`btn-resolved-${sId}-${ci}`);
+    if (btn && !btn.classList.contains('active')) {
+      btn.classList.add('active');
+      btn.innerHTML = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10l4 4L16 6"/></svg><span>Resolvido ✓</span>';
+    }
+    if (tinhaNCAnterior) currentInsp.sensos[sId][ci].ncResolvida = true;
+    if (tinhaNCAnterior) currentInsp.sensos[sId][ci].ncAberta = false;
+  } else if (obs && !obs.value.trim()) {
+    obs.style.borderColor = 'var(--red)';
   }
   updateScoreMini(sId);
   updateProgresso();
@@ -2888,13 +3053,38 @@ function setResponsavelSetor(sId, ci, val) {
   scheduleDraftSave();
 }
 
-// === Function: setNCResolucao ===
-function setNCResolucao(sId, ci, status) {
-  currentInsp.sensos[sId][ci].ncResolvido = status;
-  updateScoreMini(sId);
-  updateProgresso();
-  updateNotaGeral();
+// === Function: toggleResolved ===
+function toggleResolved(sId, ci) {
+  const btn = document.getElementById(`btn-resolved-${sId}-${ci}`);
+  if (!btn) return;
+  
+  if (btn.classList.contains('active')) {
+    btn.classList.remove('active');
+    btn.innerHTML = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10l4 4L16 6"/></svg><span>Marcar como resolvido</span>';
+    currentInsp.sensos[sId][ci].ncResolvida = false;
+    currentInsp.sensos[sId][ci].ncAberta = (currentInsp.sensos[sId][ci].nota ?? null) !== null && currentInsp.sensos[sId][ci].nota <= 3;
+  } else {
+    btn.classList.add('active');
+    btn.innerHTML = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10l4 4L16 6"/></svg><span>Resolvido ✓</span>';
+    currentInsp.sensos[sId][ci].ncResolvida = true;
+    currentInsp.sensos[sId][ci].ncAberta = false;
+  }
+  
   scheduleDraftSave();
+}
+
+// === Function: openImageModal ===
+function openImageModal(imageSrc) {
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;z-index:1000;cursor:pointer;';
+  modal.innerHTML = `
+    <div style="position:relative;max-width:90%;max-height:90%;">
+      <img src="${imageSrc}" style="max-width:100%;max-height:90vh;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,0.5);">
+      <button onclick="this.parentElement.parentElement.remove()" style="position:absolute;top:10px;right:10px;background:var(--red);color:white;border:none;width:40px;height:40px;border-radius:50%;font-size:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>
+    </div>
+  `;
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  document.body.appendChild(modal);
 }
 
 let pendingFotoTarget = null;
@@ -2993,7 +3183,7 @@ function calcMediaS(criterios) {
 
 // === Function: isNotaNC ===
 function isNotaNC(nota) {
-  return nota !== null && nota < 2;
+  return nota !== null && nota <= 3;
 }
 
 // === Function: getInspecaoAnteriorMesmoLocal ===
@@ -3012,9 +3202,9 @@ function getPenalidadeS(insp, sId, inspAnterior = null) {
 
   let penalidade = 0;
   for (let ci = 0; ci < insp.sensos[sId].length; ci++) {
-    const notaAtual = insp.sensos[sId][ci]?.nota ?? null;
-    const notaAnterior = anterior.sensos[sId][ci]?.nota ?? null;
-    if (isNotaNC(notaAnterior) && isNotaNC(notaAtual)) penalidade += 1;
+    const atualAberta = criterioTemNCAberta(insp.sensos[sId][ci]);
+    const anteriorAberta = criterioTemNCAberta(anterior.sensos[sId][ci]);
+    if (anteriorAberta && atualAberta) penalidade += 1;
   }
 
   return penalidade;
@@ -3097,17 +3287,28 @@ async function salvarInspecao() {
   // validaÃ§Ã£o
   let ok = true;
   let faltamObs = [];
+  let faltamFotoResolucao = [];
   SENSOS.forEach(s => {
     currentInsp.sensos[s.id].forEach((cr, ci) => {
       if (cr.nota === null) { ok = false; return; }
-      if (cr.nota < 4 && !cr.obs.trim()) {
+      if (cr.nota <= 3 && !cr.obs.trim()) {
         faltamObs.push(`${s.nome} - Critério ${ci+1}`);
+      }
+      if (hasPendenciaAnterior(s.id, ci) && cr.ncResolvida === true) {
+        const fotos = getFotosValidasCriterio(cr);
+        if (!fotos.length) {
+          faltamFotoResolucao.push(`${s.nome} - Critério ${ci+1}`);
+        }
       }
     });
   });
   if (!ok) { toast('Preencha todas as notas antes de salvar'); return; }
   if (faltamObs.length > 0) {
-    toast('Observação obrigatória para notas de 0 a 3');
+    toast('Adicione observação nos itens com nota de 0 a 3');
+    return;
+  }
+  if (faltamFotoResolucao.length > 0) {
+    toast('Anexe foto de evidência para NC marcada como resolvida');
     return;
   }
 
@@ -3120,6 +3321,16 @@ async function salvarInspecao() {
       navTo('home');
       return;
     }
+
+    SENSOS.forEach(s => {
+      currentInsp.sensos[s.id].forEach((cr, ci) => {
+        const notaAtual = cr.nota ?? null;
+        const tinhaAnterior = hasPendenciaAnterior(s.id, ci);
+        if (!tinhaAnterior) cr.ncResolvida = false;
+        const resolvidaMarcada = cr.ncResolvida === true;
+        cr.ncAberta = notaAtual !== null && notaAtual <= 3 && !resolvidaMarcada;
+      });
+    });
 
     const inspAnterior = getInspecaoAnteriorMesmoLocal(currentInsp);
     const penalidadesS = {};
@@ -3157,59 +3368,13 @@ async function salvarInspecao() {
 
 // === Function: renderHistorico ===
 function renderHistorico() {
-  const list = document.getElementById('hist-list');
-  if (APP.inspecoes.length === 0) {
-    list.innerHTML = '<div style="text-align:center;padding:40px 16px;color:var(--text2);font-size:13px">Nenhuma inspeção registrada ainda.</div>';
-    return;
-  }
+  const recentesList = document.getElementById('hist-recentes-list');
 
-  // Obtém os nomes dos setores únicos que possuem inspeções
-  const setoresComInsp = [...new Set(APP.inspecoes.map(i => i.setor))].sort();
-
-  list.innerHTML = setoresComInsp.map(setor => {
-    const inspecoesSetor = APP.inspecoes
-      .filter(i => i.setor === setor)
-      .sort((a, b) => new Date(b.data) - new Date(a.data));
-
-    const ultimaSetor = inspecoesSetor[0];
-    const resumoSetor = `${inspecoesSetor.length} inspeção(ões) registrada(s)`;
-
-    const areasHtml = inspecoesSetor.map(insp => {
-      const score = insp.notaGeral;
-      const statusClass = score >= 3.5 ? 'status-green' : score >= 2.5 ? 'status-gold' : score >= 1.5 ? 'status-orange' : 'status-red';
-      const labelArea = insp.subarea || 'Área geral do setor';
-      
-      return `
-        <div class="sector-area-item ${statusClass}" onclick="openDetalhe('${insp.id}')">
-          <div class="sector-area-top">
-            <div style="flex:1">
-              <div class="sector-area-name">${labelArea}</div>
-              <div class="sector-area-meta">${formatDate(insp.data)} · ${insp.periodo || ''} · ${insp.tecnico}</div>
-            </div>
-            <div style="font-family:var(--font-display); font-weight:700; color:${notaCor(score)}">${score != null ? score.toFixed(2) : '—'}</div>
-          </div>
-        </div>
-      `;
-    }).join('');
-
-    return `
-      <div class="sector-card">
-        <div class="sector-card-head" onclick="toggleSectorCard(this)">
-          <div>
-            <div class="sector-title">${setor}</div>
-            <div class="sector-sub">${resumoSetor}</div>
-          </div>
-          <div style="display:flex; align-items:center; gap:8px">
-            ${ultimaSetor ? notaBadge(ultimaSetor.notaGeral) : ''}
-            <div class="sector-chevron">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
-            </div>
-          </div>
-        </div>
-        <div class="sector-area-list">${areasHtml}</div>
-      </div>
-    `;
-  }).join('');
+  const recentes = getSortedInspecoesDesc().slice(0, 4);
+  if (!recentesList) return;
+  recentesList.innerHTML = recentes.length
+    ? recentes.map(i => inspCardHTML(i)).join('')
+    : '<div style="text-align:center;padding:16px;color:var(--text2);font-size:13px">Nenhuma inspeção registrada ainda.</div>';
 }
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -3261,8 +3426,8 @@ function openDetalhe(id) {
   let pendHTML = '';
   SENSOS.forEach(s => {
     insp.sensos[s.id].forEach((cr, ci) => {
-      if ((cr.nota || 0) < 2) {
-        const resolvida = base && (base.sensos[s.id][ci]?.nota || 0) < 2 && (cr.nota || 0) >= 2;
+      if (criterioTemNCAberta(cr)) {
+        const resolvida = base && criterioTemNCAberta(base.sensos[s.id][ci]) && !criterioTemNCAberta(cr);
         const reinc = getReincidenciaCount(insp, s.id, ci);
         const reincTxt = (!resolvida && reinc > 1) ? ` <span style="color:var(--orange2);font-weight:700">[REINCIDÊNCIA: ${reinc}ª vez]</span>` : '';
         pendHTML += `<div class="pend-item ${resolvida?'resolvida':''}">
@@ -3324,8 +3489,11 @@ function iniciarNovaComBase(baseId) {
     notaGeral: null
   };
   SENSOS.forEach(s => {
-    currentInsp.sensos[s.id] = s.criterios.map(() => ({ nota: null, obs: '', sugestao: '', fotos: [], encaminharSetor: '', ncResolvido: '' }));
+    currentInsp.sensos[s.id] = s.criterios.map(() => ({ nota: null, obs: '', sugestao: '', fotos: [], encaminharSetor: '', ncResolvida: false, ncAberta: false, autoReincidenciaFrom: null, autoReincidenciaTo: null }));
   });
+  if (sameLocal(currentInsp, base)) {
+    aplicarRegraReincidencia(base);
+  }
 
   saveDraftNow();
   renderInspecaoForm();
@@ -3361,9 +3529,9 @@ function renderPendList() {
         const pendKey = `${localKey(insp)}||${s.id}||${ci}`;
         if (latestPendKeys.has(pendKey)) return;
 
-        const isNC = (cr.nota || 0) < 2;
+        const isNC = criterioTemNCAberta(cr);
         const inspAnterior = getInspecaoAnteriorMesmoLocal(insp);
-        const wasNC = inspAnterior && (inspAnterior.sensos?.[s.id]?.[ci]?.nota || 0) < 2;
+        const wasNC = inspAnterior && criterioTemNCAberta(inspAnterior.sensos?.[s.id]?.[ci]);
         const isResolvida = wasNC && !isNC;
 
         if (!isNC && !isResolvida) return;
@@ -3372,27 +3540,28 @@ function renderPendList() {
         const reinc = getReincidenciaCount(insp, s.id, ci);
         const reincTxt = (isNC && reinc > 1) ? ` <span style="color:var(--orange2);font-weight:700">[REINCIDÊNCIA: ${reinc}ª vez]</span>` : '';
         const reincResolvida = isResolvida ? getReincidenciasAteConclusao(insp, s.id, ci) : null;
-        const fotoResolucao = isResolvida && Array.isArray(cr.fotos) ? (cr.fotos[0] || null) : null;
-
-        const targetSector = (isNC ? cr.encaminharSetor : inspAnterior?.sensos?.[s.id]?.[ci]?.encaminharSetor) || insp.setor;
+        const fotosNC = isNC ? getFotosValidasCriterio(cr) : [];
+        const fotosResolucao = isResolvida ? getFotosValidasCriterio(cr) : [];
 
         const itemHtml = `<div class="pend-item ${isResolvida?'resolvida':''}">
-          <div class="pend-setor">${targetSector} · ${s.nome}</div>
+          <div class="pend-setor">${insp.setor} · ${s.nome}</div>
           <div class="pend-desc">${SENSOS.find(x=>x.id===s.id).criterios[ci]}</div>
           <div style="font-size:11px;color:var(--text2);margin-top:4px">${formatDate(insp.data)} · ${insp.tecnico}</div>
           ${isNC ? `<div class="pend-status" style="color:var(--red)">Nota ${cr.nota} - ${cr.obs || 'Sem observação'}${reincTxt}</div>` : ''}
+          ${isNC && fotosNC.length ? `<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:8px">${fotosNC.map((foto, idx) => `<img src="${foto}" alt="Evidência NC ${idx + 1}" onclick="openImageModal('${foto.replace(/'/g, "\\'")}')" style="width:100%;height:68px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer">`).join('')}</div>` : ''}
+          ${isNC && !fotosNC.length ? `<div style="font-size:11px;color:var(--text2);margin-top:4px">Foto da NC: não anexada.</div>` : ''}
           ${isResolvida ? `<div class="pend-status" style="color:var(--green)">✓ Resolvida em ${formatDate(insp.data)}</div>` : ''}
           ${isResolvida ? `<div style="font-size:11px;color:var(--text2);margin-top:3px">Reincidências até concluir: <strong style="color:var(--green)">${reincResolvida?.reincidencias ?? 0}</strong> <span style="color:var(--text2)">(${reincResolvida?.ocorrenciasNC ?? 0} ocorrências NC consecutivas)</span></div>` : ''}
           ${isResolvida ? `<div style="font-size:11px;color:var(--text2);margin-top:3px">Antes: ${inspAnterior?.sensos?.[s.id]?.[ci]?.obs || 'Sem observação'}<br>Agora: ${cr.obs || 'Sem observação'}</div>` : ''}
-          ${isResolvida && fotoResolucao ? `<div style="margin-top:8px"><img src="${fotoResolucao}" alt="Evidência da resolução" style="width:100%;max-width:220px;border-radius:8px;border:1px solid var(--border);display:block"></div>` : ''}
-          ${isResolvida && !fotoResolucao ? `<div style="font-size:11px;color:var(--text2);margin-top:4px">Foto da resolução: não anexada.</div>` : ''}
+          ${isResolvida && fotosResolucao.length ? `<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:8px">${fotosResolucao.map((foto, idx) => `<img src="${foto}" alt="Evidência da resolução ${idx + 1}" onclick="openImageModal('${foto.replace(/'/g, "\\'")}')" style="width:100%;height:68px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer">`).join('')}</div>` : ''}
+          ${isResolvida && !fotosResolucao.length ? `<div style="font-size:11px;color:var(--text2);margin-top:4px">Foto da resolução: não anexada.</div>` : ''}
           <div class="pend-status" style="margin-top:6px;color:${isNC ? 'var(--red)' : 'var(--green)'};font-weight:700">
             ${isNC ? 'Status: Aberta' : 'Status: Resolvida'}
           </div>
         </div>`;
 
         itens.push({
-          setor: targetSector,
+          setor: insp.setor,
           aberta: isNC,
           html: itemHtml
         });
@@ -3450,8 +3619,8 @@ function getReincidenciaCount(insp, sId, ci) {
   if (idx === -1) return 0;
   let count = 0;
   for (let i = idx; i < historicoLocal.length; i++) {
-    const nota = historicoLocal[i].sensos[sId][ci]?.nota;
-    if (nota !== null && nota < 2) count++;
+    const cr = historicoLocal[i].sensos[sId][ci];
+    if (criterioTemNCAberta(cr)) count++;
     else break;
   }
   return count;
@@ -3473,8 +3642,8 @@ function getReincidenciasAteConclusao(inspResolucao, sId, ci) {
 
   let ocorrenciasNC = 0;
   for (let i = idx + 1; i < historico.length; i++) {
-    const nota = historico[i].sensos?.[sId]?.[ci]?.nota ?? null;
-    if (nota !== null && nota < 2) ocorrenciasNC++;
+    const cr = historico[i].sensos?.[sId]?.[ci] || null;
+    if (criterioTemNCAberta(cr)) ocorrenciasNC++;
     else break;
   }
 
@@ -3599,47 +3768,68 @@ async function gerarPDFSetorial(setor) {
   const inspsMesSetor = inspsMes.filter(i => i.setor === setor);
 
   const ncList = [];
-  inspsMesSetor.forEach(insp => {
-    SENSOS.forEach(s => {
-      (insp.sensos[s.id] || []).forEach((cr, ci) => {
-        if ((cr.nota ?? 0) >= 2) return;
-        if (cr.encaminharSetor && cr.encaminharSetor !== setor) return;
-        ncList.push({
-          data: insp.data,
-          local: localLabel(insp),
-          senso: s.nome,
-          criterio: s.criterios[ci],
-          obs: cr.obs || 'Sem observação.',
-          sugestao: cr.sugestao || 'Não informada.',
-          fotos: Array.isArray(cr.fotos) ? cr.fotos : [],
-          origemTipo: 'propria',
-          origemSetor: insp.setor,
-          origemLocal: localLabel(insp)
+  const latestOwnByCrit = {};
+  [...inspsMesSetor]
+    .sort((a, b) => new Date(b.data) - new Date(a.data))
+    .forEach(insp => {
+      SENSOS.forEach(s => {
+        (insp.sensos[s.id] || []).forEach((cr, ci) => {
+          const key = `${localKey(insp)}||${s.id}||${ci}`;
+          if (latestOwnByCrit[key]) return;
+          latestOwnByCrit[key] = { insp, s, ci, cr };
         });
       });
     });
+  Object.values(latestOwnByCrit).forEach(({ insp, s, ci, cr }) => {
+    if (!criterioTemNCAberta(cr)) return;
+    ncList.push({
+      data: insp.data,
+      local: localLabel(insp),
+      senso: s.nome,
+      criterio: s.criterios[ci],
+      reincidencia: getReincidenciaCount(insp, s.id, ci),
+      obs: cr.obs || 'Sem observação.',
+      sugestao: cr.sugestao || 'Não informada.',
+      fotos: Array.isArray(cr.fotos) ? cr.fotos : [],
+      origemTipo: 'propria',
+      origemSetor: insp.setor,
+      origemLocal: localLabel(insp),
+      destinoSetor: (cr.encaminharSetor || insp.setor),
+      destinoLocal: localLabel(insp)
+    });
   });
 
-  // Inclui NCs de outros setores quando foram encaminhadas para o setor deste relatório.
-  inspsMes.forEach(insp => {
-    if (insp.setor === setor) return;
-    SENSOS.forEach(s => {
-      (insp.sensos[s.id] || []).forEach((cr, ci) => {
-        if ((cr.nota ?? 0) >= 2) return;
-        if ((cr.encaminharSetor || '') !== setor) return;
-        ncList.push({
-          data: insp.data,
-          local: localLabel(insp),
-          senso: s.nome,
-          criterio: s.criterios[ci],
-          obs: cr.obs || 'Sem observação.',
-          sugestao: cr.sugestao || 'Não informada.',
-          fotos: Array.isArray(cr.fotos) ? cr.fotos : [],
-          origemTipo: 'encaminhada',
-          origemSetor: insp.setor,
-          origemLocal: localLabel(insp)
+  // Inclui apenas o estado mais recente das NCs encaminhadas para este setor.
+  const latestEncByCrit = {};
+  [...inspsMes]
+    .filter(i => i.setor !== setor)
+    .sort((a, b) => new Date(b.data) - new Date(a.data))
+    .forEach(insp => {
+      SENSOS.forEach(s => {
+        (insp.sensos[s.id] || []).forEach((cr, ci) => {
+          const key = `${insp.setor}||${localKey(insp)}||${s.id}||${ci}`;
+          if (latestEncByCrit[key]) return;
+          latestEncByCrit[key] = { insp, s, ci, cr };
         });
       });
+    });
+  Object.values(latestEncByCrit).forEach(({ insp, s, ci, cr }) => {
+    if (!criterioTemNCAberta(cr)) return;
+    if ((cr.encaminharSetor || '') !== setor) return;
+    ncList.push({
+      data: insp.data,
+      local: localLabel(insp),
+      senso: s.nome,
+      criterio: s.criterios[ci],
+      reincidencia: getReincidenciaCount(insp, s.id, ci),
+      obs: cr.obs || 'Sem observação.',
+      sugestao: cr.sugestao || 'Não informada.',
+      fotos: Array.isArray(cr.fotos) ? cr.fotos : [],
+      origemTipo: 'encaminhada',
+      origemSetor: insp.setor,
+      origemLocal: localLabel(insp),
+      destinoSetor: setor,
+      destinoLocal: localLabel(insp)
     });
   });
 
@@ -3657,10 +3847,11 @@ async function gerarPDFSetorial(setor) {
         const crAnterior = inspAnterior.sensos?.[s.id]?.[ci] || {};
         const notaAnterior = crAnterior.nota ?? null;
         const notaAtual = crAtual?.nota ?? null;
-        const resolveuAgora = notaAnterior !== null && notaAnterior < 2 && notaAtual !== null && notaAtual >= 2;
+        const resolveuAgora = notaAnterior !== null && notaAnterior <= 3 && notaAtual !== null && notaAtual >= 4;
         if (!resolveuAgora) return;
 
         const reinc = getReincidenciasAteConclusao(insp, s.id, ci);
+        const destinoSetor = crAnterior.encaminharSetor || crAtual?.encaminharSetor || insp.setor;
         resolvidasList.push({
           dataResolucao: insp.data,
           dataAnterior: inspAnterior.data,
@@ -3672,11 +3863,56 @@ async function gerarPDFSetorial(setor) {
           sugestaoAtual: crAtual?.sugestao || 'Não informada.',
           fotoResolucao: Array.isArray(crAtual?.fotos) ? (crAtual.fotos[0] || null) : null,
           ocorrenciasNC: reinc.ocorrenciasNC,
-          reincidencias: reinc.reincidencias
+          reincidencias: reinc.reincidencias,
+          origemSetor: insp.setor,
+          origemLocal: localLabel(insp),
+          destinoSetor,
+          resolvidaPorCorresponsavel: destinoSetor !== insp.setor
         });
       });
     });
   });
+
+  // Resolvidas por corresponsável: entram também no relatório do setor de destino.
+  inspsMes
+    .filter(i => i.setor !== setor)
+    .forEach(inspOrigem => {
+      if ((inspOrigem.periodo || '') !== periodoAtual) return;
+      const inspAnteriorOrigem = getInspecaoAnteriorMesmoLocal(inspOrigem);
+      if (!inspAnteriorOrigem) return;
+      if ((inspAnteriorOrigem.periodo || '') !== periodoAtual) return;
+
+      SENSOS.forEach(s => {
+        (inspOrigem.sensos[s.id] || []).forEach((crAtual, ci) => {
+          const crAnterior = inspAnteriorOrigem.sensos?.[s.id]?.[ci] || {};
+          const notaAnterior = crAnterior.nota ?? null;
+          const notaAtual = crAtual?.nota ?? null;
+          const destinoSetor = crAnterior.encaminharSetor || crAtual?.encaminharSetor || '';
+          const resolveuAgora = notaAnterior !== null && notaAnterior <= 3 && notaAtual !== null && notaAtual >= 4;
+          if (!resolveuAgora) return;
+          if (destinoSetor !== setor) return;
+
+          const reinc = getReincidenciasAteConclusao(inspOrigem, s.id, ci);
+          resolvidasList.push({
+            dataResolucao: inspOrigem.data,
+            dataAnterior: inspAnteriorOrigem.data,
+            local: localLabel(inspOrigem),
+            senso: s.nome,
+            criterio: s.criterios[ci],
+            obsAnterior: crAnterior.obs || 'Sem observação.',
+            obsAtual: crAtual?.obs || 'Sem observação.',
+            sugestaoAtual: crAtual?.sugestao || 'Não informada.',
+            fotoResolucao: Array.isArray(crAtual?.fotos) ? (crAtual.fotos[0] || null) : null,
+            ocorrenciasNC: reinc.ocorrenciasNC,
+            reincidencias: reinc.reincidencias,
+            origemSetor: inspOrigem.setor,
+            origemLocal: localLabel(inspOrigem),
+            destinoSetor,
+            resolvidaPorCorresponsavel: true
+          });
+        });
+      });
+    });
 
   // Página 1: Dashboard do setor
   const totalInspecoes = inspsMesSetor.length;
@@ -3809,9 +4045,10 @@ async function gerarPDFSetorial(setor) {
       const nc = ncList[idx];
       const fotoDataUrl = await toDataUrl(nc.fotos[0] || null);
       const criterioLines = doc.splitTextToSize(`Critério: ${nc.criterio}`, W - (margin * 2) - 6);
+      const reincLines = doc.splitTextToSize(`Reincidência: ${nc.reincidencia}ª ocorrência consecutiva`, W - (margin * 2) - 6);
       const obsLines = doc.splitTextToSize(`Observação: ${nc.obs}`, W - (margin * 2) - 6);
       const sugLines = doc.splitTextToSize(`Sugestão: ${nc.sugestao}`, W - (margin * 2) - 6);
-      const textH = 16 + (criterioLines.length * 4.5) + (obsLines.length * 4.5) + (sugLines.length * 4.5);
+      const textH = 16 + (criterioLines.length * 4.5) + (reincLines.length * 4.5) + (obsLines.length * 4.5) + (sugLines.length * 4.5);
       const imgH = fotoDataUrl ? 55 : 0;
       const blockH = textH + imgH + 8;
       ensureY(blockH + 6);
@@ -3840,13 +4077,20 @@ async function gerarPDFSetorial(setor) {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(8.5);
         doc.setTextColor(180, 83, 9);
-        doc.text(`Encaminhada de ${nc.origemSetor} · ${nc.origemLocal}`, margin + 3, textY);
+        doc.text(`NC corresponsável - Origem: ${nc.origemSetor} · ${nc.origemLocal} | Destino: ${nc.destinoSetor}`, margin + 3, textY);
+        textY += 5;
+      } else if (nc.destinoSetor && nc.destinoSetor !== nc.origemSetor) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8.5);
+        doc.setTextColor(180, 83, 9);
+        doc.text(`NC corresponsável - Origem: ${nc.origemSetor} · ${nc.origemLocal} | Destino: ${nc.destinoSetor}`, margin + 3, textY);
         textY += 5;
       }
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
       doc.setTextColor(51, 65, 85);
       doc.text(criterioLines, margin + 3, textY); textY += criterioLines.length * 4.5 + 1;
+      doc.text(reincLines, margin + 3, textY); textY += reincLines.length * 4.5 + 1;
       doc.text(obsLines, margin + 3, textY); textY += obsLines.length * 4.5 + 1;
       doc.text(sugLines, margin + 3, textY); textY += sugLines.length * 4.5 + 2;
 
@@ -3902,8 +4146,12 @@ async function gerarPDFSetorial(setor) {
       const sugLines = doc.splitTextToSize(`Ação/Sugestão: ${item.sugestaoAtual}`, W - (margin * 2) - 6);
       const reincTxt = `Reincidências até conclusão: ${item.reincidencias} (ocorrências NC consecutivas: ${item.ocorrenciasNC})`;
       const reincLines = doc.splitTextToSize(reincTxt, W - (margin * 2) - 6);
+      const correspTxt = item.resolvidaPorCorresponsavel
+        ? `Resolvida pelo corresponsável - Origem: ${item.origemSetor} · ${item.origemLocal} | Destino: ${item.destinoSetor}`
+        : '';
+      const correspLines = correspTxt ? doc.splitTextToSize(correspTxt, W - (margin * 2) - 6) : [];
 
-      const textH = 18 + (criterioLines.length * 4.5) + (antesLines.length * 4.5) + (agoraLines.length * 4.5) + (sugLines.length * 4.5) + (reincLines.length * 4.5);
+      const textH = 18 + (criterioLines.length * 4.5) + (antesLines.length * 4.5) + (agoraLines.length * 4.5) + (sugLines.length * 4.5) + (reincLines.length * 4.5) + (correspLines.length * 4.5);
       const imgH = fotoDataUrl ? 55 : 0;
       const blockH = textH + imgH + 8;
       ensureY(blockH + 6);
@@ -3941,6 +4189,14 @@ async function gerarPDFSetorial(setor) {
       doc.setTextColor(21, 128, 61);
       doc.setFont('helvetica', 'bold');
       doc.text(reincLines, margin + 3, textY); textY += reincLines.length * 4.5 + 2;
+      if (correspLines.length) {
+        doc.setTextColor(180, 83, 9);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.text(correspLines, margin + 3, textY);
+        textY += correspLines.length * 4.5 + 2;
+        doc.setFontSize(9);
+      }
 
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(100, 116, 139);
@@ -4140,7 +4396,7 @@ async function gerarPDFInsp(id) {
 
     SENSOS.forEach(s => {
       insp.sensos[s.id].forEach((cr, ci) => {
-        if ((cr.nota||0) >= 2) return;
+        if ((cr.nota||0) >= 4) return;
         checkY(20);
         doc.setFillColor(254,242,242); doc.roundedRect(margin, y, W-margin*2, 16, 3, 3, 'F');
         doc.setFillColor(231,76,60); doc.rect(margin, y+2, 2, 12, 'F');
@@ -4192,9 +4448,10 @@ async function gerarPDFInsp(id) {
 
     pendenciasRecebidas.forEach(item => {
       const origemLines = doc.splitTextToSize(`${item.origemSetor} · ${item.origemLocal}`, W - margin * 2 - 8);
+      const correspLines = doc.splitTextToSize(`NC corresponsável - Origem: ${item.origemSetor} · ${item.origemLocal} | Destino: ${insp.setor}`, W - margin * 2 - 8);
       const critLines = doc.splitTextToSize(`${item.senso} · Critério ${item.criterioIndice} - ${item.criterioTexto}`, W - margin * 2 - 8);
       const obsLines = item.obs ? doc.splitTextToSize(`Obs: ${item.obs}`, W - margin * 2 - 8) : [];
-      const blocoH = 16 + origemLines.length * 4 + critLines.length * 4 + obsLines.length * 4;
+      const blocoH = 20 + origemLines.length * 4 + correspLines.length * 4 + critLines.length * 4 + obsLines.length * 4;
 
       if (y + blocoH > 280) {
         doc.addPage();
@@ -4206,9 +4463,11 @@ async function gerarPDFInsp(id) {
       doc.setFillColor(248,250,252); doc.roundedRect(margin, y, W-margin*2, blocoH, 3, 3, 'F');
       doc.setTextColor(30,41,59); doc.setFontSize(9); doc.setFont('helvetica','bold');
       doc.text(origemLines, margin+4, y+7);
+      doc.setTextColor(180,83,9); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+      doc.text(correspLines, margin+4, y+11 + origemLines.length * 4);
       doc.setTextColor(51,65,85); doc.setFontSize(8); doc.setFont('helvetica','normal');
-      doc.text(critLines, margin+4, y+13);
-      let blocoY = y + 13 + critLines.length * 4;
+      doc.text(critLines, margin+4, y+15 + origemLines.length * 4 + correspLines.length * 4);
+      let blocoY = y + 15 + origemLines.length * 4 + correspLines.length * 4 + critLines.length * 4;
       doc.setTextColor(100,116,139); doc.setFontSize(7.5);
       doc.text(`${formatDate(item.origemData)} · ${item.origemPeriodo || 'sem período'} · ${item.tecnico} · Nota ${item.nota}`, margin+4, blocoY);
       blocoY += 5;
@@ -4339,7 +4598,7 @@ async function gerarPDFInsp(id) {
     addFotoPage();
 
     for (const reg of registrosFotos) {
-      const isNC = (reg.nota ?? 0) < 2;
+      const isNC = (reg.nota ?? 0) <= 3;
       const statusTxt = isNC ? 'NÃO CONFORME' : 'CONFORME';
       const statusCol = isNC ? [231, 76, 60] : [46, 204, 113];
 
@@ -4485,6 +4744,7 @@ function resumeDraftIfExists() {
 
 // INIT
 window.addEventListener('load', () => {
+  ensureCurrentTecInList();
   if (currentTec) document.getElementById('home-tec-name').textContent = currentTec;
   
   const savedTheme = localStorage.getItem('aa5s_theme');
@@ -4494,7 +4754,7 @@ window.addEventListener('load', () => {
 
   renderHome();
   const resumedDraft = resumeDraftIfExists();
-  if (APP.tecnicos.length === 0 && !resumedDraft) {
+  if (!currentTec && !resumedDraft) {
     setTimeout(() => openTecModal(), 500);
   }
   syncFromCloud(); // Tenta sincronizar com a nuvem assim que abre
