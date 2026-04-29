@@ -1985,15 +1985,14 @@ async function syncFromCloud() {
       }
     }
 
-    if (cloudInsps.length > 0) {
-      const merged = {};
-      cloudInsps.forEach(i => { if (i?.id) merged[i.id] = i; });
-      APP.inspecoes.forEach(i => {
-        if (!i?.id) return;
-        if (!merged[i.id] || APP.syncQueue.includes(i.id)) merged[i.id] = i;
-      });
-      APP.inspecoes = Object.values(merged).sort((a, b) => new Date(a.data) - new Date(b.data));
-    }
+    const merged = {};
+    cloudInsps.forEach(i => { if (i?.id) merged[i.id] = i; });
+    // Mantém local apenas inspeções pendentes de envio (fila offline).
+    APP.inspecoes.forEach(i => {
+      if (!i?.id) return;
+      if (APP.syncQueue.includes(i.id)) merged[i.id] = i;
+    });
+    APP.inspecoes = Object.values(merged).sort((a, b) => new Date(a.data) - new Date(b.data));
     persistLocalApp(APP);
     renderHome();
     scheduleSyncQueue(0);
@@ -2013,6 +2012,7 @@ let isSavingInspecao = false;
 let dashboardRefreshTimer = null;
 let dashboardClockTimer = null;
 let dashboardTvMode = localStorage.getItem('aa5s_dashboard_tv') === 'on';
+let cloudRefreshTimer = null;
 
 // === Function: setSyncStatus ===
 function setSyncStatus(status, text = '') {
@@ -4815,10 +4815,22 @@ function checkOnline() {
 }
 window.addEventListener('online', () => {
   checkOnline();
+  syncFromCloud();
   scheduleSyncQueue(0);
 });
 window.addEventListener('offline', checkOnline);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && navigator.onLine) syncFromCloud();
+});
 checkOnline();
+
+// === Function: startCloudAutoRefresh ===
+function startCloudAutoRefresh() {
+  clearInterval(cloudRefreshTimer);
+  cloudRefreshTimer = setInterval(() => {
+    if (document.visibilityState === 'visible' && navigator.onLine) syncFromCloud();
+  }, 30000);
+}
 
 // === Function: resumeDraftIfExists ===
 function resumeDraftIfExists() {
@@ -4847,6 +4859,7 @@ window.addEventListener('load', () => {
     setTimeout(() => openTecModal(), 500);
   }
   syncFromCloud().finally(() => scheduleSyncQueue(0)); // Sincroniza nuvem antes da fila local
+  startCloudAutoRefresh();
 
   // Registrar Service Worker apenas em produção para não atrapalhar debug local
   if ('serviceWorker' in navigator) {
