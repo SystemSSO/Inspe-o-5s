@@ -1041,6 +1041,37 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
 }
 #offline-banner.show { display: flex; }
 
+/* ── SYNC STATUS ── */
+#sync-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: var(--text2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.03);
+  margin-right: 6px;
+}
+#sync-status .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--text2);
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.05);
+}
+#sync-status.syncing .dot {
+  background: var(--gold);
+  animation: pulseSync 1.1s ease-in-out infinite;
+}
+#sync-status.synced .dot { background: var(--green); }
+#sync-status.offline .dot { background: var(--red); }
+@keyframes pulseSync {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.7; }
+}
+
 /* â”€â”€ PDF HIDDEN â”€â”€ */
 #pdf-render { position: absolute; left: -9999px; top: 0; width: 794px; font-family: Arial, sans-serif; }
 
@@ -1053,7 +1084,6 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
   <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l2.5 2.5"/></svg>
   Modo offline - dados salvos localmente
 </div>
-
 <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
      SCREEN: HOME
 â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
@@ -1065,6 +1095,10 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
       <div class="app-header sub" style="font-size:10px;color:var(--text2)"></div>
     </div>
     <div class="spacer"></div>
+  <div id="sync-status" class="synced">
+    <span class="dot"></span>
+    <span id="sync-status-text">Sincronizado</span>
+  </div>
   <button class="btn-icon" onclick="toggleTheme()" style="margin-right:6px">
     <svg class="theme-icon" width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
       <!-- Sun Icon -->
@@ -1841,9 +1875,13 @@ function scheduleSyncQueue(delay = 200) {
 // === Function: syncPendingQueue ===
 async function syncPendingQueue() {
   if (syncInProgress) return;
-  if (!navigator.onLine || !hasFirebaseConfig()) return;
+  if (!navigator.onLine || !hasFirebaseConfig()) {
+    setSyncStatus('offline', 'Modo offline');
+    return;
+  }
   APP = normalizeAppState(APP);
   syncInProgress = true;
+  setSyncStatus('syncing', 'Sincronizando...');
 
   try {
     await db.collection("config").doc("geral").set({ tecnicos: APP.tecnicos }, { merge: true });
@@ -1880,8 +1918,10 @@ async function syncPendingQueue() {
     }
 
     persistLocalApp(APP);
+    setSyncStatus('synced', 'Sincronizado');
   } catch (e) {
     console.warn("Falha ao sincronizar agora. Tentaremos novamente ao reconectar.", e);
+    setSyncStatus(navigator.onLine ? 'syncing' : 'offline', navigator.onLine ? 'Aguardando nova tentativa...' : 'Modo offline');
   } finally {
     syncInProgress = false;
   }
@@ -1892,15 +1932,30 @@ async function syncPendingQueue() {
 // === Function: syncFromCloud ===
 async function syncFromCloud() {
   if (!hasFirebaseConfig()) return;
+  if (!navigator.onLine) {
+    setSyncStatus('offline', 'Modo offline');
+    return;
+  }
+  setSyncStatus('syncing', 'Sincronizando...');
+  toast('Sincronizando dados...');
   try {
     // Buscar técnicos
     const config = await db.collection("config").doc("geral").get();
     if (config.exists && Array.isArray(config.data().tecnicos)) APP.tecnicos = config.data().tecnicos;
 
-    // Buscar últimas 50 inspeções
-    const snapshot = await db.collection("inspecoes").orderBy("data", "desc").limit(50).get();
+    // Buscar todas as inspeções (paginação automática)
     const cloudInsps = [];
-    snapshot.forEach(doc => cloudInsps.push(doc.data()));
+    const pageSize = 200;
+    let lastDoc = null;
+    while (true) {
+      let query = db.collection("inspecoes").orderBy("data", "desc").limit(pageSize);
+      if (lastDoc) query = query.startAfter(lastDoc);
+      const snapshot = await query.get();
+      if (snapshot.empty) break;
+      snapshot.forEach(doc => cloudInsps.push(doc.data()));
+      if (snapshot.size < pageSize) break;
+      lastDoc = snapshot.docs[snapshot.docs.length - 1];
+    }
 
     // Restaurar fotos de documentos separados
     for (const insp of cloudInsps) {
@@ -1942,8 +1997,12 @@ async function syncFromCloud() {
     persistLocalApp(APP);
     renderHome();
     scheduleSyncQueue(0);
+    setSyncStatus('synced', 'Sincronizado');
+    toast('Sincronização concluída.');
   } catch (e) {
     console.warn("Rodando em modo offline ou erro de sync:", e);
+    setSyncStatus(navigator.onLine ? 'syncing' : 'offline', navigator.onLine ? 'Aguardando conexão com servidor...' : 'Modo offline');
+    toast('Sem sincronização: modo offline ou erro de conexão.');
   }
 }
 
@@ -1954,6 +2013,16 @@ let isSavingInspecao = false;
 let dashboardRefreshTimer = null;
 let dashboardClockTimer = null;
 let dashboardTvMode = localStorage.getItem('aa5s_dashboard_tv') === 'on';
+
+// === Function: setSyncStatus ===
+function setSyncStatus(status, text = '') {
+  const el = document.getElementById('sync-status');
+  const tx = document.getElementById('sync-status-text');
+  if (!el || !tx) return;
+  el.classList.remove('offline', 'syncing', 'synced');
+  el.classList.add(status);
+  tx.textContent = text || (status === 'offline' ? 'Modo offline' : status === 'syncing' ? 'Sincronizando...' : 'Sincronizado');
+}
 
 // === Function: ensureCurrentTecInList ===
 function ensureCurrentTecInList() {
@@ -4736,8 +4805,13 @@ document.querySelectorAll('.modal-overlay').forEach(m => {
 // === Function: checkOnline ===
 function checkOnline() {
   const banner = document.getElementById('offline-banner');
-  if (!navigator.onLine) banner.classList.add('show');
-  else banner.classList.remove('show');
+  if (!navigator.onLine) {
+    banner.classList.add('show');
+    setSyncStatus('offline', 'Modo offline');
+  } else {
+    banner.classList.remove('show');
+    setSyncStatus(syncInProgress ? 'syncing' : 'synced', syncInProgress ? 'Sincronizando...' : 'Online');
+  }
 }
 window.addEventListener('online', () => {
   checkOnline();
