@@ -1881,7 +1881,10 @@ async function syncPendingQueue() {
   setSyncStatus('syncing', 'Sincronizando...');
 
   try {
-    await db.collection("config").doc("geral").set({ tecnicos: APP.tecnicos }, { merge: true });
+    // Evita sobrescrever técnicos no Firebase com lista vazia após limpeza local.
+    if (Array.isArray(APP.tecnicos) && APP.tecnicos.length > 0) {
+      await db.collection("config").doc("geral").set({ tecnicos: APP.tecnicos }, { merge: true });
+    }
 
     const pendentes = [...APP.syncQueue];
     for (const inspId of pendentes) {
@@ -4843,8 +4846,7 @@ window.addEventListener('load', () => {
   if (!currentTec && !resumedDraft) {
     setTimeout(() => openTecModal(), 500);
   }
-  syncFromCloud(); // Tenta sincronizar com a nuvem assim que abre
-  scheduleSyncQueue(0);
+  syncFromCloud().finally(() => scheduleSyncQueue(0)); // Sincroniza nuvem antes da fila local
 
   // Registrar Service Worker apenas em produção para não atrapalhar debug local
   if ('serviceWorker' in navigator) {
