@@ -1316,10 +1316,6 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
         <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 2h7l4 4v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M12 2v4h4"/><path d="M7 13l3 3 3-3M10 10v6"/></svg>
         Gerar PDF
       </button>
-      <button class="btn-secondary" onclick="gerarExcelSetorial()" style="margin-top:8px">
-        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 2h9l3 3v13H4z"/><path d="M13 2v3h3"/><path d="M7 8l6 6M13 8l-6 6"/></svg>
-        Exportar Excel
-      </button>
     </div>
     <div class="section-title">Gerar relatório por gerência</div>
     <div class="card">
@@ -1333,9 +1329,9 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
         <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 2h7l4 4v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M12 2v4h4"/><path d="M7 13l3 3 3-3M10 10v6"/></svg>
         Gerar PDF da Gerência
       </button>
-      <button class="btn-secondary" onclick="gerarExcelGerencia()" style="margin-top:8px">
+      <button class="btn-secondary" onclick="gerarExcelGeral()" style="margin-top:8px">
         <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 2h9l3 3v13H4z"/><path d="M13 2v3h3"/><path d="M7 8l6 6M13 8l-6 6"/></svg>
-        Exportar Excel da Gerência
+        Exportar Excel (Geral)
       </button>
     </div>
   </div>
@@ -4534,6 +4530,125 @@ function gerarExcelGerencia() {
   ]);
 
   toast('Excel da gerência exportado com sucesso!');
+}
+
+// === Function: gerarExcelGeral ===
+function gerarExcelGeral() {
+  const insps = [...APP.inspecoes].sort((a, b) => new Date(a.data) - new Date(b.data));
+  if (!insps.length) { toast('Não há inspeções para exportar.'); return; }
+
+  const rowsInspecoes = insps.map(insp => {
+    let ncAbertas = 0;
+    let ncResolvidas = 0;
+    const anterior = getInspecaoAnteriorMesmoLocal(insp);
+    SENSOS.forEach(s => {
+      (insp.sensos?.[s.id] || []).forEach((cr, ci) => {
+        if (criterioTemNCAberta(cr)) ncAbertas++;
+        const crAnterior = anterior?.sensos?.[s.id]?.[ci] || null;
+        if (crAnterior && criterioTemNCAberta(crAnterior) && !criterioTemNCAberta(cr)) ncResolvidas++;
+      });
+    });
+    return {
+      id: insp.id,
+      data: formatDate(insp.data),
+      periodo: insp.periodo || '',
+      setor: insp.setor || '',
+      local: insp.subarea || '',
+      tecnico: insp.tecnico || '',
+      nota_geral: typeof insp.notaGeral === 'number' ? Number(insp.notaGeral.toFixed(2)) : '',
+      nc_abertas: ncAbertas,
+      nc_resolvidas: ncResolvidas
+    };
+  });
+
+  const rowsNC = [];
+  insps.forEach(insp => {
+    const anterior = getInspecaoAnteriorMesmoLocal(insp);
+    SENSOS.forEach(s => {
+      (insp.sensos?.[s.id] || []).forEach((cr, ci) => {
+        const criterioTxt = s.criterios[ci] || `Critério ${ci + 1}`;
+        if (criterioTemNCAberta(cr)) {
+          rowsNC.push({
+            status: 'ABERTA',
+            data: formatDate(insp.data),
+            periodo: insp.periodo || '',
+            setor: insp.setor || '',
+            local: insp.subarea || '',
+            tecnico: insp.tecnico || '',
+            senso: s.nome,
+            criterio_indice: ci + 1,
+            criterio: criterioTxt,
+            nota: cr.nota ?? '',
+            observacao: cr.obs || '',
+            sugestao: cr.sugestao || '',
+            encaminhado_para: cr.encaminharSetor || '',
+            fotos_qtd: (getFotosNCAbertaComFallback(insp, s.id, ci, cr) || []).length
+          });
+        }
+        const crAnterior = anterior?.sensos?.[s.id]?.[ci] || null;
+        if (crAnterior && criterioTemNCAberta(crAnterior) && !criterioTemNCAberta(cr)) {
+          rowsNC.push({
+            status: 'RESOLVIDA',
+            data: formatDate(insp.data),
+            periodo: insp.periodo || '',
+            setor: insp.setor || '',
+            local: insp.subarea || '',
+            tecnico: insp.tecnico || '',
+            senso: s.nome,
+            criterio_indice: ci + 1,
+            criterio: criterioTxt,
+            nota: cr.nota ?? '',
+            observacao: `Antes: ${crAnterior.obs || ''} | Agora: ${cr.obs || ''}`,
+            sugestao: cr.sugestao || '',
+            encaminhado_para: cr.encaminharSetor || '',
+            fotos_qtd: (getFotosValidasCriterio(cr) || []).length
+          });
+        }
+      });
+    });
+  });
+
+  const now = new Date();
+  const stamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  downloadExcelWorkbook(`Housekeeping_Geral_${stamp}.xls`, [
+    {
+      name: 'Inspecoes',
+      columns: [
+        { key: 'id', label: 'ID' },
+        { key: 'data', label: 'Data' },
+        { key: 'periodo', label: 'Período' },
+        { key: 'setor', label: 'Setor' },
+        { key: 'local', label: 'Local' },
+        { key: 'tecnico', label: 'Técnico' },
+        { key: 'nota_geral', label: 'Nota Geral' },
+        { key: 'nc_abertas', label: 'NC Abertas' },
+        { key: 'nc_resolvidas', label: 'NC Resolvidas' }
+      ],
+      rows: rowsInspecoes
+    },
+    {
+      name: 'NC_Geral',
+      columns: [
+        { key: 'status', label: 'Status' },
+        { key: 'data', label: 'Data' },
+        { key: 'periodo', label: 'Período' },
+        { key: 'setor', label: 'Setor' },
+        { key: 'local', label: 'Local' },
+        { key: 'tecnico', label: 'Técnico' },
+        { key: 'senso', label: 'Senso' },
+        { key: 'criterio_indice', label: 'Critério Nº' },
+        { key: 'criterio', label: 'Critério' },
+        { key: 'nota', label: 'Nota' },
+        { key: 'observacao', label: 'Observação' },
+        { key: 'sugestao', label: 'Sugestão' },
+        { key: 'encaminhado_para', label: 'Encaminhado Para' },
+        { key: 'fotos_qtd', label: 'Qtd. Fotos' }
+      ],
+      rows: rowsNC
+    }
+  ]);
+
+  toast('Excel geral exportado com sucesso!');
 }
 
 // === Function: gerarPDFGerencia ===
