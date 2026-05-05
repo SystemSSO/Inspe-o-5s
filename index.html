@@ -4009,7 +4009,7 @@ async function gerarPDFSetorial(setor) {
           obsAnterior: crAnterior.obs || 'Sem observação.',
           obsAtual: crAtual?.obs || 'Sem observação.',
           sugestaoAtual: crAtual?.sugestao || 'Não informada.',
-          fotoResolucao: Array.isArray(crAtual?.fotos) ? (crAtual.fotos[0] || null) : null,
+          fotosResolucao: getFotosValidasCriterio(crAtual),
           ocorrenciasNC: reinc.ocorrenciasNC,
           reincidencias: reinc.reincidencias,
           origemSetor: insp.setor,
@@ -4056,7 +4056,7 @@ async function gerarPDFSetorial(setor) {
           obsAnterior: crAnterior.obs || 'Sem observação.',
           obsAtual: crAtual?.obs || 'Sem observação.',
           sugestaoAtual: crAtual?.sugestao || 'Não informada.',
-          fotoResolucao: Array.isArray(crAtual?.fotos) ? (crAtual.fotos[0] || null) : null,
+          fotosResolucao: getFotosValidasCriterio(crAtual),
           ocorrenciasNC: reinc.ocorrenciasNC,
           reincidencias: reinc.reincidencias,
           origemSetor: inspOrigem.setor,
@@ -4197,13 +4197,15 @@ async function gerarPDFSetorial(setor) {
   } else {
     for (let idx = 0; idx < ncList.length; idx++) {
       const nc = ncList[idx];
-      const fotoDataUrl = await toDataUrl(nc.fotos[0] || null);
+      const fotosDataUrl = (await Promise.all((Array.isArray(nc.fotos) ? nc.fotos : []).map(toDataUrl))).filter(Boolean);
       const criterioLines = doc.splitTextToSize(`Critério: ${nc.criterio}`, W - (margin * 2) - 6);
       const reincLines = doc.splitTextToSize(`Reincidência: ${nc.reincidencia}ª ocorrência consecutiva`, W - (margin * 2) - 6);
       const obsLines = doc.splitTextToSize(`Observação: ${nc.obs}`, W - (margin * 2) - 6);
       const sugLines = doc.splitTextToSize(`Sugestão: ${nc.sugestao}`, W - (margin * 2) - 6);
       const textH = 16 + (criterioLines.length * 4.5) + (reincLines.length * 4.5) + (obsLines.length * 4.5) + (sugLines.length * 4.5);
-      const imgH = fotoDataUrl ? 55 : 0;
+      const fotosPorLinha = 3;
+      const linhasFotos = fotosDataUrl.length ? Math.ceil(fotosDataUrl.length / fotosPorLinha) : 0;
+      const imgH = linhasFotos ? (linhasFotos * 34 + (linhasFotos - 1) * 2) : 0;
       const blockH = textH + imgH + 8;
       ensureY(blockH + 6);
 
@@ -4248,25 +4250,38 @@ async function gerarPDFSetorial(setor) {
       doc.text(obsLines, margin + 3, textY); textY += obsLines.length * 4.5 + 1;
       doc.text(sugLines, margin + 3, textY); textY += sugLines.length * 4.5 + 2;
 
-      if (fotoDataUrl) {
-        try {
-          const props = doc.getImageProperties(fotoDataUrl);
-          const ratio = props.width / props.height;
-          const maxW = W - (margin * 2) - 8;
-          const maxH = 50;
-          let drawW = maxW;
-          let drawH = drawW / ratio;
-          if (drawH > maxH) {
-            drawH = maxH;
-            drawW = drawH * ratio;
+      if (fotosDataUrl.length) {
+        const areaW = W - (margin * 2) - 8;
+        const gap = 2;
+        const cellW = (areaW - (gap * (fotosPorLinha - 1))) / fotosPorLinha;
+        const thumbH = 34;
+        for (let i = 0; i < fotosDataUrl.length; i++) {
+          const fotoDataUrl = fotosDataUrl[i];
+          try {
+            const props = doc.getImageProperties(fotoDataUrl);
+            const ratio = props.width / props.height;
+            const col = i % fotosPorLinha;
+            const row = Math.floor(i / fotosPorLinha);
+            const boxX = margin + 4 + col * (cellW + gap);
+            const boxY = textY + 1 + row * (thumbH + gap);
+            let drawW = cellW;
+            let drawH = drawW / ratio;
+            if (drawH > thumbH) {
+              drawH = thumbH;
+              drawW = drawH * ratio;
+            }
+            const x = boxX + (cellW - drawW) / 2;
+            const yImg = boxY + (thumbH - drawH) / 2;
+            const fmt = fotoDataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+            doc.addImage(fotoDataUrl, fmt, x, yImg, drawW, drawH, undefined, 'FAST');
+          } catch {
+            doc.setTextColor(148, 163, 184);
+            const col = i % fotosPorLinha;
+            const row = Math.floor(i / fotosPorLinha);
+            const boxX = margin + 4 + col * (cellW + gap);
+            const boxY = textY + 1 + row * (thumbH + gap);
+            doc.text('Foto indisponível.', boxX + 2, boxY + 6);
           }
-          const x = margin + ((W - (margin * 2)) - drawW) / 2;
-          const imgY = textY + 1;
-          const fmt = fotoDataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
-          doc.addImage(fotoDataUrl, fmt, x, imgY, drawW, drawH, undefined, 'FAST');
-        } catch {
-          doc.setTextColor(148, 163, 184);
-          doc.text('Foto não pôde ser renderizada.', margin + 3, textY + 4);
         }
       } else {
         doc.setTextColor(148, 163, 184);
@@ -4293,7 +4308,7 @@ async function gerarPDFSetorial(setor) {
   } else {
     for (let idx = 0; idx < resolvidasList.length; idx++) {
       const item = resolvidasList[idx];
-      const fotoDataUrl = await toDataUrl(item.fotoResolucao);
+      const fotosDataUrl = (await Promise.all((Array.isArray(item.fotosResolucao) ? item.fotosResolucao : []).map(toDataUrl))).filter(Boolean);
       const criterioLines = doc.splitTextToSize(`Critério: ${item.criterio}`, W - (margin * 2) - 6);
       const antesLines = doc.splitTextToSize(`Antes: ${item.obsAnterior}`, W - (margin * 2) - 6);
       const agoraLines = doc.splitTextToSize(`Agora: ${item.obsAtual}`, W - (margin * 2) - 6);
@@ -4306,7 +4321,9 @@ async function gerarPDFSetorial(setor) {
       const correspLines = correspTxt ? doc.splitTextToSize(correspTxt, W - (margin * 2) - 6) : [];
 
       const textH = 18 + (criterioLines.length * 4.5) + (antesLines.length * 4.5) + (agoraLines.length * 4.5) + (sugLines.length * 4.5) + (reincLines.length * 4.5) + (correspLines.length * 4.5);
-      const imgH = fotoDataUrl ? 55 : 0;
+      const fotosPorLinha = 3;
+      const linhasFotos = fotosDataUrl.length ? Math.ceil(fotosDataUrl.length / fotosPorLinha) : 0;
+      const imgH = linhasFotos ? (linhasFotos * 34 + (linhasFotos - 1) * 2) : 0;
       const blockH = textH + imgH + 8;
       ensureY(blockH + 6);
 
@@ -4357,25 +4374,38 @@ async function gerarPDFSetorial(setor) {
       doc.text(`Origem da NC: ${formatDate(item.dataAnterior)}`, margin + 3, textY);
       textY += 5;
 
-      if (fotoDataUrl) {
-        try {
-          const props = doc.getImageProperties(fotoDataUrl);
-          const ratio = props.width / props.height;
-          const maxW = W - (margin * 2) - 8;
-          const maxH = 50;
-          let drawW = maxW;
-          let drawH = drawW / ratio;
-          if (drawH > maxH) {
-            drawH = maxH;
-            drawW = drawH * ratio;
+      if (fotosDataUrl.length) {
+        const areaW = W - (margin * 2) - 8;
+        const gap = 2;
+        const cellW = (areaW - (gap * (fotosPorLinha - 1))) / fotosPorLinha;
+        const thumbH = 34;
+        for (let i = 0; i < fotosDataUrl.length; i++) {
+          const fotoDataUrl = fotosDataUrl[i];
+          try {
+            const props = doc.getImageProperties(fotoDataUrl);
+            const ratio = props.width / props.height;
+            const col = i % fotosPorLinha;
+            const row = Math.floor(i / fotosPorLinha);
+            const boxX = margin + 4 + col * (cellW + gap);
+            const boxY = textY + 1 + row * (thumbH + gap);
+            let drawW = cellW;
+            let drawH = drawW / ratio;
+            if (drawH > thumbH) {
+              drawH = thumbH;
+              drawW = drawH * ratio;
+            }
+            const x = boxX + (cellW - drawW) / 2;
+            const yImg = boxY + (thumbH - drawH) / 2;
+            const fmt = fotoDataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+            doc.addImage(fotoDataUrl, fmt, x, yImg, drawW, drawH, undefined, 'FAST');
+          } catch {
+            doc.setTextColor(148, 163, 184);
+            const col = i % fotosPorLinha;
+            const row = Math.floor(i / fotosPorLinha);
+            const boxX = margin + 4 + col * (cellW + gap);
+            const boxY = textY + 1 + row * (thumbH + gap);
+            doc.text('Foto indisponível.', boxX + 2, boxY + 6);
           }
-          const x = margin + ((W - (margin * 2)) - drawW) / 2;
-          const imgY = textY + 1;
-          const fmt = fotoDataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
-          doc.addImage(fotoDataUrl, fmt, x, imgY, drawW, drawH, undefined, 'FAST');
-        } catch {
-          doc.setTextColor(148, 163, 184);
-          doc.text('Foto da resolução não pôde ser renderizada.', margin + 3, textY + 4);
         }
       } else {
         doc.setTextColor(148, 163, 184);
@@ -4605,8 +4635,10 @@ async function gerarPDFInsp(id) {
       const correspLines = doc.splitTextToSize(`NC corresponsável - Origem: ${item.origemSetor} · ${item.origemLocal} | Destino: ${insp.setor}`, W - margin * 2 - 8);
       const critLines = doc.splitTextToSize(`${item.senso} · Critério ${item.criterioIndice} - ${item.criterioTexto}`, W - margin * 2 - 8);
       const obsLines = item.obs ? doc.splitTextToSize(`Obs: ${item.obs}`, W - margin * 2 - 8) : [];
-      const fotoDataUrl = await imageUrlToDataURL(item.fotos?.[0] || null);
-      const imgH = fotoDataUrl ? 40 : 0;
+      const fotosDataUrl = (await Promise.all((Array.isArray(item.fotos) ? item.fotos : []).map(imageUrlToDataURL))).filter(Boolean);
+      const fotosPorLinha = 3;
+      const linhasFotos = fotosDataUrl.length ? Math.ceil(fotosDataUrl.length / fotosPorLinha) : 0;
+      const imgH = linhasFotos ? (linhasFotos * 26 + (linhasFotos - 1) * 2) : 0;
       const blocoH = 20 + origemLines.length * 4 + correspLines.length * 4 + critLines.length * 4 + obsLines.length * 4 + imgH;
 
       if (y + blocoH > 280) {
@@ -4632,23 +4664,37 @@ async function gerarPDFInsp(id) {
         doc.text(obsLines, margin+4, blocoY);
         blocoY += obsLines.length * 4 + 2;
       }
-      if (fotoDataUrl) {
-        try {
-          const props = doc.getImageProperties(fotoDataUrl);
-          const ratio = props.width / props.height;
-          const maxW = W - margin * 2 - 10;
-          const maxH = 34;
-          let drawW = maxW;
-          let drawH = drawW / ratio;
-          if (drawH > maxH) {
-            drawH = maxH;
-            drawW = drawH * ratio;
+      if (fotosDataUrl.length) {
+        const areaW = W - margin * 2 - 10;
+        const gap = 2;
+        const cellW = (areaW - (gap * (fotosPorLinha - 1))) / fotosPorLinha;
+        const thumbH = 26;
+        for (let i = 0; i < fotosDataUrl.length; i++) {
+          const fotoDataUrl = fotosDataUrl[i];
+          try {
+            const props = doc.getImageProperties(fotoDataUrl);
+            const ratio = props.width / props.height;
+            const col = i % fotosPorLinha;
+            const row = Math.floor(i / fotosPorLinha);
+            const boxX = margin + 5 + col * (cellW + gap);
+            const boxY = blocoY + row * (thumbH + gap);
+            let drawW = cellW;
+            let drawH = drawW / ratio;
+            if (drawH > thumbH) {
+              drawH = thumbH;
+              drawW = drawH * ratio;
+            }
+            const x = boxX + (cellW - drawW) / 2;
+            const yImg = boxY + (thumbH - drawH) / 2;
+            doc.addImage(fotoDataUrl, fotoDataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG', x, yImg, drawW, drawH, undefined, 'FAST');
+          } catch {
+            doc.setTextColor(120,120,120); doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
+            const col = i % fotosPorLinha;
+            const row = Math.floor(i / fotosPorLinha);
+            const boxX = margin + 5 + col * (cellW + gap);
+            const boxY = blocoY + row * (thumbH + gap);
+            doc.text('Foto indisponível.', boxX + 1, boxY + 5);
           }
-          const x = margin + ((W - margin * 2) - drawW) / 2;
-          doc.addImage(fotoDataUrl, fotoDataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG', x, blocoY, drawW, drawH, undefined, 'FAST');
-        } catch {
-          doc.setTextColor(120,120,120); doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
-          doc.text('Evidência fotográfica não pôde ser renderizada.', margin + 4, blocoY + 4);
         }
       }
 
@@ -4675,8 +4721,10 @@ async function gerarPDFInsp(id) {
       const critLines = doc.splitTextToSize(item.criterioTexto, W - margin * 2 - 8);
       const antLines = doc.splitTextToSize(`Antes (nota ${item.notaAnterior}): ${item.obsAnterior || 'Sem observação.'}`, W - margin * 2 - 8);
       const atualLines = doc.splitTextToSize(`Agora (nota ${item.notaAtual}): ${item.obsAtual || 'Sem observação.'}`, W - margin * 2 - 8);
-      const fotoDataUrl = await imageUrlToDataURL(item.fotosAtual[0] || null);
-      const imgH = fotoDataUrl ? 46 : 0;
+      const fotosDataUrl = (await Promise.all((Array.isArray(item.fotosAtual) ? item.fotosAtual : []).map(imageUrlToDataURL))).filter(Boolean);
+      const fotosPorLinha = 3;
+      const linhasFotos = fotosDataUrl.length ? Math.ceil(fotosDataUrl.length / fotosPorLinha) : 0;
+      const imgH = linhasFotos ? (linhasFotos * 26 + (linhasFotos - 1) * 2) : 0;
       const blocoH = 16 + critLines.length * 4 + antLines.length * 4 + atualLines.length * 4 + imgH + 6;
 
       if (y + blocoH > 280) {
@@ -4710,23 +4758,37 @@ async function gerarPDFInsp(id) {
       doc.setTextColor(22,101,52); doc.setFont('helvetica','bold');
       doc.text(atualLines, margin+5, by); by += atualLines.length * 4 + 2;
 
-      if (fotoDataUrl) {
-        try {
-          const props = doc.getImageProperties(fotoDataUrl);
-          const ratio = props.width / props.height;
-          const maxW = W - margin * 2 - 10;
-          const maxH = 42;
-          let drawW = maxW;
-          let drawH = drawW / ratio;
-          if (drawH > maxH) {
-            drawH = maxH;
-            drawW = drawH * ratio;
+      if (fotosDataUrl.length) {
+        const areaW = W - margin * 2 - 10;
+        const gap = 2;
+        const cellW = (areaW - (gap * (fotosPorLinha - 1))) / fotosPorLinha;
+        const thumbH = 26;
+        for (let i = 0; i < fotosDataUrl.length; i++) {
+          const fotoDataUrl = fotosDataUrl[i];
+          try {
+            const props = doc.getImageProperties(fotoDataUrl);
+            const ratio = props.width / props.height;
+            const col = i % fotosPorLinha;
+            const row = Math.floor(i / fotosPorLinha);
+            const boxX = margin + 5 + col * (cellW + gap);
+            const boxY = by + row * (thumbH + gap);
+            let drawW = cellW;
+            let drawH = drawW / ratio;
+            if (drawH > thumbH) {
+              drawH = thumbH;
+              drawW = drawH * ratio;
+            }
+            const x = boxX + (cellW - drawW) / 2;
+            const yImg = boxY + (thumbH - drawH) / 2;
+            doc.addImage(fotoDataUrl, fotoDataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG', x, yImg, drawW, drawH, undefined, 'FAST');
+          } catch {
+            doc.setTextColor(120,120,120); doc.setFont('helvetica','normal');
+            const col = i % fotosPorLinha;
+            const row = Math.floor(i / fotosPorLinha);
+            const boxX = margin + 5 + col * (cellW + gap);
+            const boxY = by + row * (thumbH + gap);
+            doc.text('Foto indisponível.', boxX + 1, boxY + 5);
           }
-          const x = margin + ((W - margin * 2) - drawW) / 2;
-          doc.addImage(fotoDataUrl, fotoDataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG', x, by, drawW, drawH, undefined, 'FAST');
-        } catch {
-          doc.setTextColor(120,120,120); doc.setFont('helvetica','normal');
-          doc.text('Evidência fotográfica não pôde ser renderizada.', margin+5, by+4);
         }
       } else {
         doc.setTextColor(120,120,120); doc.setFont('helvetica','normal');
@@ -4912,8 +4974,14 @@ window.addEventListener('online', () => {
 });
 window.addEventListener('offline', checkOnline);
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && navigator.onLine) syncFromCloud();
+  if (document.visibilityState === 'hidden') {
+    saveDraftNow();
+    return;
+  }
+  if (navigator.onLine) syncFromCloud();
 });
+window.addEventListener('pagehide', saveDraftNow);
+window.addEventListener('beforeunload', saveDraftNow);
 checkOnline();
 
 // === Function: startCloudAutoRefresh ===
