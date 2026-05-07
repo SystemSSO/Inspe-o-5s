@@ -2400,6 +2400,7 @@ const DRAFTS_KEY = 'aa5s_drafts_v2';
 const AREA_OVERRIDES_KEY = 'aa5s_area_overrides_v1';
 
 let areaEditorState = { setor: '', items: [] };
+let homeResumeDraftKey = null;
 
 // === Function: getAreaOverridesStore ===
 function getAreaOverridesStore() {
@@ -3092,11 +3093,13 @@ function renderHomeResumeBanner() {
   const latest = getSortedInspecoesDesc()[0] || null;
 
   if (!draftEntry && !latest) {
+    homeResumeDraftKey = null;
     wrap.innerHTML = '';
     return false;
   }
 
   if (draftEntry) {
+    homeResumeDraftKey = draftEntry.key;
     const draft = draftEntry.draft;
     const setorTxt = draft.setor || 'Setor não informado';
     const subareaTxt = draft.subarea || 'Área geral';
@@ -3107,7 +3110,7 @@ function renderHomeResumeBanner() {
         <div class="resume-banner-main">Rascunho em andamento: ${setorTxt} · ${subareaTxt}</div>
         <div class="resume-banner-sub">Atualizado em ${whenTxt}</div>
         <div class="resume-banner-actions">
-          <button class="btn-primary" onclick="resumeDraftByKey(decodeURIComponent('${encodeURIComponent(draftEntry.key)}'))">Retomar agora</button>
+          <button class="btn-primary" onclick="retomarRascunhoBanner()">Retomar agora</button>
           <button class="btn-secondary" onclick="showNewInspModal()">Nova inspeção</button>
         </div>
       </div>
@@ -3115,6 +3118,7 @@ function renderHomeResumeBanner() {
     return true;
   }
 
+  homeResumeDraftKey = null;
   const label = `${latest.setor || 'Setor'}${latest.subarea ? ' · ' + latest.subarea : ''}`;
   const whenTxt = latest.data ? new Date(latest.data).toLocaleString('pt-BR') : 'sem data';
   wrap.innerHTML = `
@@ -3129,6 +3133,15 @@ function renderHomeResumeBanner() {
     </div>
   `;
   return true;
+}
+
+// === Function: retomarRascunhoBanner ===
+function retomarRascunhoBanner() {
+  if (!homeResumeDraftKey) {
+    toast('Rascunho não encontrado.');
+    return;
+  }
+  resumeDraftByKey(homeResumeDraftKey);
 }
 
 // === Function: getSortedInspecoesDesc ===
