@@ -455,6 +455,85 @@ body.light-mode .criterio-section {
   align-items: center;
   justify-content: flex-start;
 }
+.nc-compare {
+  margin: 8px 0 10px;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.04));
+}
+.nc-compare-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+.nc-compare-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--green);
+  font-weight: 700;
+}
+.nc-verified-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  background: rgba(16, 185, 129, 0.18);
+  color: var(--green);
+  font-size: 10px;
+  font-weight: 700;
+}
+.nc-verified-pill svg {
+  width: 11px;
+  height: 11px;
+}
+.nc-compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.nc-compare-col {
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 8px;
+  padding: 6px;
+  background: rgba(15, 23, 42, 0.2);
+}
+.nc-compare-lbl {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text2);
+  margin-bottom: 5px;
+}
+.nc-compare-thumb {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 7px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  cursor: pointer;
+}
+.nc-compare-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.nc-compare-empty {
+  min-height: 62px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 11px;
+  color: var(--text2);
+  border: 1px dashed var(--border);
+  border-radius: 7px;
+}
 .btn-nc-resolved {
   flex: 0 0 auto;
   min-height: 34px;
@@ -543,6 +622,9 @@ body.light-mode .nc-anterior-section {
 body.light-mode .nc-anterior-info {
   background: rgba(244, 63, 94, 0.05);
   border-color: rgba(244, 63, 94, 0.3);
+}
+body.light-mode .nc-compare-col {
+  background: rgba(255, 255, 255, 0.9);
 }
 
 /* â”€â”€ TOAST â”€â”€ */
@@ -3867,6 +3949,7 @@ function criterioHTML(s, si, cr, ci, base) {
   const baseFotos = baseFotosDiretas.length ? baseFotosDiretas : getUltimaEvidenciaNC(s.id, ci);
   const baseTemRefPendente = Array.isArray(baseCr?.fotos) && baseCr.fotos.includes('__ref__');
   const item = currentInsp.sensos[s.id][ci];
+  const fotosDepois = getFotosValidasCriterio(item);
   const correspAtual = item.encaminharSetor && item.encaminharSetor !== currentInsp.setor ? item.encaminharSetor : '';
   const correspAnterior = baseCr?.encaminharSetor && baseCr.encaminharSetor !== currentInsp.setor ? baseCr.encaminharSetor : '';
   const reincAtual = getReincidenciaFormulario(s.id, ci);
@@ -3887,6 +3970,31 @@ function criterioHTML(s, si, cr, ci, base) {
   // Seção de não conformidade anterior com imagens
   const hasNCAnterior = criterioTemNCAberta(baseCr);
   const isResolved = item.ncResolvida === true || (item.nota !== null && item.nota >= 4);
+  const antesDepoisSection = (isResolved && hasNCAnterior) ? `
+    <div class="nc-compare">
+      <div class="nc-compare-head">
+        <div class="nc-compare-title">Comparativo de Evidência</div>
+        <span class="nc-verified-pill">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+          Verificado
+        </span>
+      </div>
+      <div class="nc-compare-grid">
+        <div class="nc-compare-col">
+          <div class="nc-compare-lbl">Antes</div>
+          ${baseFotos[0]
+            ? `<div class="nc-compare-thumb" onclick="openImageModal('${baseFotos[0].replace(/'/g, "\\'")}')"><img src="${baseFotos[0]}" alt="Foto antes"></div>`
+            : `<div class="nc-compare-empty">${baseTemRefPendente ? 'Foto anterior em sincronização' : 'Sem foto anterior'}</div>`}
+        </div>
+        <div class="nc-compare-col">
+          <div class="nc-compare-lbl">Depois</div>
+          ${fotosDepois[0]
+            ? `<div class="nc-compare-thumb" onclick="openImageModal('${fotosDepois[0].replace(/'/g, "\\'")}')"><img src="${fotosDepois[0]}" alt="Foto depois"></div>`
+            : `<div class="nc-compare-empty">Adicione foto de resolução</div>`}
+        </div>
+      </div>
+    </div>
+  ` : '';
   const ncAnteriorSection = hasNCAnterior ? `
     <div class="nc-anterior-section">
       <div class="nc-anterior-header">
@@ -3905,6 +4013,7 @@ function criterioHTML(s, si, cr, ci, base) {
           `).join('')}
         </div>
       ` : `<div style="font-size:11px;color:var(--text2);padding:6px;text-align:center">${baseTemRefPendente ? 'Evidência da NC anterior em sincronização...' : 'Sem fotos registradas da não conformidade anterior'}</div>`}
+      ${antesDepoisSection}
       <div class="nc-anterior-actions">
         <button class="btn-nc-resolved ${isResolved ? 'active' : ''}" onclick="toggleResolved('${s.id}',${ci})" id="btn-resolved-${s.id}-${ci}">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10l4 4L16 6"/></svg>
