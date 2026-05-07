@@ -821,7 +821,6 @@ body.light-mode .nc-compare-col {
   overflow: hidden;
   box-shadow: var(--shadow);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.2s ease;
-  animation: sectorCardFloat 5.5s ease-in-out infinite;
 }
 .sector-card::before {
   content: "";
@@ -841,7 +840,6 @@ body.light-mode .nc-compare-col {
   transform: rotate(20deg);
   pointer-events: none;
   background: linear-gradient(90deg, transparent, rgba(125, 211, 252, 0.16), transparent);
-  animation: sectorCardSweep 6.8s ease-in-out infinite;
 }
 .sector-card:hover {
   transform: translateY(-4px);
@@ -1048,6 +1046,17 @@ body.light-mode .nc-compare-col {
   padding: 4px 8px;
   white-space: nowrap;
 }
+body.light-mode .hist-group-title {
+  color: #0f172a;
+}
+body.light-mode .hist-group-meta {
+  color: #1e293b;
+}
+body.light-mode .hist-group-count {
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.78);
+  border-color: rgba(59, 130, 246, 0.34);
+}
 .hist-group-body {
   border-top: 1px solid var(--border);
   padding-top: 8px;
@@ -1069,7 +1078,6 @@ body.light-mode .nc-compare-col {
   animation-delay: var(--hist-delay, 0ms);
   transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.28s ease, border-color 0.28s ease, background 0.28s ease;
   box-shadow: 0 8px 22px rgba(2, 6, 23, 0.2);
-  backdrop-filter: blur(2px);
 }
 .insp-card::after {
   content: "";
@@ -1078,7 +1086,6 @@ body.light-mode .nc-compare-col {
   width: 4px;
   background: linear-gradient(180deg, rgba(99, 102, 241, 0.95), rgba(14, 165, 233, 0.72));
   opacity: 0.95;
-  animation: historyAccentPulse 4.8s ease-in-out infinite;
 }
 .insp-card::before {
   content: "";
@@ -1086,7 +1093,6 @@ body.light-mode .nc-compare-col {
   inset: 0;
   background: radial-gradient(circle at 85% -10%, rgba(125, 211, 252, 0.2), transparent 45%);
   pointer-events: none;
-  animation: historyGlowShift 6.8s ease-in-out infinite;
 }
 .insp-card:active { transform: scale(0.98); }
 .insp-card:hover {
@@ -1112,21 +1118,33 @@ body.light-mode .nc-compare-col {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 8px;
+  padding: 8px 9px;
   border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.08);
-  background: rgba(2, 6, 23, 0.22);
+  border: 1px solid rgba(125, 211, 252, 0.26);
+  background: rgba(2, 6, 23, 0.3);
   font-size: 11px;
-  color: var(--text2);
+  font-weight: 600;
+  color: #e2e8f0;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
 }
 .insp-meta-item svg {
   flex-shrink: 0;
-  opacity: 0.9;
+  opacity: 1;
+  color: #7dd3fc;
 }
 .insp-meta-item span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+body.light-mode .insp-meta-item {
+  border-color: rgba(59, 130, 246, 0.25);
+  background: rgba(255, 255, 255, 0.86);
+  color: #0f172a;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+}
+body.light-mode .insp-meta-item svg {
+  color: #2563eb;
 }
 .insp-card-open {
   font-size: 11px;
@@ -1135,6 +1153,9 @@ body.light-mode .nc-compare-col {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+}
+body.light-mode .insp-card-open {
+  color: #0f172a;
 }
 .insp-card-open svg {
   transition: transform 0.25s ease;
@@ -1280,7 +1301,6 @@ body.light-mode .nc-compare-col {
   gap: 10px;
   cursor: pointer;
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.2);
-  animation: pendSectorBreath 5.8s ease-in-out infinite;
 }
 .pend-sector-toggle::after {
   content: "";
@@ -1292,7 +1312,6 @@ body.light-mode .nc-compare-col {
   transform: rotate(20deg);
   pointer-events: none;
   background: linear-gradient(90deg, transparent, rgba(125, 211, 252, 0.18), transparent);
-  animation: pendSectorSweep 7.2s ease-in-out infinite;
 }
 .pend-sector-title {
   font-family: var(--font-display);
@@ -1352,7 +1371,7 @@ body.light-mode .pend-open-count {
   overflow: hidden;
   border-color: rgba(165, 180, 252, 0.26);
   background: linear-gradient(150deg, rgba(79, 70, 229, 0.13), rgba(14, 165, 233, 0.08));
-  animation: cardAppear 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) backwards, reportCardBreath 6.2s ease-in-out infinite;
+  animation: cardAppear 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
 }
 #screen-relatorios .card::after {
   content: "";
@@ -1364,7 +1383,6 @@ body.light-mode .pend-open-count {
   transform: rotate(20deg);
   pointer-events: none;
   background: linear-gradient(90deg, transparent, rgba(191, 219, 254, 0.2), transparent);
-  animation: reportCardSweep 8s ease-in-out infinite;
 }
 @keyframes reportCardSweep {
   0%, 74%, 100% { opacity: 0; transform: translateX(0) rotate(20deg); }
@@ -1714,7 +1732,7 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
   gap: 12px;
   animation: unitCardIn 0.35s ease-out both;
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.2);
-  animation: unitCardIn 0.35s ease-out both, unitCardBreath 5.8s ease-in-out infinite;
+  animation: unitCardIn 0.35s ease-out both;
 }
 .unit-card::before {
   content: "";
@@ -1736,7 +1754,6 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
   background: linear-gradient(90deg, transparent, rgba(191,219,254,0.18), transparent);
   transform: rotate(18deg);
   pointer-events: none;
-  animation: unitCardSweep 7.2s ease-in-out infinite;
 }
 .unit-card:hover {
   transform: translateY(-2px);
