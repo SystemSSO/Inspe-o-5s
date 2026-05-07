@@ -6134,8 +6134,14 @@ async function gerarPDFGerencia() {
       const criterioLines = doc.splitTextToSize(`Critério: ${item.criterio}`, W - margin * 2 - 8);
       const obsLines = doc.splitTextToSize(`Obs: ${item.obs}`, W - margin * 2 - 8);
       const sugLines = doc.splitTextToSize(`Sugestão: ${item.sugestao}`, W - margin * 2 - 8);
-      const fotos = Array.isArray(item.fotos) ? item.fotos.slice(0, 2) : [];
-      const hFotos = fotos.length ? 34 : 0;
+      const fotos = Array.isArray(item.fotos) ? item.fotos : [];
+      const fotosDataUrl = (await Promise.all(fotos.map(imageToDataUrl))).filter(Boolean);
+      const fotosPorLinha = 3;
+      const linhasFotos = fotosDataUrl.length ? Math.ceil(fotosDataUrl.length / fotosPorLinha) : 0;
+      const fotoW = 42;
+      const fotoH = 28;
+      const gapFoto = 3;
+      const hFotos = linhasFotos ? (linhasFotos * fotoH) + ((linhasFotos - 1) * gapFoto) : 0;
       const h = 12 + criterioLines.length * 4 + obsLines.length * 4 + sugLines.length * 4 + hFotos + 8;
       if (y + h > 196) y = novaPaginaComCabecalho('Não Conformidades por Setor', `${gerencia} · ${mesAnoAtual}`);
 
@@ -6161,14 +6167,13 @@ async function gerarPDFGerencia() {
       doc.text(sugLines, margin + 3, by);
       by += sugLines.length * 4 + 2;
 
-      if (fotos.length) {
-        const gap = 3;
-        const fotoW = fotos.length === 1 ? 58 : 42;
-        const fotoH = 28;
-        for (let fi = 0; fi < fotos.length; fi++) {
-          const dataUrl = await imageToDataUrl(fotos[fi]);
-          const fx = margin + 3 + fi * (fotoW + gap);
-          const fy = by;
+      if (fotosDataUrl.length) {
+        for (let fi = 0; fi < fotosDataUrl.length; fi++) {
+          const dataUrl = fotosDataUrl[fi];
+          const col = fi % fotosPorLinha;
+          const row = Math.floor(fi / fotosPorLinha);
+          const fx = margin + 3 + col * (fotoW + gapFoto);
+          const fy = by + row * (fotoH + gapFoto);
           doc.setDrawColor(203, 213, 225);
           doc.roundedRect(fx, fy, fotoW, fotoH, 1.5, 1.5);
           if (dataUrl) {
@@ -6191,11 +6196,6 @@ async function gerarPDFGerencia() {
             doc.setFontSize(7);
             doc.text('Foto indisponível', fx + fotoW / 2, fy + fotoH / 2, { align: 'center' });
           }
-        }
-        if ((item.fotos || []).length > 2) {
-          doc.setTextColor(22, 53, 159);
-          doc.setFontSize(7.5);
-          doc.text(`+${item.fotos.length - 2} foto(s)`, margin + 3 + (fotos.length * (fotoW + gap)), by + 6);
         }
       } else {
         doc.setTextColor(22, 53, 159);
@@ -6716,7 +6716,7 @@ async function gerarPDFSetorial(setor) {
     for (let idx = 0; idx < ncList.length; idx++) {
       const nc = ncList[idx];
       const fotosTodas = Array.isArray(nc.fotos) ? nc.fotos : [];
-      const fotosDataUrl = (await Promise.all(fotosTodas.slice(0, 2).map(toDataUrl))).filter(Boolean);
+      const fotosDataUrl = (await Promise.all(fotosTodas.map(toDataUrl))).filter(Boolean);
       const titulo = `${idx + 1}. ${nc.senso} · ${nc.local} · ${formatDate(nc.data)}`;
       const criterioLines = doc.splitTextToSize(`Critério: ${nc.criterio}`, W - margin * 2 - 8);
       const obsLines = doc.splitTextToSize(`Obs: ${nc.obs}`, W - margin * 2 - 8);
@@ -6726,7 +6726,12 @@ async function gerarPDFSetorial(setor) {
         ? `NC corresponsável - Origem: ${nc.origemSetor} · ${nc.origemLocal} | Destino: ${nc.destinoSetor}`
         : '';
       const correspLines = correspTxt ? doc.splitTextToSize(correspTxt, W - margin * 2 - 8) : [];
-      const hFotos = fotosDataUrl.length ? 34 : 0;
+      const fotosPorLinha = 3;
+      const fotoW = 42;
+      const fotoH = 28;
+      const gapFoto = 3;
+      const linhasFotos = fotosDataUrl.length ? Math.ceil(fotosDataUrl.length / fotosPorLinha) : 0;
+      const hFotos = linhasFotos ? (linhasFotos * fotoH) + ((linhasFotos - 1) * gapFoto) : 0;
       const lineH = 4.4;
       const h = 14 + criterioLines.length * lineH + obsLines.length * lineH + sugLines.length * lineH + reincLines.length * lineH + correspLines.length * lineH + hFotos + 14;
       ensureY(h + 10);
@@ -6763,13 +6768,12 @@ async function gerarPDFSetorial(setor) {
       doc.setTextColor(22, 53, 159);
 
       if (fotosDataUrl.length) {
-        const gap = 3;
-        const fotoW = fotosDataUrl.length === 1 ? 58 : 42;
-        const fotoH = 28;
         for (let fi = 0; fi < fotosDataUrl.length; fi++) {
           const dataUrl = fotosDataUrl[fi];
-          const fx = margin + 3 + fi * (fotoW + gap);
-          const fy = by;
+          const col = fi % fotosPorLinha;
+          const row = Math.floor(fi / fotosPorLinha);
+          const fx = margin + 3 + col * (fotoW + gapFoto);
+          const fy = by + row * (fotoH + gapFoto);
           doc.setDrawColor(203, 213, 225);
           doc.roundedRect(fx, fy, fotoW, fotoH, 1.5, 1.5);
           try {
@@ -6786,11 +6790,6 @@ async function gerarPDFSetorial(setor) {
             doc.setFontSize(7);
             doc.text('Foto indisponível', fx + fotoW / 2, fy + fotoH / 2, { align: 'center' });
           }
-        }
-        if (fotosTodas.length > 2) {
-          doc.setTextColor(22, 53, 159);
-          doc.setFontSize(7.5);
-          doc.text(`+${fotosTodas.length - 2} foto(s)`, margin + 3 + (fotosDataUrl.length * (fotoW + gap)), by + 6);
         }
       } else {
         doc.setTextColor(22, 53, 159);
@@ -6819,7 +6818,7 @@ async function gerarPDFSetorial(setor) {
     for (let idx = 0; idx < resolvidasList.length; idx++) {
       const item = resolvidasList[idx];
       const fotosTodas = Array.isArray(item.fotosResolucao) ? item.fotosResolucao : [];
-      const fotosDataUrl = (await Promise.all(fotosTodas.slice(0, 2).map(toDataUrl))).filter(Boolean);
+      const fotosDataUrl = (await Promise.all(fotosTodas.map(toDataUrl))).filter(Boolean);
       const titulo = `${idx + 1}. ${item.senso} · ${item.local} · Resolvido em ${formatDate(item.dataResolucao)}`;
       const criterioLines = doc.splitTextToSize(`Critério: ${item.criterio}`, W - margin * 2 - 8);
       const antesLines = doc.splitTextToSize(`Antes: ${item.obsAnterior}`, W - margin * 2 - 8);
@@ -6830,7 +6829,12 @@ async function gerarPDFSetorial(setor) {
         ? `Resolvida pelo corresponsável - Origem: ${item.origemSetor} · ${item.origemLocal} | Destino: ${item.destinoSetor}`
         : '';
       const correspLines = correspTxt ? doc.splitTextToSize(correspTxt, W - margin * 2 - 8) : [];
-      const hFotos = fotosDataUrl.length ? 34 : 0;
+      const fotosPorLinha = 3;
+      const fotoW = 42;
+      const fotoH = 28;
+      const gapFoto = 3;
+      const linhasFotos = fotosDataUrl.length ? Math.ceil(fotosDataUrl.length / fotosPorLinha) : 0;
+      const hFotos = linhasFotos ? (linhasFotos * fotoH) + ((linhasFotos - 1) * gapFoto) : 0;
       const lineH = 4.4;
       const h = 14 + criterioLines.length * lineH + antesLines.length * lineH + agoraLines.length * lineH + sugLines.length * lineH + reincLines.length * lineH + correspLines.length * lineH + hFotos + 16;
       ensureY(h + 10);
@@ -6873,13 +6877,12 @@ async function gerarPDFSetorial(setor) {
       by += 5;
 
       if (fotosDataUrl.length) {
-        const gap = 3;
-        const fotoW = fotosDataUrl.length === 1 ? 58 : 42;
-        const fotoH = 28;
         for (let fi = 0; fi < fotosDataUrl.length; fi++) {
           const dataUrl = fotosDataUrl[fi];
-          const fx = margin + 3 + fi * (fotoW + gap);
-          const fy = by;
+          const col = fi % fotosPorLinha;
+          const row = Math.floor(fi / fotosPorLinha);
+          const fx = margin + 3 + col * (fotoW + gapFoto);
+          const fy = by + row * (fotoH + gapFoto);
           doc.setDrawColor(203, 213, 225);
           doc.roundedRect(fx, fy, fotoW, fotoH, 1.5, 1.5);
           try {
@@ -6896,11 +6899,6 @@ async function gerarPDFSetorial(setor) {
             doc.setFontSize(7);
             doc.text('Foto indisponível', fx + fotoW / 2, fy + fotoH / 2, { align: 'center' });
           }
-        }
-        if (fotosTodas.length > 2) {
-          doc.setTextColor(22, 53, 159);
-          doc.setFontSize(7.5);
-          doc.text(`+${fotosTodas.length - 2} foto(s)`, margin + 3 + (fotosDataUrl.length * (fotoW + gap)), by + 6);
         }
       } else {
         doc.setTextColor(22, 53, 159);
