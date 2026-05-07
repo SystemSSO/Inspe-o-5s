@@ -1661,7 +1661,7 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
     </div>
 
     <div class="home-actions">
-      <button class="btn-primary" onclick="showNewInspModal()">
+      <button class="btn-primary" id="home-btn-nova-insp" onclick="showNewInspModal()">
         <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="8"/><path d="M10 6v8M6 10h8"/></svg>
         Nova inspeção
       </button>
@@ -3068,7 +3068,9 @@ function confirmarTecnico() {
 function renderHome() {
   document.getElementById('home-tec-name').textContent = currentTec || 'Selecionar técnico';
   document.getElementById('home-unit-name').textContent = currentUnidade;
-  renderHomeResumeBanner();
+  const hasResumeBanner = renderHomeResumeBanner();
+  const btnNova = document.getElementById('home-btn-nova-insp');
+  if (btnNova) btnNova.style.display = hasResumeBanner ? 'none' : '';
 
   const sectorList = document.getElementById('home-sector-list');
   sectorList.innerHTML = sectorCardListHTML();
@@ -3084,14 +3086,14 @@ function getLatestDraftForCurrentUnit() {
 // === Function: renderHomeResumeBanner ===
 function renderHomeResumeBanner() {
   const wrap = document.getElementById('home-resume-banner');
-  if (!wrap) return;
+  if (!wrap) return false;
 
   const draftEntry = getLatestDraftForCurrentUnit();
   const latest = getSortedInspecoesDesc()[0] || null;
 
   if (!draftEntry && !latest) {
     wrap.innerHTML = '';
-    return;
+    return false;
   }
 
   if (draftEntry) {
@@ -3110,7 +3112,7 @@ function renderHomeResumeBanner() {
         </div>
       </div>
     `;
-    return;
+    return true;
   }
 
   const label = `${latest.setor || 'Setor'}${latest.subarea ? ' · ' + latest.subarea : ''}`;
@@ -3126,6 +3128,7 @@ function renderHomeResumeBanner() {
       </div>
     </div>
   `;
+  return true;
 }
 
 // === Function: getSortedInspecoesDesc ===
