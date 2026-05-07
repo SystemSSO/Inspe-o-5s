@@ -102,6 +102,22 @@ html, body {
 .app-header .spacer { flex: 1; }
 .btn-icon { background: none; border: 1px solid var(--border); border-radius: 8px; color: var(--text2); width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
 .btn-icon:active { background: var(--card); }
+.theme-toggle-btn {
+  background: linear-gradient(145deg, rgba(99, 102, 241, 0.2), rgba(14, 165, 233, 0.16));
+  border-color: rgba(165, 180, 252, 0.45);
+  color: #c7d2fe;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.14);
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+.theme-toggle-btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(125, 211, 252, 0.55);
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.16);
+}
+.light-mode .theme-toggle-btn {
+  color: #1e3a8a;
+  background: linear-gradient(145deg, rgba(99, 102, 241, 0.16), rgba(14, 165, 233, 0.12));
+}
 
 /* â”€â”€ SCROLL BODY â”€â”€ */
 .scroll-body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
@@ -662,6 +678,30 @@ body.light-mode .nc-compare-col {
   text-transform: none;
   transition: background 0.15s ease;
 }
+.tech-badge.unit-highlight {
+  background: rgba(14, 165, 233, 0.14);
+  border-color: rgba(14, 165, 233, 0.45);
+  color: #bae6fd;
+  box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.14);
+}
+.tech-badge.tec-highlight {
+  background: rgba(16, 185, 129, 0.14);
+  border-color: rgba(16, 185, 129, 0.45);
+  color: #bbf7d0;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.14);
+}
+.light-mode .tech-badge.unit-highlight {
+  background: rgba(14, 165, 233, 0.14);
+  border-color: rgba(14, 165, 233, 0.38);
+  color: #0c4a6e;
+  box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.1);
+}
+.light-mode .tech-badge.tec-highlight {
+  background: rgba(16, 185, 129, 0.14);
+  border-color: rgba(16, 185, 129, 0.38);
+  color: #065f46;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.1);
+}
 .tech-badge:hover {
   transform: none;
   border-color: var(--border);
@@ -885,6 +925,38 @@ body.light-mode .nc-compare-col {
 }
 .sector-card-actions {
   padding: 0 10px 10px;
+}
+.area-edit-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.area-edit-item {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px;
+  background: rgba(255,255,255,0.02);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.area-edit-item .form-input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 10px;
+  font-size: 13px;
+}
+.area-edit-actions {
+  display: flex;
+  gap: 4px;
+}
+.btn-area-mini {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--navy3);
+  color: var(--text2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
 }
 
 /* ── HISTORY SPECIFIC ── */
@@ -1356,11 +1428,25 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
   background: var(--gold);
   animation: pulseSync 1.1s ease-in-out infinite;
 }
-#sync-status.synced .dot { background: var(--green); }
-#sync-status.offline .dot { background: var(--red); }
+#sync-status.synced .dot {
+  background: var(--green);
+  animation: pulseOnline 2.4s ease-in-out infinite;
+}
+#sync-status.offline .dot {
+  background: var(--red);
+  animation: pulseOffline 1.3s ease-in-out infinite;
+}
 @keyframes pulseSync {
   0%, 100% { transform: scale(1); opacity: 1; }
   50% { transform: scale(1.2); opacity: 0.7; }
+}
+@keyframes pulseOnline {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.12); opacity: 0.82; }
+}
+@keyframes pulseOffline {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.18); opacity: 0.65; }
 }
 
 /* â”€â”€ PDF HIDDEN â”€â”€ */
@@ -1545,7 +1631,7 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
     <span class="dot"></span>
     <span id="sync-status-text">Sincronizado</span>
   </div>
-  <button class="btn-icon" onclick="toggleTheme()" style="margin-right:6px">
+  <button class="btn-icon theme-toggle-btn" onclick="toggleTheme()" style="margin-right:6px">
     <svg class="theme-icon" width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
       <!-- Sun Icon -->
       <circle cx="10" cy="10" r="4"/>
@@ -1562,11 +1648,11 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
           <strong id="home-tec-name">Selecionar técnico</strong>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
-          <div class="tech-badge" onclick="openUnitModal()">
+          <div class="tech-badge unit-highlight" onclick="openUnitModal()">
             <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2l7 4v8l-7 4-7-4V6l7-4z"/><path d="M3 6l7 4 7-4"/></svg>
             <span id="home-unit-name">CD</span>
           </div>
-          <div class="tech-badge" onclick="openTecModal()">
+          <div class="tech-badge tec-highlight" onclick="openTecModal()">
             <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="7" r="3.5"/><path d="M3 17c0-3.3 3.1-6 7-6s7 2.7 7 6"/></svg>
             Trocar
           </div>
@@ -1668,7 +1754,7 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
       <div style="font-size:10px;color:var(--text2)">Todas as inspeções</div>
     </div>
   <div class="spacer"></div>
-  <button class="btn-icon" onclick="toggleTheme()" style="margin-right:12px">
+  <button class="btn-icon theme-toggle-btn" onclick="toggleTheme()" style="margin-right:12px">
     <svg class="theme-icon" width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
       <circle cx="10" cy="10" r="4"/><path d="M10 2v2m0 12v2M2 10h2m12 0h2M4.3 4.3l1.5 1.5m8.4 8.4l1.5 1.5M4.3 15.7l1.5-1.5m8.4-8.4l1.5-1.5"/>
     </svg>
@@ -1899,6 +1985,10 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
       <label class="form-label">Local</label>
       <select class="form-select" id="nova-subarea-select"></select>
     </div>
+    <div class="form-group" id="nova-subarea-custom-group" style="display:none;">
+      <label class="form-label">Nome da outra área</label>
+      <input type="text" class="form-input" id="nova-subarea-custom" placeholder="Digite o nome da área/local">
+    </div>
     <div class="form-group">
       <label class="form-label">Período de referência</label>
       <input type="month" class="form-input" id="nova-periodo" value="">
@@ -1952,6 +2042,19 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
     <button class="btn-secondary" onclick="closeFotoModal()">
       Cancelar
     </button>
+  </div>
+</div>
+
+<!-- Editar áreas -->
+<div class="modal-overlay" id="modal-area-editor">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Editar áreas do setor</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:8px" id="area-editor-subtitle">Setor</div>
+    <div class="area-edit-list" id="area-edit-list"></div>
+    <button class="btn-secondary" onclick="adicionarAreaEditor()" style="margin-top:10px">+ Adicionar área</button>
+    <button class="btn-primary" onclick="salvarAreaEditor()" style="margin-top:8px">Salvar alterações</button>
+    <button class="btn-secondary" onclick="fecharAreaEditor()" style="margin-top:8px">Cancelar</button>
   </div>
 </div>
 
@@ -2247,17 +2350,35 @@ const UNIDADE_LABELS = {
   MSB: 'Morro Sem Boné'
 };
 
+// === Function: normalizeUnidadeCode ===
+function normalizeUnidadeCode(code, fallback = 'CD') {
+  const normalized = String(code || '').trim().toUpperCase();
+  if (normalized === 'HAR') return 'REF';
+  return UNIDADES.includes(normalized) ? normalized : fallback;
+}
+
 // === Function: getInspectionUnidade ===
 function getInspectionUnidade(insp) {
   if (!insp) return 'CD';
-  if (insp.unidade) return insp.unidade === 'HAR' ? 'REF' : insp.unidade;
+  if (insp.unidade) return normalizeUnidadeCode(insp.unidade, 'CD');
   return insp.setor === 'Reflorestamento' ? 'REF' : 'CD';
 }
 
 // === Function: getSetoresAtivos ===
 function getSetoresAtivos(unidade = currentUnidade) {
-  if (unidade === 'REF') return SETORES.filter(s => s.nome === 'Reflorestamento');
-  return SETORES.filter(s => s.nome !== 'Reflorestamento');
+  const unit = normalizeUnidadeCode(unidade, currentUnidade || 'CD');
+  if (unit === 'REF') {
+    return SETORES
+      .filter(s => s.nome === 'Reflorestamento')
+      .map(s => ({ ...s, subareas: getSetorSubareasAtivas(s.nome, unit) }));
+  }
+  if (unit === 'CD') {
+    return SETORES
+      .filter(s => s.nome !== 'Reflorestamento')
+      .map(s => ({ ...s, subareas: getSetorSubareasAtivas(s.nome, unit) }));
+  }
+  // BA/JC/MSB: não herdam setores da Codemin automaticamente
+  return [];
 }
 
 // === Function: getSetorConfigAtivo ===
@@ -2267,7 +2388,7 @@ function getSetorConfigAtivo(nomeSetor) {
 
 // === Function: inspectionIsCurrentUnit ===
 function inspectionIsCurrentUnit(insp) {
-  return getInspectionUnidade(insp) === currentUnidade;
+  return getInspectionUnidade(insp) === normalizeUnidadeCode(currentUnidade, 'CD');
 }
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -2276,6 +2397,35 @@ function inspectionIsCurrentUnit(insp) {
 const DB_KEY = 'aa5s_data';
 const DRAFT_KEY = 'aa5s_draft';
 const DRAFTS_KEY = 'aa5s_drafts_v2';
+const AREA_OVERRIDES_KEY = 'aa5s_area_overrides_v1';
+
+let areaEditorState = { setor: '', items: [] };
+
+// === Function: getAreaOverridesStore ===
+function getAreaOverridesStore() {
+  try {
+    const raw = localStorage.getItem(AREA_OVERRIDES_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+// === Function: saveAreaOverridesStore ===
+function saveAreaOverridesStore(store) {
+  localStorage.setItem(AREA_OVERRIDES_KEY, JSON.stringify(store || {}));
+}
+
+// === Function: getSetorSubareasAtivas ===
+function getSetorSubareasAtivas(setorNome, unidade = currentUnidade) {
+  const unit = normalizeUnidadeCode(unidade, currentUnidade || 'CD');
+  const store = getAreaOverridesStore();
+  const override = store?.[unit]?.[setorNome];
+  if (Array.isArray(override) && override.length) return override;
+  const base = SETORES.find(s => s.nome === setorNome);
+  return Array.isArray(base?.subareas) ? [...base.subareas] : [];
+}
 // ConfiguraÃ§Ã£o do Firebase (Substitua pelos seus dados do console do Firebase)
 const firebaseConfig = {
   apiKey: "AIzaSyDY4GZmEg6cZwqxMELGY7AlOOBEPngampA",
@@ -2477,7 +2627,7 @@ function renderDraftsInNewInspModal() {
   if (!wrap || !list) return;
 
   const setorSel = document.getElementById('nova-setor-select')?.value || '';
-  const subareaSel = document.getElementById('nova-subarea-select')?.value || '';
+  const subareaSel = getNovaSubareaResolvida();
   const matchKey = setorSel ? `${String(setorSel).trim()}||${String(subareaSel || '').trim()}` : '';
 
   const entries = listDraftEntries();
@@ -2770,7 +2920,7 @@ function ensureCurrentTecInList() {
 }
 
 if (currentUnidade === 'HAR') currentUnidade = 'REF';
-if (!UNIDADES.includes(currentUnidade)) currentUnidade = 'CD';
+currentUnidade = normalizeUnidadeCode(currentUnidade, 'CD');
 localStorage.setItem('aa5s_unit', currentUnidade);
 
 // === Function: renderUnitGrid ===
@@ -2816,10 +2966,14 @@ function openUnitModal() {
 // === Function: confirmarUnidade ===
 function confirmarUnidade() {
   const v = pendingUnidade || currentUnidade || 'CD';
-  currentUnidade = UNIDADES.includes(v) ? v : 'CD';
+  currentUnidade = normalizeUnidadeCode(v, 'CD');
   localStorage.setItem('aa5s_unit', currentUnidade);
   document.getElementById('modal-unit').classList.remove('open');
   renderHome();
+  renderHistorico();
+  renderPendencias();
+  renderRelatorios();
+  if (document.getElementById('screen-dashboard')?.classList.contains('active')) renderDashboard();
 }
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -3309,6 +3463,94 @@ function filterSectors(query) {
   });
 }
 
+// === Function: abrirAreaEditor ===
+function abrirAreaEditor(setor) {
+  const nomeSetor = String(setor || '').trim();
+  if (!nomeSetor) return;
+  areaEditorState = {
+    setor: nomeSetor,
+    items: [...getSetorSubareasAtivas(nomeSetor)].map(v => String(v || ''))
+  };
+  document.getElementById('area-editor-subtitle').textContent = `${nomeSetor} · Unidade ${currentUnidade}`;
+  renderAreaEditorList();
+  document.getElementById('modal-area-editor').classList.add('open');
+}
+
+// === Function: fecharAreaEditor ===
+function fecharAreaEditor() {
+  document.getElementById('modal-area-editor').classList.remove('open');
+}
+
+// === Function: renderAreaEditorList ===
+function renderAreaEditorList() {
+  const list = document.getElementById('area-edit-list');
+  if (!list) return;
+  const items = areaEditorState.items || [];
+  list.innerHTML = items.map((item, idx) => `
+    <div class="area-edit-item">
+      <input class="form-input" value="${String(item || '').replace(/"/g, '&quot;')}" oninput="editarAreaNome(${idx}, this.value)">
+      <div class="area-edit-actions">
+        <button type="button" class="btn-area-mini" onclick="moverAreaEditor(${idx}, -1)" title="Subir">↑</button>
+        <button type="button" class="btn-area-mini" onclick="moverAreaEditor(${idx}, 1)" title="Descer">↓</button>
+        <button type="button" class="btn-area-mini" onclick="removerAreaEditor(${idx})" title="Remover">×</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// === Function: editarAreaNome ===
+function editarAreaNome(idx, value) {
+  if (!Array.isArray(areaEditorState.items)) areaEditorState.items = [];
+  areaEditorState.items[idx] = String(value || '');
+}
+
+// === Function: moverAreaEditor ===
+function moverAreaEditor(idx, dir) {
+  const items = areaEditorState.items || [];
+  const j = idx + dir;
+  if (j < 0 || j >= items.length) return;
+  const tmp = items[idx];
+  items[idx] = items[j];
+  items[j] = tmp;
+  areaEditorState.items = items;
+  renderAreaEditorList();
+}
+
+// === Function: removerAreaEditor ===
+function removerAreaEditor(idx) {
+  areaEditorState.items = (areaEditorState.items || []).filter((_, i) => i !== idx);
+  renderAreaEditorList();
+}
+
+// === Function: adicionarAreaEditor ===
+function adicionarAreaEditor() {
+  if (!Array.isArray(areaEditorState.items)) areaEditorState.items = [];
+  areaEditorState.items.push('');
+  renderAreaEditorList();
+}
+
+// === Function: salvarAreaEditor ===
+function salvarAreaEditor() {
+  const setor = String(areaEditorState.setor || '').trim();
+  if (!setor) return;
+  const cleaned = (areaEditorState.items || [])
+    .map(v => String(v || '').trim())
+    .filter(Boolean);
+  if (!cleaned.length) {
+    toast('Inclua ao menos uma área para salvar.');
+    return;
+  }
+  const unique = [...new Set(cleaned)];
+  const unit = normalizeUnidadeCode(currentUnidade, 'CD');
+  const store = getAreaOverridesStore();
+  if (!store[unit]) store[unit] = {};
+  store[unit][setor] = unique;
+  saveAreaOverridesStore(store);
+  fecharAreaEditor();
+  renderHome();
+  toast('Áreas atualizadas com sucesso.');
+}
+
 // === Function: sectorCardListHTML ===
 function sectorCardListHTML() {
   const setoresOrdenados = [...getSetoresAtivos().map(s => s.nome)];
@@ -3385,6 +3627,25 @@ function sectorCardListHTML() {
         </div>
       </div>`;
     }).join('');
+    const setorSafeNovaArea = setor.replace(/'/g, "\\'");
+    const addNovaAreaHtml = `<div class="sector-area-item" onclick="iniciarInspecaoOutraArea('${setorSafeNovaArea}')" style="cursor:pointer;border-color:rgba(14,165,233,0.4);background:rgba(14,165,233,0.08)">
+      <div class="sector-area-top">
+        <div style="flex:1">
+          <div class="sector-area-name" style="color:var(--orange2)">+ Adicionar nova área</div>
+          <div class="sector-area-meta" style="color:var(--text2)">Área não listada · Toque para criar e nomear</div>
+        </div>
+        <div style="font-family:var(--font-display);font-weight:700;color:var(--orange2)">Novo</div>
+      </div>
+    </div>`;
+    const editarAreasHtml = `<div class="sector-area-item" onclick="abrirAreaEditor('${setorSafeNovaArea}')" style="cursor:pointer;border-color:rgba(245,158,11,0.42);background:rgba(245,158,11,0.1)">
+      <div class="sector-area-top">
+        <div style="flex:1">
+          <div class="sector-area-name" style="color:var(--gold)">✎ Editar áreas</div>
+          <div class="sector-area-meta" style="color:var(--text2)">Alterar ordem e nomenclatura</div>
+        </div>
+        <div style="font-family:var(--font-display);font-weight:700;color:var(--gold)">Editar</div>
+      </div>
+    </div>`;
 
     return `
       <div class="sector-card" data-sector="${setor}">
@@ -3400,6 +3661,8 @@ function sectorCardListHTML() {
         <div class="sector-area-list">
           ${areasInspecionadasHtml}
           ${areasFaltantes.length ? `<div style="font-size:11px;color:var(--red);font-weight:700;padding:6px 2px 2px">Áreas faltantes (${areasFaltantes.length})</div>${areasFaltantesHtml}` : ''}
+          ${addNovaAreaHtml}
+          ${editarAreasHtml}
         </div>
       </div>
     `;
@@ -3606,6 +3869,11 @@ function showNewInspModal() {
     renderDraftsInNewInspModal();
   };
   document.getElementById('nova-subarea-select').onchange = () => {
+    handleCustomSubareaToggle();
+    checkInspAnterior();
+    renderDraftsInNewInspModal();
+  };
+  document.getElementById('nova-subarea-custom').oninput = () => {
     checkInspAnterior();
     renderDraftsInNewInspModal();
   };
@@ -3631,7 +3899,48 @@ function iniciarInspecaoAreaPendente(setor, subarea = '') {
   setorSelect.value = setor;
   populateSubareaSelect();
   if (subarea) subareaSelect.value = subarea;
+  handleCustomSubareaToggle();
   checkInspAnterior();
+}
+
+// === Function: iniciarInspecaoOutraArea ===
+function iniciarInspecaoOutraArea(setor) {
+  if (!currentTec) {
+    toast('Selecione um técnico antes de iniciar a inspeção.');
+    openTecModal();
+    return;
+  }
+  showNewInspModal();
+  const setorSelect = document.getElementById('nova-setor-select');
+  const subareaSelect = document.getElementById('nova-subarea-select');
+  const customInput = document.getElementById('nova-subarea-custom');
+  if (!setorSelect || !subareaSelect) return;
+  setorSelect.value = setor;
+  populateSubareaSelect();
+  subareaSelect.value = '__OUTRA__';
+  handleCustomSubareaToggle();
+  if (customInput) {
+    customInput.value = '';
+    try { customInput.focus(); } catch {}
+  }
+  checkInspAnterior();
+}
+
+// === Function: getNovaSubareaResolvida ===
+function getNovaSubareaResolvida() {
+  const subareaSelect = document.getElementById('nova-subarea-select');
+  const customInput = document.getElementById('nova-subarea-custom');
+  const v = subareaSelect?.value || '';
+  if (v === '__OUTRA__') return String(customInput?.value || '').trim();
+  return String(v || '').trim();
+}
+
+// === Function: handleCustomSubareaToggle ===
+function handleCustomSubareaToggle() {
+  const subareaSelect = document.getElementById('nova-subarea-select');
+  const customGroup = document.getElementById('nova-subarea-custom-group');
+  if (!subareaSelect || !customGroup) return;
+  customGroup.style.display = subareaSelect.value === '__OUTRA__' ? 'block' : 'none';
 }
 
 // === Function: populateSubareaSelect ===
@@ -3639,22 +3948,27 @@ function populateSubareaSelect() {
   const setorSelect = document.getElementById('nova-setor-select');
   const subareaSelect = document.getElementById('nova-subarea-select');
   const subareaGroup = document.getElementById('nova-subarea-group');
+  const customInput = document.getElementById('nova-subarea-custom');
   const selectedSectorName = setorSelect.value;
   const selectedSector = getSetorConfigAtivo(selectedSectorName);
 
   subareaSelect.innerHTML = '<option value="">— Selecione o local —</option>';
   if (selectedSector && selectedSector.subareas.length > 0) {
     subareaSelect.innerHTML += selectedSector.subareas.map(sa => `<option value="${sa}">${sa}</option>`).join('');
+    subareaSelect.innerHTML += '<option value="__OUTRA__">+ Outra área</option>';
     subareaGroup.style.display = 'block';
   } else {
     subareaGroup.style.display = 'none';
   }
+  if (customInput) customInput.value = '';
+  handleCustomSubareaToggle();
 }
 
 // === Function: checkInspAnterior ===
 function checkInspAnterior() {
   const setor = document.getElementById('nova-setor-select').value;
-  const subarea = document.getElementById('nova-subarea-select').value;
+  const subarea = getNovaSubareaResolvida();
+  const selectedSubareaRaw = document.getElementById('nova-subarea-select').value;
   const selectedSector = getSetorConfigAtivo(setor);
   const wrap = document.getElementById('nova-insp-anterior-wrap');
   const baseSel = document.getElementById('nova-base-select');
@@ -3665,7 +3979,7 @@ function checkInspAnterior() {
     return;
   }
 
-  if (selectedSector && selectedSector.subareas.length > 0 && !subarea) {
+  if (selectedSector && selectedSector.subareas.length > 0 && (!subarea || selectedSubareaRaw === '__OUTRA__' && !subarea.trim())) {
     wrap.style.display = 'none';
     baseSel.disabled = false;
     return;
@@ -3696,14 +4010,15 @@ function iniciarInspecao() {
     return;
   }
   const setor = document.getElementById('nova-setor-select').value;
-  const subarea = document.getElementById('nova-subarea-select').value;
+  const subarea = getNovaSubareaResolvida();
+  const selectedSubareaRaw = document.getElementById('nova-subarea-select').value;
   const periodo = document.getElementById('nova-periodo').value;
   const selectedSector = getSetorConfigAtivo(setor);
 
   document.getElementById('modal-nova-insp').classList.remove('open');
 
   if (!setor) { toast('Selecione um setor para iniciar a inspeção.'); return; }
-  if (selectedSector && selectedSector.subareas.length > 0 && !subarea) {
+  if (selectedSector && selectedSector.subareas.length > 0 && (!subarea || selectedSubareaRaw === '__OUTRA__' && !subarea.trim())) {
     toast('Selecione o local para iniciar a inspeção.');
     return;
   }
