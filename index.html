@@ -3530,12 +3530,14 @@ function moverAreaEditor(idx, dir) {
   items[idx] = items[j];
   items[j] = tmp;
   areaEditorState.items = renumberAreaItems(items);
+  aplicarAlteracoesAreaEditor(false);
   renderAreaEditorList();
 }
 
 // === Function: removerAreaEditor ===
 function removerAreaEditor(idx) {
   areaEditorState.items = renumberAreaItems((areaEditorState.items || []).filter((_, i) => i !== idx));
+  aplicarAlteracoesAreaEditor(false);
   renderAreaEditorList();
 }
 
@@ -3546,18 +3548,18 @@ function adicionarAreaEditor() {
   renderAreaEditorList();
 }
 
-// === Function: salvarAreaEditor ===
-function salvarAreaEditor() {
+// === Function: aplicarAlteracoesAreaEditor ===
+function aplicarAlteracoesAreaEditor(showToast = false) {
   const setor = String(areaEditorState.setor || '').trim();
-  if (!setor) return;
+  if (!setor) return false;
   const renumbered = renumberAreaItems(areaEditorState.items || []);
   areaEditorState.items = renumbered;
   const cleaned = renumbered
     .map(v => String(v || '').trim())
     .filter(Boolean);
   if (!cleaned.length) {
-    toast('Inclua ao menos uma área para salvar.');
-    return;
+    if (showToast) toast('Inclua ao menos uma área para salvar.');
+    return false;
   }
   const unique = [...new Set(cleaned)];
   const unit = normalizeUnidadeCode(currentUnidade, 'CD');
@@ -3565,9 +3567,42 @@ function salvarAreaEditor() {
   if (!store[unit]) store[unit] = {};
   store[unit][setor] = unique;
   saveAreaOverridesStore(store);
-  fecharAreaEditor();
+
+  // Sincroniza nomenclatura nas inspeções já salvas do mesmo setor/unidade
+  const mapByBase = {};
+  unique.forEach(nome => {
+    const base = stripAreaLeadingNumber(nome);
+    if (base) mapByBase[base] = nome;
+  });
+  let updatedCount = 0;
+  APP.inspecoes.forEach(insp => {
+    if (!insp || insp.setor !== setor) return;
+    if (getInspectionUnidade(insp) !== unit) return;
+    const atual = String(insp.subarea || '').trim();
+    if (!atual) return;
+    const base = stripAreaLeadingNumber(atual);
+    const novo = mapByBase[base];
+    if (novo && novo !== atual) {
+      insp.subarea = novo;
+      updatedCount++;
+    }
+  });
+  persistLocalApp(APP);
   renderHome();
-  toast('Áreas atualizadas com sucesso.');
+  renderHistorico();
+
+  if (showToast) {
+    toast(updatedCount > 0 ? `Áreas atualizadas (${updatedCount} registro(s) ajustado(s)).` : 'Áreas atualizadas com sucesso.');
+  }
+  return true;
+}
+
+// === Function: salvarAreaEditor ===
+function salvarAreaEditor() {
+  const ok = aplicarAlteracoesAreaEditor(true);
+  if (!ok) return;
+
+  fecharAreaEditor();
 }
 
 // === Function: sectorCardListHTML ===
