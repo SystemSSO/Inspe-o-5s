@@ -3501,6 +3501,20 @@ function renderAreaEditorList() {
   `).join('');
 }
 
+// === Function: stripAreaLeadingNumber ===
+function stripAreaLeadingNumber(value) {
+  return String(value || '').replace(/^\s*\d+\s*[–-]\s*/, '').trim();
+}
+
+// === Function: renumberAreaItems ===
+function renumberAreaItems(items) {
+  return (items || []).map((raw, idx) => {
+    const base = stripAreaLeadingNumber(raw);
+    if (!base) return '';
+    return `${idx + 1} – ${base}`;
+  });
+}
+
 // === Function: editarAreaNome ===
 function editarAreaNome(idx, value) {
   if (!Array.isArray(areaEditorState.items)) areaEditorState.items = [];
@@ -3515,13 +3529,13 @@ function moverAreaEditor(idx, dir) {
   const tmp = items[idx];
   items[idx] = items[j];
   items[j] = tmp;
-  areaEditorState.items = items;
+  areaEditorState.items = renumberAreaItems(items);
   renderAreaEditorList();
 }
 
 // === Function: removerAreaEditor ===
 function removerAreaEditor(idx) {
-  areaEditorState.items = (areaEditorState.items || []).filter((_, i) => i !== idx);
+  areaEditorState.items = renumberAreaItems((areaEditorState.items || []).filter((_, i) => i !== idx));
   renderAreaEditorList();
 }
 
@@ -3536,7 +3550,9 @@ function adicionarAreaEditor() {
 function salvarAreaEditor() {
   const setor = String(areaEditorState.setor || '').trim();
   if (!setor) return;
-  const cleaned = (areaEditorState.items || [])
+  const renumbered = renumberAreaItems(areaEditorState.items || []);
+  areaEditorState.items = renumbered;
+  const cleaned = renumbered
     .map(v => String(v || '').trim())
     .filter(Boolean);
   if (!cleaned.length) {
