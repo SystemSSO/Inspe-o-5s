@@ -169,10 +169,35 @@ html, body {
   display: flex; align-items: center; justify-content: center; gap: 8px;
   box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
   transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  animation: primaryBannerGlow 3s ease-in-out infinite;
+}
+.btn-primary::after {
+  content: "";
+  position: absolute;
+  top: -40%;
+  left: -70%;
+  width: 55%;
+  height: 190%;
+  transform: rotate(18deg);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.22), transparent);
+  animation: primaryBannerShimmer 4.5s ease-in-out infinite;
+  pointer-events: none;
 }
 .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 20px 25px -5px rgba(79, 70, 229, 0.4); }
 .light-mode .btn-primary { box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2); }
 .btn-primary:active { background: #c94f10; transform: scale(0.98); }
+
+@keyframes primaryBannerGlow {
+  0%, 100% { box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3); }
+  50% { box-shadow: 0 16px 28px -6px rgba(79, 70, 229, 0.42); }
+}
+@keyframes primaryBannerShimmer {
+  0%, 70%, 100% { opacity: 0; transform: translateX(0) rotate(18deg); }
+  15%, 35% { opacity: 1; }
+  45% { opacity: 0; transform: translateX(280%) rotate(18deg); }
+}
 .btn-secondary {
   background: var(--card); color: var(--text);
   border: 1px solid var(--border); border-radius: 12px;
@@ -242,11 +267,14 @@ html, body {
 
 /* â”€â”€ FOTO AREA â”€â”€ */
 .foto-area {
-  border: 2px dashed var(--border); border-radius: 12px;
-  padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 8px;
+  border: 1px dashed var(--border); border-radius: 10px;
+  min-height: 42px;
+  padding: 8px 10px;
+  display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 6px;
   cursor: pointer; transition: border-color 0.15s;
 }
 .foto-area:active { border-color: var(--orange); }
+.foto-area svg { width: 16px; height: 16px; }
 .foto-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
 .foto-thumb { aspect-ratio: 1; border-radius: 6px; overflow: hidden; position: relative; }
 .foto-thumb img { width: 100%; height: 100%; object-fit: cover; }
@@ -736,73 +764,6 @@ body.light-mode .nc-compare-col {
   .home-actions { grid-template-columns: 1fr; }
 }
 
-.resume-banner {
-  position: relative;
-  overflow: hidden;
-  margin: 0 16px 14px;
-  border-radius: 16px;
-  border: 1px solid rgba(165, 180, 252, 0.35);
-  background: linear-gradient(150deg, rgba(79, 70, 229, 0.2), rgba(14, 165, 233, 0.12));
-  padding: 12px;
-  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.22);
-  animation: bannerIn 0.35s ease-out both, bannerGlow 3s ease-in-out infinite;
-}
-.resume-banner::after {
-  content: "";
-  position: absolute;
-  top: -40%;
-  left: -70%;
-  width: 55%;
-  height: 190%;
-  transform: rotate(18deg);
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.22), transparent);
-  animation: bannerShimmer 4.5s ease-in-out infinite;
-  pointer-events: none;
-}
-.resume-banner-title {
-  font-family: var(--font-label);
-  font-size: 11px;
-  letter-spacing: 0.7px;
-  text-transform: uppercase;
-  color: var(--text2);
-}
-.resume-banner-main {
-  margin-top: 4px;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text);
-  line-height: 1.35;
-}
-.resume-banner-sub {
-  margin-top: 3px;
-  font-size: 12px;
-  color: var(--text2);
-}
-.resume-banner-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 10px;
-}
-.resume-banner-actions .btn-primary,
-.resume-banner-actions .btn-secondary {
-  min-height: 40px;
-  padding: 10px 12px;
-  font-size: 12px;
-  border-radius: 10px;
-}
-@keyframes bannerIn {
-  from { opacity: 0; transform: translateY(10px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-@keyframes bannerGlow {
-  0%, 100% { box-shadow: 0 12px 24px rgba(15, 23, 42, 0.22); }
-  50% { box-shadow: 0 16px 30px rgba(79, 70, 229, 0.24); }
-}
-@keyframes bannerShimmer {
-  0%, 70%, 100% { opacity: 0; transform: translateX(0) rotate(18deg); }
-  15%, 35% { opacity: 1; }
-  45% { opacity: 0; transform: translateX(280%) rotate(18deg); }
-}
 
 .section-title {
   font-size: 13px; font-weight: 700;
@@ -1848,6 +1809,8 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
   .unit-grid { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) {
+  .btn-primary,
+  .btn-primary::after,
   .unit-card,
   .unit-card::before,
   .unit-card::after,
@@ -1862,8 +1825,7 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
   .home-hero-top > div:last-child,
   .sector-card,
   .insp-card,
-  .pend-item,
-  .resume-banner {
+  .pend-item {
     animation: none !important;
     transition: none !important;
   }
@@ -1928,7 +1890,6 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
         Nova inspeção
       </button>
     </div>
-    <div id="home-resume-banner"></div>
 
     <div class="section-title">Setores e locais</div>
     <div class="search-container">
@@ -2132,6 +2093,48 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
         Exportar Excel (Geral)
       </button>
     </div>
+    <div class="section-title smartsheet-admin-only" style="display:none">Integração Smartsheet</div>
+    <div class="card smartsheet-admin-only" style="display:none">
+      <div class="form-group">
+        <label class="form-label">Link da planilha</label>
+        <input class="form-input" id="smartsheet-url" placeholder="https://app.smartsheet.com/sheets/..." value="https://app.smartsheet.com/sheets/34Cxg2545fF73M6cx6jqQR4HC4mX4GRXHcx6xw21?view=grid">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Sheet ID numérico da API</label>
+        <input class="form-input" id="smartsheet-sheet-id" inputmode="numeric" placeholder="Ex.: 1234567890123456">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Token de acesso Smartsheet</label>
+        <input class="form-input" id="smartsheet-token" type="password" placeholder="Cole o token Bearer aqui">
+      </div>
+      <div class="form-group">
+        <label class="form-label">URL do proxy Smartsheet (recomendado)</label>
+        <input class="form-input" id="smartsheet-proxy-url" placeholder="https://...cloudfunctions.net/smartsheetProxy">
+      </div>
+      <div class="form-group">
+        <label class="form-label">URL do fluxo Power Automate (e-mail)</label>
+        <input class="form-input" id="power-automate-email-url" placeholder="https://prod-...logic.azure.com/...">
+      </div>
+      <div id="smartsheet-status" style="font-size:12px;color:var(--text2);margin:-4px 0 12px"></div>
+      <button class="btn-primary" onclick="salvarSmartsheetConfig()">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 13l4 4L16 7"/></svg>
+        Salvar conexão
+      </button>
+      <button class="btn-secondary" onclick="testarSmartsheetConexao()" style="margin-top:8px">
+        Testar conexão
+      </button>
+      <button class="btn-secondary" onclick="sincronizarTudoSmartsheet()" style="margin-top:8px">
+        Enviar todas as inspeções
+      </button>
+      <button class="btn-secondary" onclick="scheduleSyncQueue(0)" style="margin-top:8px">
+        Enviar pendentes
+      </button>
+    </div>
+    <div class="card" id="smartsheet-admin-lock">
+      <button class="btn-secondary" onclick="unlockSmartsheetAdmin()" style="width:auto;padding:9px 14px;margin-left:auto">
+        Admin
+      </button>
+    </div>
   </div>
   <div class="bottom-nav">
     <button class="nav-btn" onclick="navTo('home')">
@@ -2256,6 +2259,13 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
     <div class="form-group">
       <label class="form-label">Período de referência</label>
       <input type="month" class="form-input" id="nova-periodo" value="">
+    </div>
+    <div class="form-group">
+      <label class="form-label" style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0">
+        <input type="checkbox" id="nova-email-auto" style="width:18px;height:18px;accent-color:var(--orange)">
+        Enviar e-mail automático após salvar
+      </label>
+      <input type="text" class="form-input" id="nova-email-destino" placeholder="destinatario@empresa.com; outro@empresa.com" style="margin-top:8px">
     </div>
     <div id="nova-drafts-wrap" style="display:none">
       <div class="divider"></div>
@@ -2605,11 +2615,10 @@ const SETORES = [
   }
 ];
 
-const UNIDADES = ['CD', 'BA', 'REF', 'JC', 'MSB'];
+const UNIDADES = ['CD', 'BA', 'JC', 'MSB'];
 const UNIDADE_LABELS = {
   CD: 'Codemin',
   BA: 'Barro Alto',
-  REF: 'Reflorestamento',
   JC: 'Morro do Jacaré',
   MSB: 'Morro Sem Boné'
 };
@@ -2617,7 +2626,7 @@ const UNIDADE_LABELS = {
 // === Function: normalizeUnidadeCode ===
 function normalizeUnidadeCode(code, fallback = 'CD') {
   const normalized = String(code || '').trim().toUpperCase();
-  if (normalized === 'HAR') return 'REF';
+  if (normalized === 'HAR' || normalized === 'REF') return 'CD';
   return UNIDADES.includes(normalized) ? normalized : fallback;
 }
 
@@ -2625,20 +2634,14 @@ function normalizeUnidadeCode(code, fallback = 'CD') {
 function getInspectionUnidade(insp) {
   if (!insp) return 'CD';
   if (insp.unidade) return normalizeUnidadeCode(insp.unidade, 'CD');
-  return insp.setor === 'Reflorestamento' ? 'REF' : 'CD';
+  return 'CD';
 }
 
 // === Function: getSetoresAtivos ===
 function getSetoresAtivos(unidade = currentUnidade) {
   const unit = normalizeUnidadeCode(unidade, currentUnidade || 'CD');
-  if (unit === 'REF') {
-    return SETORES
-      .filter(s => s.nome === 'Reflorestamento')
-      .map(s => ({ ...s, subareas: getSetorSubareasAtivas(s.nome, unit) }));
-  }
   if (unit === 'CD') {
     return SETORES
-      .filter(s => s.nome !== 'Reflorestamento')
       .map(s => ({ ...s, subareas: getSetorSubareasAtivas(s.nome, unit) }));
   }
   // BA/JC/MSB: não herdam setores da Codemin automaticamente
@@ -2655,16 +2658,50 @@ function inspectionIsCurrentUnit(insp) {
   return getInspectionUnidade(insp) === normalizeUnidadeCode(currentUnidade, 'CD');
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════
 //  STORAGE (IndexedDB com fallback localStorage)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════
 const DB_KEY = 'aa5s_data';
 const DRAFT_KEY = 'aa5s_draft';
 const DRAFTS_KEY = 'aa5s_drafts_v2';
 const AREA_OVERRIDES_KEY = 'aa5s_area_overrides_v1';
+const SMARTSHEET_CONFIG_KEY = 'aa5s_smartsheet_config_v1';
+const SMARTSHEET_ADMIN_UNLOCK_KEY = 'aa5s_smartsheet_admin_unlocked';
+const SMARTSHEET_ADMIN_PASSWORD = 'Codemin@123';
+const EMAIL_AUTO_ENABLED_KEY = 'aa5s_email_auto_enabled';
+const EMAIL_AUTO_TO_KEY = 'aa5s_email_auto_to';
+const EMAIL_AUTO_DEFAULT_TO = 'niquel_incidentes';
+const POWER_AUTOMATE_EMAIL_URL_KEY = 'aa5s_power_automate_email_url';
+const HOUSEKEEPING_DASHBOARD_URL = 'https://app.powerbi.com/groups/me/apps/f448c5c3-a40f-4a08-9a8a-16fb5e2a2887/reports/9a53374f-51f4-43fb-bd64-e3f8f7da18a7/ReportSection?ctid=2864f69d-77c3-4fbe-bbc0-97502052391a&experience=power-bi';
+const SMARTSHEET_DEFAULT_SHEET_URL = 'https://app.smartsheet.com/sheets/34Cxg2545fF73M6cx6jqQR4HC4mX4GRXHcx6xw21?view=grid';
+const SMARTSHEET_DEFAULT_SHEET_ID = '5633228105797508';
+const SMARTSHEET_API_BASE = 'https://api.smartsheet.com/2.0';
+const SMARTSHEET_COLUMNS = [
+  { key: 'site', title: 'Site', aliases: ['Unidade', 'UN'] },
+  { key: 'area_dashboard', title: 'Área', aliases: ['Area', 'Housekeeping'] },
+  { key: 'data_original', title: 'Data Original', aliases: ['Período', 'Periodo', 'Mês', 'Mes', 'Referência', 'Referencia'] },
+  { key: 'mes_ano', title: 'Mês/Ano', aliases: ['Mes/Ano', 'Período Dashboard', 'Periodo Dashboard'] },
+  { key: 'ano', title: 'Ano', aliases: ['Year'] },
+  { key: 'mes_numero', title: 'Mês Número', aliases: ['Mes Numero', 'Mês Num', 'Mes Num'] },
+  { key: 'mes_nome', title: 'Mês', aliases: ['Mes'] },
+  { key: 'nome', title: 'Nome', aliases: ['Técnico', 'Tecnico', 'Auditor', 'Responsável', 'Responsavel'] },
+  { key: 'localizacao', title: 'Localização', aliases: ['Localizacao', 'Setor', 'Gerência', 'Gerencia', 'Departamento'] },
+  { key: 'local_inspecionado', title: 'Local Inspecionado', aliases: ['Local', 'Subárea', 'Subarea'] },
+  { key: 'tempo', title: 'Tempo', aliases: ['Duração', 'Duracao', 'Tempo de Inspeção', 'Tempo de Inspecao'] },
+  { key: 'pontuacao_final', title: 'Pontuação Final', aliases: ['Pontuacao Final', 'Nota Geral', 'Média Final', 'Media Final', 'Resultado'] },
+  { key: 'senso_1', title: 'Senso 1 de Utilização', aliases: ['Senso 1', 'Utilização', 'Utilizacao'] },
+  { key: 'senso_2', title: 'Senso 2 de Organização', aliases: ['Senso 2', 'Organização', 'Organizacao'] },
+  { key: 'senso_3', title: 'Senso 3 de Limpeza', aliases: ['Senso 3', 'Limpeza'] },
+  { key: 'senso_4', title: 'Senso 4 de Padronização', aliases: ['Senso 4', 'Padronização', 'Padronizacao'] },
+  { key: 'senso_5', title: 'Senso 5 de Disciplina', aliases: ['Senso 5', 'Autodisciplina', 'Disciplina'] },
+  { key: 'nc_abertas_total', title: 'NC Abertas', aliases: ['Não Conformidades Abertas', 'Nao Conformidades Abertas'] },
+  { key: 'nc_resolvidas_total', title: 'NC Resolvidas', aliases: ['Não Conformidades Resolvidas', 'Nao Conformidades Resolvidas'] },
+  { key: 'data_envio', title: 'Data de Envio da Inspeção', aliases: ['Data Envio', 'Data de Envio', 'Enviado Em'] },
+  { key: 'id_inspecao', title: 'ID Inspeção', aliases: ['ID Inspecao', 'ID'] },
+  { key: 'atualizado_em', title: 'Atualizado Em', aliases: ['Atualizado'] }
+];
 
 let areaEditorState = { setor: '', items: [] };
-let homeResumeDraftKey = null;
 
 // === Function: getAreaOverridesStore ===
 function getAreaOverridesStore() {
@@ -2733,7 +2770,8 @@ function normalizeAppState(data) {
     tecnicos: Array.isArray(base.tecnicos) ? base.tecnicos : [],
     inspecoes: Array.isArray(base.inspecoes) ? base.inspecoes : [],
     syncQueue: Array.isArray(base.syncQueue) ? [...new Set(base.syncQueue)] : [],
-    deleteQueue: Array.isArray(base.deleteQueue) ? [...new Set(base.deleteQueue)] : []
+    deleteQueue: Array.isArray(base.deleteQueue) ? [...new Set(base.deleteQueue)] : [],
+    smartsheetQueue: Array.isArray(base.smartsheetQueue) ? [...new Set(base.smartsheetQueue)] : []
   };
 }
 
@@ -2786,13 +2824,732 @@ function enqueueSyncInspection(inspId) {
   persistLocalApp(APP);
 }
 
+// === Function: enqueueSmartsheetInspection ===
+function enqueueSmartsheetInspection(inspId) {
+  if (!inspId) return;
+  APP = normalizeAppState(APP);
+  if (!APP.smartsheetQueue.includes(inspId)) APP.smartsheetQueue.push(inspId);
+  persistLocalApp(APP);
+}
+
 // === Function: enqueueDeleteInspection ===
 function enqueueDeleteInspection(inspId) {
   if (!inspId) return;
   APP = normalizeAppState(APP);
   if (!APP.deleteQueue.includes(inspId)) APP.deleteQueue.push(inspId);
   APP.syncQueue = APP.syncQueue.filter(id => id !== inspId);
+  APP.smartsheetQueue = APP.smartsheetQueue.filter(id => id !== inspId);
   persistLocalApp(APP);
+}
+
+// === Function: normalizeSmartsheetConfig ===
+function normalizeSmartsheetConfig(cfg = {}) {
+  return {
+    sheetUrl: String(cfg.sheetUrl || SMARTSHEET_DEFAULT_SHEET_URL).trim(),
+    sheetId: String(cfg.sheetId || SMARTSHEET_DEFAULT_SHEET_ID).trim(),
+    token: String(cfg.token || '').trim(),
+    proxyUrl: String(cfg.proxyUrl || '').trim()
+  };
+}
+
+// === Function: getSmartsheetConfig ===
+function getSmartsheetConfig() {
+  try {
+    const raw = localStorage.getItem(SMARTSHEET_CONFIG_KEY);
+    return normalizeSmartsheetConfig(raw ? JSON.parse(raw) : {});
+  } catch {
+    return normalizeSmartsheetConfig();
+  }
+}
+
+// === Function: saveSmartsheetConfig ===
+function saveSmartsheetConfig(cfg) {
+  localStorage.setItem(SMARTSHEET_CONFIG_KEY, JSON.stringify(normalizeSmartsheetConfig(cfg)));
+}
+
+// === Function: hasSmartsheetConfig ===
+function hasSmartsheetConfig() {
+  const cfg = getSmartsheetConfig();
+  return /^\d+$/.test(cfg.sheetId) && (cfg.token.length > 10 || /^https?:\/\//.test(cfg.proxyUrl));
+}
+
+// === Function: setSmartsheetStatus ===
+function setSmartsheetStatus(text, isError = false) {
+  const el = document.getElementById('smartsheet-status');
+  if (!el) return;
+  el.textContent = text;
+  el.style.color = isError ? 'var(--red)' : 'var(--text2)';
+}
+
+// === Function: isSmartsheetAdminUnlocked ===
+function isSmartsheetAdminUnlocked() {
+  return sessionStorage.getItem(SMARTSHEET_ADMIN_UNLOCK_KEY) === '1';
+}
+
+// === Function: renderSmartsheetAdminVisibility ===
+function renderSmartsheetAdminVisibility() {
+  const unlocked = isSmartsheetAdminUnlocked();
+  document.querySelectorAll('.smartsheet-admin-only').forEach(el => {
+    el.style.display = unlocked ? '' : 'none';
+  });
+  const lock = document.getElementById('smartsheet-admin-lock');
+  if (lock) lock.style.display = unlocked ? 'none' : '';
+}
+
+// === Function: unlockSmartsheetAdmin ===
+function unlockSmartsheetAdmin() {
+  const senha = prompt('Senha de administrador');
+  if (senha !== SMARTSHEET_ADMIN_PASSWORD) {
+    toast('Senha incorreta.');
+    return;
+  }
+  sessionStorage.setItem(SMARTSHEET_ADMIN_UNLOCK_KEY, '1');
+  renderSmartsheetAdminVisibility();
+  renderSmartsheetSettings();
+  toast('Integração Smartsheet liberada.');
+}
+
+// === Function: normalizeColumnTitle ===
+function normalizeColumnTitle(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+}
+
+// === Function: criterioSmartsheetKey ===
+function criterioSmartsheetKey(sId, ci) {
+  return `criterio_${sId}_${ci + 1}`;
+}
+
+// === Function: getSmartsheetColumns ===
+function getSmartsheetColumns() {
+  const criterioColumns = [];
+  SENSOS.forEach((s, si) => {
+    (s.criterios || []).forEach((criterio, ci) => {
+      criterioColumns.push({
+        key: criterioSmartsheetKey(s.id, ci),
+        title: `${si + 1}S ${ci + 1}`,
+        aliases: [
+          `${s.nome} - Critério ${ci + 1}`,
+          `${s.nome} - C${ci + 1}`,
+          `Critério ${ci + 1} - ${s.nome}`,
+          criterio
+        ]
+      });
+    });
+  });
+  return [...SMARTSHEET_COLUMNS, ...criterioColumns];
+}
+
+// === Function: getUnidadeShortCode ===
+function getUnidadeShortCode(unidade) {
+  return normalizeUnidadeCode(unidade || 'CD', 'CD');
+}
+
+// === Function: getDashboardAreaLabel ===
+function getDashboardAreaLabel(insp) {
+  const unit = getUnidadeShortCode(getInspectionUnidade(insp));
+  return `${unit} - ${insp?.setor || ''}`.trim();
+}
+
+// === Function: sortSmartsheetColumns ===
+function sortSmartsheetColumns(columns = []) {
+  return [...columns].sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
+}
+
+// === Function: formatPeriodoOriginal ===
+function formatPeriodoOriginal(periodo, dataIso = '') {
+  if (periodo && /^\d{4}-\d{2}$/.test(periodo)) {
+    const [ano, mes] = periodo.split('-').map(Number);
+    return new Date(ano, mes - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  }
+  if (periodo) return String(periodo);
+  if (dataIso) return new Date(dataIso).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  return '';
+}
+
+// === Function: formatPeriodoTitulo ===
+function formatPeriodoTitulo(periodo, dataIso = '') {
+  if (periodo && /^\d{4}-\d{2}$/.test(periodo)) {
+    const [ano, mes] = periodo.split('-').map(Number);
+    const mesNome = new Date(ano, mes - 1, 1).toLocaleDateString('pt-BR', { month: 'long' });
+    return `${mesNome.charAt(0).toUpperCase()}${mesNome.slice(1)} de ${ano}`;
+  }
+  return formatPeriodoOriginal(periodo, dataIso) || '';
+}
+
+// === Function: formatDurationMs ===
+function formatDurationMs(ms) {
+  if (!Number.isFinite(ms) || ms < 0) return '';
+  const totalSeconds = Math.round(ms / 1000);
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  if (h > 0) return `${h}h ${String(m).padStart(2, '0')}min`;
+  if (m > 0) return `${m}min ${String(s).padStart(2, '0')}s`;
+  return `${s}s`;
+}
+
+// === Function: getInspectionDurationText ===
+function getInspectionDurationText(insp) {
+  if (!insp) return '';
+  if (typeof insp.duracaoMs === 'number') return formatDurationMs(insp.duracaoMs);
+  const inicio = new Date(insp.inicioEm || insp.data || '').getTime();
+  const fim = new Date(insp.finalizadaEm || '').getTime();
+  if (!Number.isFinite(inicio) || !Number.isFinite(fim)) return '';
+  return formatDurationMs(fim - inicio);
+}
+
+// === Function: getInspectionNcTotals ===
+function getInspectionNcTotals(insp) {
+  const anterior = getInspecaoAnteriorMesmoLocal(insp);
+  let abertas = 0;
+  let resolvidas = 0;
+  SENSOS.forEach(s => {
+    (insp?.sensos?.[s.id] || []).forEach((cr, ci) => {
+      if (criterioTemNCAberta(cr)) abertas++;
+      const crAnt = anterior?.sensos?.[s.id]?.[ci] || null;
+      if (crAnt && criterioTemNCAberta(crAnt) && !criterioTemNCAberta(cr)) resolvidas++;
+    });
+  });
+  return { abertas, resolvidas };
+}
+
+// === Function: getEmailAutoSettings ===
+function getEmailAutoSettings() {
+  return {
+    enabled: localStorage.getItem(EMAIL_AUTO_ENABLED_KEY) === '1',
+    to: localStorage.getItem(EMAIL_AUTO_TO_KEY) || EMAIL_AUTO_DEFAULT_TO
+  };
+}
+
+// === Function: getPowerAutomateEmailUrl ===
+function getPowerAutomateEmailUrl() {
+  return localStorage.getItem(POWER_AUTOMATE_EMAIL_URL_KEY) || '';
+}
+
+// === Function: setPowerAutomateEmailUrl ===
+function setPowerAutomateEmailUrl(url) {
+  localStorage.setItem(POWER_AUTOMATE_EMAIL_URL_KEY, String(url || '').trim());
+}
+
+// === Function: setEmailAutoSettings ===
+function setEmailAutoSettings(enabled, to) {
+  localStorage.setItem(EMAIL_AUTO_ENABLED_KEY, enabled ? '1' : '0');
+  localStorage.setItem(EMAIL_AUTO_TO_KEY, String(to || EMAIL_AUTO_DEFAULT_TO).trim() || EMAIL_AUTO_DEFAULT_TO);
+}
+
+// === Function: applyEmailAutoSettingsToModal ===
+function applyEmailAutoSettingsToModal() {
+  const cfg = getEmailAutoSettings();
+  const chk = document.getElementById('nova-email-auto');
+  const to = document.getElementById('nova-email-destino');
+  if (chk) chk.checked = cfg.enabled;
+  if (to) to.value = cfg.to;
+}
+
+// === Function: buildInspectionEmailBody ===
+function buildInspectionEmailBody(insp) {
+  const periodo = formatPeriodoTitulo(insp.periodo, insp.data);
+  const ncTotals = getInspectionNcTotals(insp);
+  const linhasSensos = SENSOS.map((s, idx) => {
+    const media = calcMediaSFinal(insp, s.id, getInspecaoAnteriorMesmoLocal(insp));
+    return `${idx + 1}. ${s.nome}: ${media.toFixed(2)}`;
+  }).join('\n');
+
+  return [
+    'Prezados,',
+    '',
+    `Segue o fechamento da inspeção de Housekeeping de ${periodo}.`,
+    '',
+    `Site: ${UNIDADE_LABELS[getInspectionUnidade(insp)] || getInspectionUnidade(insp)}`,
+    `Setor: ${insp.setor || ''}`,
+    `Área: ${insp.subarea || 'Área geral do setor'}`,
+    `Técnico: ${insp.tecnico || ''}`,
+    `Pontuação final: ${typeof insp.notaGeral === 'number' ? insp.notaGeral.toFixed(2) : '—'}`,
+    `Tempo de inspeção: ${getInspectionDurationText(insp) || '—'}`,
+    `NC abertas: ${ncTotals.abertas}`,
+    `NC resolvidas: ${ncTotals.resolvidas}`,
+    '',
+    'Pontuação por senso:',
+    linhasSensos,
+    '',
+    'Link para acesso ao Dashboard de Housekeeping',
+    HOUSEKEEPING_DASHBOARD_URL,
+    '',
+    'Observação: os dados da inspeção foram registrados no sistema Housekeeping/Smartsheet.',
+    '',
+    'Atenciosamente,'
+  ].join('\n');
+}
+
+// === Function: buildInspectionEmailPayload ===
+function buildInspectionEmailPayload(insp) {
+  const periodo = formatPeriodoTitulo(insp.periodo, insp.data);
+  const ncTotals = getInspectionNcTotals(insp);
+  const inspAnterior = getInspecaoAnteriorMesmoLocal(insp);
+  const sensos = SENSOS.map((s, idx) => ({
+    id: s.id,
+    nome: s.nome,
+    ordem: idx + 1,
+    nota: Number(calcMediaSFinal(insp, s.id, inspAnterior).toFixed(2))
+  }));
+  return {
+    to: String(insp.emailAuto?.to || EMAIL_AUTO_DEFAULT_TO).trim(),
+    subject: getInspectionEmailSubject(insp),
+    bodyText: buildInspectionEmailBody(insp),
+    bodyHtml: buildInspectionEmailHtml(insp),
+    dashboardUrl: HOUSEKEEPING_DASHBOARD_URL,
+    inspection: {
+      id: insp.id,
+      site: UNIDADE_LABELS[getInspectionUnidade(insp)] || getInspectionUnidade(insp),
+      unidade: getInspectionUnidade(insp),
+      setor: insp.setor || '',
+      area: insp.subarea || '',
+      periodo,
+      periodoCodigo: insp.periodo || '',
+      tecnico: insp.tecnico || '',
+      pontuacaoFinal: typeof insp.notaGeral === 'number' ? Number(insp.notaGeral.toFixed(2)) : null,
+      tempo: getInspectionDurationText(insp) || '',
+      ncAbertas: ncTotals.abertas,
+      ncResolvidas: ncTotals.resolvidas,
+      dataInspecao: insp.data || '',
+      dataEnvio: new Date().toISOString(),
+      sensos
+    }
+  };
+}
+
+// === Function: escapeHtml ===
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+// === Function: buildInspectionEmailHtml ===
+function buildInspectionEmailHtml(insp) {
+  const text = buildInspectionEmailBody(insp);
+  return `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.45;color:#1f2937">
+    ${text.split('\n').map(line => line ? `<p style="margin:0 0 8px">${escapeHtml(line)}</p>` : '<br>').join('')}
+  </div>`;
+}
+
+// === Function: getInspectionEmailSubject ===
+function getInspectionEmailSubject(insp) {
+  const periodo = formatPeriodoTitulo(insp.periodo, insp.data).replace(/^./, c => c.toUpperCase());
+  return `Housekeeping ${getUnidadeShortCode(getInspectionUnidade(insp))} - ${insp.setor || ''} - ${periodo}`;
+}
+
+// === Function: openInspectionEmailDraft ===
+function openInspectionEmailDraft(insp) {
+  if (!insp?.emailAuto?.enabled) return;
+  const to = String(insp.emailAuto.to || EMAIL_AUTO_DEFAULT_TO).trim();
+  const subject = getInspectionEmailSubject(insp);
+  const body = buildInspectionEmailBody(insp);
+  const mailto = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.location.href = mailto;
+}
+
+// === Function: sendInspectionEmailAutomatic ===
+async function sendInspectionEmailAutomatic(insp) {
+  if (!insp?.emailAuto?.enabled) return;
+  const powerAutomateUrl = getPowerAutomateEmailUrl();
+  if (powerAutomateUrl) {
+    try {
+      const res = await fetch(powerAutomateUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(buildInspectionEmailPayload(insp))
+      });
+      if (!res.ok) throw new Error(`Power Automate HTTP ${res.status}`);
+      toast('E-mail enviado pelo Power Automate.');
+      return;
+    } catch (e) {
+      console.warn('Falha no Power Automate. Tentando fallback.', e);
+      toast('Falha no Power Automate. Tentando fallback.');
+    }
+  }
+
+  const cfg = getSmartsheetConfig();
+  if (!cfg.proxyUrl) {
+    openInspectionEmailDraft(insp);
+    return;
+  }
+
+  try {
+    const to = String(insp.emailAuto.to || EMAIL_AUTO_DEFAULT_TO)
+      .split(/[;,]/)
+      .map(v => v.trim())
+      .filter(Boolean);
+    const res = await fetch(cfg.proxyUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'sendEmail',
+        to,
+        subject: getInspectionEmailSubject(insp),
+        text: buildInspectionEmailBody(insp),
+        html: buildInspectionEmailHtml(insp)
+      })
+    });
+    const payload = await res.json().catch(() => null);
+    if (!res.ok || !payload?.ok) throw new Error(payload?.message || `Erro HTTP ${res.status}`);
+    toast('E-mail automático enviado.');
+  } catch (e) {
+    console.warn('Falha ao enviar e-mail automático. Abrindo rascunho.', e);
+    toast('Falha no envio automático. Abrindo rascunho.');
+    openInspectionEmailDraft(insp);
+  }
+}
+
+// === Function: renderSmartsheetSettings ===
+function renderSmartsheetSettings() {
+  const cfg = getSmartsheetConfig();
+  const url = document.getElementById('smartsheet-url');
+  const sheetId = document.getElementById('smartsheet-sheet-id');
+  const token = document.getElementById('smartsheet-token');
+  const proxyUrl = document.getElementById('smartsheet-proxy-url');
+  const powerAutomateUrl = document.getElementById('power-automate-email-url');
+  if (url) url.value = cfg.sheetUrl || SMARTSHEET_DEFAULT_SHEET_URL;
+  if (sheetId) sheetId.value = cfg.sheetId || '';
+  if (token) token.value = cfg.token || '';
+  if (proxyUrl) proxyUrl.value = cfg.proxyUrl || '';
+  if (powerAutomateUrl) powerAutomateUrl.value = getPowerAutomateEmailUrl();
+  const pending = normalizeAppState(APP).smartsheetQueue.length;
+  const ready = hasSmartsheetConfig();
+  setSmartsheetStatus(
+    ready
+      ? `Conexão salva. ${pending} inspeção(ões) pendente(s) para envio.`
+      : `Informe o Sheet ID e configure o proxy ou token. ${pending} inspeção(ões) aguardando configuração.`
+  );
+}
+
+// === Function: salvarSmartsheetConfig ===
+function salvarSmartsheetConfig() {
+  const cfg = normalizeSmartsheetConfig({
+    sheetUrl: document.getElementById('smartsheet-url')?.value || SMARTSHEET_DEFAULT_SHEET_URL,
+    sheetId: document.getElementById('smartsheet-sheet-id')?.value || '',
+    token: document.getElementById('smartsheet-token')?.value || '',
+    proxyUrl: document.getElementById('smartsheet-proxy-url')?.value || ''
+  });
+  setPowerAutomateEmailUrl(document.getElementById('power-automate-email-url')?.value || '');
+  saveSmartsheetConfig(cfg);
+  renderSmartsheetSettings();
+  toast(hasSmartsheetConfig() ? 'Conexão Smartsheet salva.' : 'Complete o Sheet ID numérico e o token.');
+  if (hasSmartsheetConfig()) scheduleSyncQueue(0);
+}
+
+// === Function: smartsheetFetch ===
+async function smartsheetFetch(path, options = {}) {
+  try {
+    const cfg = getSmartsheetConfig();
+    if (!/^\d+$/.test(cfg.sheetId)) throw new Error('Sheet ID numérico não configurado.');
+    if (cfg.proxyUrl) {
+      const res = await fetch(cfg.proxyUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          sheetId: cfg.sheetId,
+          path,
+          method: options.method || 'GET',
+          body: options.body ? JSON.parse(options.body) : null
+        })
+      });
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload?.message || `Proxy Smartsheet HTTP ${res.status}`);
+      if (!payload.ok) throw new Error(payload.message || 'Falha no proxy Smartsheet.');
+      return payload.data;
+    }
+    if (!cfg.token) throw new Error('Token Smartsheet não configurado.');
+    const res = await fetch(`${SMARTSHEET_API_BASE}${path}`, {
+      ...options,
+      headers: {
+        'Authorization': `Bearer ${cfg.token}`,
+        'Content-Type': 'application/json',
+        'smartsheet-integration-source': 'APPLICATION,Housekeeping,Inspecao-5S',
+        ...(options.headers || {})
+      }
+    });
+    if (!res.ok) {
+      let detail = '';
+      try { detail = (await res.json())?.message || ''; } catch {}
+      throw new Error(detail || `Erro Smartsheet HTTP ${res.status}`);
+    }
+    return res.json();
+  } catch (e) {
+    if (String(e?.message || '').includes('Failed to fetch')) {
+      throw new Error('O navegador bloqueou a chamada direta ao Smartsheet (CORS). Configure a URL do proxy Smartsheet.');
+    }
+    throw e;
+  }
+}
+
+// === Function: getSmartsheetColumnMap ===
+async function getSmartsheetColumnMap(autoCreate = true) {
+  const cfg = getSmartsheetConfig();
+  const data = await smartsheetFetch(`/sheets/${cfg.sheetId}/columns?includeAll=true`);
+  let columns = sortSmartsheetColumns(Array.isArray(data.data) ? data.data : []);
+  const buildIndex = (cols) => {
+    const byTitle = {};
+    cols.forEach(c => { byTitle[normalizeColumnTitle(c.title)] = c; });
+    return byTitle;
+  };
+  let byTitle = buildIndex(columns);
+
+  const expectedColumns = getSmartsheetColumns();
+  const missing = expectedColumns
+    .filter(c => ![c.title, ...(c.aliases || [])].some(t => byTitle[normalizeColumnTitle(t)]))
+    .map(c => ({ title: c.title, type: 'TEXT_NUMBER', index: columns.length, width: 160 }));
+
+  if (autoCreate && missing.length) {
+    await smartsheetFetch(`/sheets/${cfg.sheetId}/columns`, {
+      method: 'POST',
+      body: JSON.stringify(missing)
+    });
+    const refreshed = await smartsheetFetch(`/sheets/${cfg.sheetId}/columns?includeAll=true`);
+    columns = sortSmartsheetColumns(Array.isArray(refreshed.data) ? refreshed.data : []);
+    byTitle = buildIndex(columns);
+  }
+
+  const map = {};
+  const primary = columns.find(c => c.primary) || columns[0];
+  expectedColumns.forEach(expected => {
+    const match = [expected.title, ...(expected.aliases || [])]
+      .map(t => byTitle[normalizeColumnTitle(t)])
+      .find(Boolean);
+    if (match) map[expected.key] = match.id;
+  });
+  if (!map.localizacao && primary) map.localizacao = primary.id;
+  return map;
+}
+
+// === Function: truncateSmartsheetValue ===
+function truncateSmartsheetValue(value) {
+  if (value === null || value === undefined) return '';
+  const text = String(value);
+  return text.length > 3900 ? `${text.slice(0, 3900)}...` : text;
+}
+
+// === Function: buildSmartsheetRowsFromInspection ===
+function buildSmartsheetRowsFromInspection(insp, columnMap) {
+  const rows = [];
+  const sentAt = new Date();
+  const periodoParts = getPeriodoParts(insp.periodo, insp.data);
+  const ncTotals = getInspectionNcTotals(insp);
+  const inspAnterior = getInspecaoAnteriorMesmoLocal(insp);
+  const values = {
+    site: UNIDADE_LABELS[getInspectionUnidade(insp)] || getInspectionUnidade(insp),
+    area_dashboard: getDashboardAreaLabel(insp),
+    data_original: formatPeriodoOriginal(insp.periodo, insp.data),
+    mes_ano: periodoParts.mesAno,
+    ano: periodoParts.ano,
+    mes_numero: periodoParts.mesNumero,
+    mes_nome: periodoParts.mesNome,
+    nome: insp.tecnico || '',
+    localizacao: insp.setor || '',
+    local_inspecionado: insp.subarea || '',
+    tempo: getInspectionDurationText(insp),
+    pontuacao_final: typeof insp.notaGeral === 'number' ? Number(insp.notaGeral.toFixed(2)) : '',
+    nc_abertas_total: ncTotals.abertas,
+    nc_resolvidas_total: ncTotals.resolvidas,
+    data_envio: sentAt.toLocaleString('pt-BR'),
+    id_inspecao: insp.id,
+    atualizado_em: sentAt.toISOString()
+  };
+
+  SENSOS.forEach((s, si) => {
+    const mediaSenso = calcMediaSFinal(insp, s.id, inspAnterior);
+    values[`senso_${si + 1}`] = Number(mediaSenso.toFixed(2));
+    (insp.sensos?.[s.id] || []).forEach((cr, ci) => {
+      values[criterioSmartsheetKey(s.id, ci)] = cr?.nota ?? '';
+    });
+  });
+
+  rows.push({
+    toBottom: true,
+    cells: Object.entries(values)
+      .filter(([key]) => columnMap[key])
+      .map(([key, value]) => ({
+        columnId: columnMap[key],
+        value: truncateSmartsheetValue(value),
+        strict: false
+      }))
+  });
+  return rows;
+}
+
+// === Function: syncSmartsheetInspection ===
+async function syncSmartsheetInspection(insp) {
+  const columnMap = await getSmartsheetColumnMap(true);
+  const rows = buildSmartsheetRowsFromInspection(insp, columnMap);
+  const cfg = getSmartsheetConfig();
+  for (let i = 0; i < rows.length; i += 500) {
+    await smartsheetFetch(`/sheets/${cfg.sheetId}/rows`, {
+      method: 'POST',
+      body: JSON.stringify(rows.slice(i, i + 500))
+    });
+  }
+}
+
+// === Function: syncPendingSmartsheetQueue ===
+async function syncPendingSmartsheetQueue() {
+  if (!hasSmartsheetConfig()) return;
+  if (!navigator.onLine) {
+    setSyncStatus('offline', 'Modo offline');
+    return;
+  }
+  APP = normalizeAppState(APP);
+  const pendentes = [...APP.smartsheetQueue];
+  if (!pendentes.length) return;
+
+  for (const inspId of pendentes) {
+    const insp = APP.inspecoes.find(i => i.id === inspId);
+    if (!insp) {
+      APP.smartsheetQueue = APP.smartsheetQueue.filter(id => id !== inspId);
+      persistLocalApp(APP);
+      continue;
+    }
+    await syncSmartsheetInspection(insp);
+    APP.smartsheetQueue = APP.smartsheetQueue.filter(id => id !== inspId);
+    persistLocalApp(APP);
+  }
+  renderSmartsheetSettings();
+}
+
+// === Function: testarSmartsheetConexao ===
+async function testarSmartsheetConexao() {
+  salvarSmartsheetConfig();
+  if (!hasSmartsheetConfig()) return;
+  setSmartsheetStatus('Testando conexão...');
+  try {
+    const cfg = getSmartsheetConfig();
+    const sheet = await smartsheetFetch(`/sheets/${cfg.sheetId}?pageSize=1`);
+    setSmartsheetStatus(`Conectado: ${sheet.name || 'planilha encontrada'}.`);
+    toast('Conexão Smartsheet OK.');
+  } catch (e) {
+    console.error('Erro Smartsheet:', e);
+    setSmartsheetStatus(`Falha na conexão: ${e.message}`, true);
+    toast('Falha ao conectar no Smartsheet.');
+  }
+}
+
+// === Function: sincronizarTudoSmartsheet ===
+function sincronizarTudoSmartsheet() {
+  salvarSmartsheetConfig();
+  if (!hasSmartsheetConfig()) return;
+  APP.inspecoes.forEach(insp => enqueueSmartsheetInspection(insp.id));
+  renderSmartsheetSettings();
+  scheduleSyncQueue(0);
+  toast('Inspeções colocadas na fila do Smartsheet.');
+}
+
+// === Function: getPeriodoParts ===
+function getPeriodoParts(periodo, dataIso = '') {
+  let date = null;
+  if (periodo && /^\d{4}-\d{2}$/.test(periodo)) {
+    const [ano, mes] = periodo.split('-').map(Number);
+    date = new Date(ano, mes - 1, 1);
+  } else if (dataIso) {
+    date = new Date(dataIso);
+  }
+  if (!date || Number.isNaN(date.getTime())) {
+    return { ano: '', mesNumero: '', mesNome: '', mesAno: String(periodo || '') };
+  }
+  const ano = date.getFullYear();
+  const mesNumero = date.getMonth() + 1;
+  const mesNome = date.toLocaleDateString('pt-BR', { month: 'long' });
+  return {
+    ano,
+    mesNumero,
+    mesNome,
+    mesAno: `${ano} ${mesNome}`
+  };
+}
+
+// === Function: chunkArray ===
+function chunkArray(items, size = 300) {
+  const chunks = [];
+  for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size));
+  return chunks;
+}
+
+// === Function: formatarSmartsheetPlanilha ===
+async function formatarSmartsheetPlanilha() {
+  salvarSmartsheetConfig();
+  if (!hasSmartsheetConfig()) return;
+
+  const ok = confirm('Isto vai apagar todas as linhas atuais do Smartsheet e reorganizar/renomear as colunas conforme o app. Deseja continuar?');
+  if (!ok) return;
+  const confirmacao = prompt('Digite FORMATAR para confirmar.');
+  if (confirmacao !== 'FORMATAR') {
+    toast('Formatação cancelada.');
+    return;
+  }
+
+  setSmartsheetStatus('Formatando planilha Smartsheet...');
+  try {
+    const cfg = getSmartsheetConfig();
+    const expectedColumns = getSmartsheetColumns();
+
+    const sheet = await smartsheetFetch(`/sheets/${cfg.sheetId}?includeAll=true`);
+    const rowIds = (sheet.rows || []).map(r => r.id).filter(Boolean);
+    for (const ids of chunkArray(rowIds, 300)) {
+      await smartsheetFetch(`/sheets/${cfg.sheetId}/rows?ids=${ids.join(',')}&ignoreRowsNotFound=true`, {
+        method: 'DELETE'
+      });
+    }
+
+    let columnsResp = await smartsheetFetch(`/sheets/${cfg.sheetId}/columns?includeAll=true`);
+    let columns = sortSmartsheetColumns(Array.isArray(columnsResp.data) ? columnsResp.data : []);
+
+    if (columns.length < expectedColumns.length) {
+      const novas = expectedColumns.slice(columns.length).map((col, idx) => ({
+        title: col.title,
+        type: 'TEXT_NUMBER',
+        index: columns.length + idx,
+        width: 160
+      }));
+      await smartsheetFetch(`/sheets/${cfg.sheetId}/columns`, {
+        method: 'POST',
+        body: JSON.stringify(novas)
+      });
+      columnsResp = await smartsheetFetch(`/sheets/${cfg.sheetId}/columns?includeAll=true`);
+      columns = sortSmartsheetColumns(Array.isArray(columnsResp.data) ? columnsResp.data : []);
+    }
+
+    for (let i = 0; i < expectedColumns.length; i++) {
+      const col = columns[i];
+      const expected = expectedColumns[i];
+      if (!col) continue;
+      if (col.title !== expected.title || col.index !== i) {
+        await smartsheetFetch(`/sheets/${cfg.sheetId}/columns/${col.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ title: expected.title, index: i })
+        });
+      }
+    }
+
+    const extras = columns.slice(expectedColumns.length).filter(c => !c.primary).reverse();
+    for (const col of extras) {
+      await smartsheetFetch(`/sheets/${cfg.sheetId}/columns/${col.id}`, { method: 'DELETE' });
+    }
+
+    APP.smartsheetQueue = [];
+    persistLocalApp(APP);
+    renderSmartsheetSettings();
+    setSmartsheetStatus(`Planilha formatada: ${rowIds.length} linha(s) removida(s), ${expectedColumns.length} coluna(s) padronizada(s).`);
+    toast('Planilha Smartsheet formatada.');
+  } catch (e) {
+    console.error('Erro ao formatar Smartsheet:', e);
+    setSmartsheetStatus(`Falha ao formatar: ${e.message}`, true);
+    toast('Falha ao formatar Smartsheet.');
+  }
 }
 
 // === Function: loadDraft ===
@@ -3063,6 +3820,7 @@ async function syncPendingQueue() {
       persistLocalApp(APP);
     }
 
+    await syncPendingSmartsheetQueue();
     persistLocalApp(APP);
     setSyncStatus('synced', 'Sincronizado');
   } catch (e) {
@@ -3143,7 +3901,7 @@ async function syncFromCloud() {
     });
     APP.inspecoes = Object.values(merged).sort((a, b) => new Date(a.data) - new Date(b.data));
     persistLocalApp(APP);
-    renderHome();
+    refreshAfterDataSync();
     scheduleSyncQueue(0);
     setSyncStatus('synced', 'Sincronizado');
     toast('Sincronização concluída.');
@@ -3152,6 +3910,27 @@ async function syncFromCloud() {
     setSyncStatus(navigator.onLine ? 'syncing' : 'offline', navigator.onLine ? 'Aguardando conexão com servidor...' : 'Modo offline');
     toast('Sem sincronização: modo offline ou erro de conexão.');
   }
+}
+
+// === Function: getActiveScreenId ===
+function getActiveScreenId() {
+  const active = document.querySelector('.screen.active');
+  if (!active?.id) return 'home';
+  return active.id.replace('screen-', '');
+}
+
+// === Function: refreshAfterDataSync ===
+function refreshAfterDataSync() {
+  const activeId = getActiveScreenId();
+  if (activeId === 'inspecao') return;
+  if (activeId === 'historico') { renderHistorico(); return; }
+  if (activeId === 'pendencias') { renderPendencias(); return; }
+  if (activeId === 'relatorios') { renderRelatorios(); return; }
+  if (activeId === 'dashboard') {
+    renderDashboard();
+    return;
+  }
+  renderHome();
 }
 
 let APP = loadData();
@@ -3184,7 +3963,7 @@ function ensureCurrentTecInList() {
   }
 }
 
-if (currentUnidade === 'HAR') currentUnidade = 'REF';
+if (currentUnidade === 'HAR' || currentUnidade === 'REF') currentUnidade = 'CD';
 currentUnidade = normalizeUnidadeCode(currentUnidade, 'CD');
 localStorage.setItem('aa5s_unit', currentUnidade);
 
@@ -3333,9 +4112,6 @@ function confirmarTecnico() {
 function renderHome() {
   document.getElementById('home-tec-name').textContent = currentTec || 'Selecionar técnico';
   document.getElementById('home-unit-name').textContent = currentUnidade;
-  const hasResumeBanner = renderHomeResumeBanner();
-  const btnNova = document.getElementById('home-btn-nova-insp');
-  if (btnNova) btnNova.style.display = hasResumeBanner ? 'none' : '';
 
   const sectorList = document.getElementById('home-sector-list');
   sectorList.innerHTML = sectorCardListHTML();
@@ -3346,66 +4122,6 @@ function getLatestDraftForCurrentUnit() {
   const entries = listDraftEntries()
     .filter(row => row?.draft && getInspectionUnidade(row.draft) === currentUnidade);
   return entries.length ? entries[0] : null;
-}
-
-// === Function: renderHomeResumeBanner ===
-function renderHomeResumeBanner() {
-  const wrap = document.getElementById('home-resume-banner');
-  if (!wrap) return false;
-
-  const draftEntry = getLatestDraftForCurrentUnit();
-  const latest = getSortedInspecoesDesc()[0] || null;
-
-  if (!draftEntry && !latest) {
-    homeResumeDraftKey = null;
-    wrap.innerHTML = '';
-    return false;
-  }
-
-  if (draftEntry) {
-    homeResumeDraftKey = draftEntry.key;
-    const draft = draftEntry.draft;
-    const setorTxt = draft.setor || 'Setor não informado';
-    const subareaTxt = draft.subarea || 'Área geral';
-    const whenTxt = draft.__draftUpdatedAt ? new Date(draft.__draftUpdatedAt).toLocaleString('pt-BR') : 'agora há pouco';
-    wrap.innerHTML = `
-      <div class="resume-banner">
-        <div class="resume-banner-title">Retomar automático</div>
-        <div class="resume-banner-main">Rascunho em andamento: ${setorTxt} · ${subareaTxt}</div>
-        <div class="resume-banner-sub">Atualizado em ${whenTxt}</div>
-        <div class="resume-banner-actions">
-          <button class="btn-primary" onclick="retomarRascunhoBanner()">Retomar agora</button>
-          <button class="btn-secondary" onclick="showNewInspModal()">Nova inspeção</button>
-        </div>
-      </div>
-    `;
-    return true;
-  }
-
-  homeResumeDraftKey = null;
-  const label = `${latest.setor || 'Setor'}${latest.subarea ? ' · ' + latest.subarea : ''}`;
-  const whenTxt = latest.data ? new Date(latest.data).toLocaleString('pt-BR') : 'sem data';
-  wrap.innerHTML = `
-    <div class="resume-banner">
-      <div class="resume-banner-title">Acesso rápido</div>
-      <div class="resume-banner-main">Última inspeção: ${label}</div>
-      <div class="resume-banner-sub">Registrada em ${whenTxt}</div>
-      <div class="resume-banner-actions">
-        <button class="btn-primary" onclick="openDetalhe('${latest.id}')">Abrir agora</button>
-        <button class="btn-secondary" onclick="showNewInspModal()">Nova inspeção</button>
-      </div>
-    </div>
-  `;
-  return true;
-}
-
-// === Function: retomarRascunhoBanner ===
-function retomarRascunhoBanner() {
-  if (!homeResumeDraftKey) {
-    toast('Rascunho não encontrado.');
-    return;
-  }
-  resumeDraftByKey(homeResumeDraftKey);
 }
 
 // === Function: getSortedInspecoesDesc ===
@@ -3958,26 +4674,6 @@ function sectorCardListHTML() {
         </div>
       </div>`;
     }).join('');
-    const setorSafeNovaArea = setor.replace(/'/g, "\\'");
-    const addNovaAreaHtml = `<div class="sector-area-item" onclick="iniciarInspecaoOutraArea('${setorSafeNovaArea}')" style="cursor:pointer;border-color:rgba(14,165,233,0.4);background:rgba(14,165,233,0.08)">
-      <div class="sector-area-top">
-        <div style="flex:1">
-          <div class="sector-area-name" style="color:var(--orange2)">+ Adicionar nova área</div>
-          <div class="sector-area-meta" style="color:var(--text2)">Área não listada · Toque para criar e nomear</div>
-        </div>
-        <div style="font-family:var(--font-display);font-weight:700;color:var(--orange2)">Novo</div>
-      </div>
-    </div>`;
-    const editarAreasHtml = `<div class="sector-area-item" onclick="abrirAreaEditor('${setorSafeNovaArea}')" style="cursor:pointer;border-color:rgba(245,158,11,0.42);background:rgba(245,158,11,0.1)">
-      <div class="sector-area-top">
-        <div style="flex:1">
-          <div class="sector-area-name" style="color:var(--gold)">✎ Editar áreas</div>
-          <div class="sector-area-meta" style="color:var(--text2)">Alterar ordem e nomenclatura</div>
-        </div>
-        <div style="font-family:var(--font-display);font-weight:700;color:var(--gold)">Editar</div>
-      </div>
-    </div>`;
-
     return `
       <div class="sector-card" data-sector="${setor}">
         <div class="sector-card-head" onclick="toggleSectorCard(this)">
@@ -3992,8 +4688,6 @@ function sectorCardListHTML() {
         <div class="sector-area-list">
           ${areasInspecionadasHtml}
           ${areasFaltantes.length ? `<div style="font-size:11px;color:var(--red);font-weight:700;padding:6px 2px 2px">Áreas faltantes (${areasFaltantes.length})</div>${areasFaltantesHtml}` : ''}
-          ${addNovaAreaHtml}
-          ${editarAreasHtml}
         </div>
       </div>
     `;
@@ -4198,6 +4892,7 @@ function showNewInspModal() {
 
   const now = new Date();
   document.getElementById('nova-periodo').value = now.toISOString().slice(0,7);
+  applyEmailAutoSettingsToModal();
 
   setorSelect.onchange = () => {
     populateSubareaSelect();
@@ -4291,7 +4986,6 @@ function populateSubareaSelect() {
   subareaSelect.innerHTML = '<option value="">— Selecione o local —</option>';
   if (selectedSector && selectedSector.subareas.length > 0) {
     subareaSelect.innerHTML += selectedSector.subareas.map(sa => `<option value="${sa}">${sa}</option>`).join('');
-    subareaSelect.innerHTML += '<option value="__OUTRA__">+ Outra área</option>';
     subareaGroup.style.display = 'block';
   } else {
     subareaGroup.style.display = 'none';
@@ -4349,6 +5043,8 @@ function iniciarInspecao() {
   const subarea = getNovaSubareaResolvida();
   const selectedSubareaRaw = document.getElementById('nova-subarea-select').value;
   const periodo = document.getElementById('nova-periodo').value;
+  const emailAutoEnabled = document.getElementById('nova-email-auto')?.checked || false;
+  const emailAutoTo = document.getElementById('nova-email-destino')?.value || EMAIL_AUTO_DEFAULT_TO;
   const selectedSector = getSetorConfigAtivo(setor);
 
   document.getElementById('modal-nova-insp').classList.remove('open');
@@ -4358,9 +5054,11 @@ function iniciarInspecao() {
     toast('Selecione o local para iniciar a inspeção.');
     return;
   }
+  setEmailAutoSettings(emailAutoEnabled, emailAutoTo);
 
   const draftMesmoLocal = getDraftBySetorLocal(setor, subarea || '');
   if (draftMesmoLocal && draftMesmoLocal.id && draftMesmoLocal.sensos) {
+    draftMesmoLocal.emailAuto = { enabled: emailAutoEnabled, to: emailAutoTo };
     currentInsp = draftMesmoLocal;
     draftUIState = {
       ...draftUIState,
@@ -4385,9 +5083,11 @@ function iniciarInspecao() {
     tecnico: currentTec,
     unidade: currentUnidade,
     data: new Date().toISOString(),
+    inicioEm: new Date().toISOString(),
     sensos: {},
     notaGeral: null,
-    subarea: subarea || null
+    subarea: subarea || null,
+    emailAuto: { enabled: emailAutoEnabled, to: emailAutoTo }
   };
   draftUIState = {
     lastFieldId: null,
@@ -5100,6 +5800,14 @@ async function salvarInspecao() {
     });
     currentInsp.penalidadesS = penalidadesS;
     currentInsp.notaGeral = calcNotaGeralFinal(currentInsp, inspAnterior);
+    const finalizadaEm = new Date().toISOString();
+    currentInsp.finalizadaEm = currentInsp.finalizadaEm || finalizadaEm;
+    const inicioRef = currentInsp.inicioEm || (!isEditing ? currentInsp.data : finalizadaEm) || finalizadaEm;
+    const inicioMs = new Date(inicioRef).getTime();
+    const fimMs = new Date(currentInsp.finalizadaEm).getTime();
+    if (!Number.isFinite(currentInsp.duracaoMs) && Number.isFinite(inicioMs) && Number.isFinite(fimMs)) {
+      currentInsp.duracaoMs = Math.max(0, fimMs - inicioMs);
+    }
     delete currentInsp.__draftMeta;
     delete currentInsp.__draftUpdatedAt;
     delete currentInsp.__isEditing;
@@ -5113,8 +5821,10 @@ async function salvarInspecao() {
       APP.inspecoes.push(currentInsp);
     }
     enqueueSyncInspection(currentInsp.id);
+    enqueueSmartsheetInspection(currentInsp.id);
     clearDraft();
     await saveData(APP);
+    const savedInsp = JSON.parse(JSON.stringify(currentInsp));
 
     if (!navigator.onLine || !hasFirebaseConfig()) {
       toast(isEditing ? 'Edição salva no aparelho. Sincroniza quando houver internet.' : 'Inspeção salva no aparelho. Sincroniza quando houver internet.');
@@ -5124,6 +5834,7 @@ async function salvarInspecao() {
 
     currentInsp = null;
     navTo('home');
+    if (!isEditing) setTimeout(() => sendInspectionEmailAutomatic(savedInsp), 250);
   } catch (e) {
     console.error('Erro ao salvar inspeção:', e);
     toast('Erro ao salvar. Tente novamente.');
@@ -5468,6 +6179,8 @@ function renderRelatorios() {
     gerencias.map(g => `<option value="${g}">${g}</option>`).join('');
   const gerSel = document.getElementById('rel-gerencia-select');
   if (gerSel) gerSel.innerHTML = gerOpts;
+  renderSmartsheetAdminVisibility();
+  renderSmartsheetSettings();
 }
 
 // === Function: getGerenciasMap ===
@@ -6173,7 +6886,7 @@ async function gerarPDFGerencia() {
 
   function novaPaginaComCabecalho(titulo, subtitulo = '') {
     doc.addPage();
-    doc.setFillColor(79, 70, 229);
+    doc.setFillColor(22, 53, 159);
     doc.rect(0, 0, W, 22, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
@@ -6247,7 +6960,85 @@ async function gerarPDFGerencia() {
     doc.setLineWidth(0.4);
     doc.roundedRect(10, 18, 124, 176, 8, 8);
 
-    doc.setFillColor(79, 70, 229);
+    // Logo Anglo American (opcional)
+    try {
+      const loadLogoDataUrl = async (src) => {
+        return await new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => {
+            try {
+              if (!(img.naturalWidth > 10 && img.naturalHeight > 10)) throw new Error('Imagem inválida');
+              const canvas = document.createElement('canvas');
+              canvas.width = img.naturalWidth || img.width;
+              canvas.height = img.naturalHeight || img.height;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0);
+              resolve(canvas.toDataURL('image/png'));
+            } catch (e) {
+              reject(e);
+            }
+          };
+          img.onerror = reject;
+          img.src = src;
+        });
+      };
+      const logoCandidates = [
+        'anglo_american_logo.png',
+        './anglo_american_logo.png',
+        new URL('anglo_american_logo.png', window.location.href).href,
+        'logo_anglo_american.png',
+        './logo_anglo_american.png',
+        'anglo_logo',
+        './anglo_logo',
+        'anglo_logo.png',
+        './anglo_logo.png',
+        'anglo_logo.png.png',
+        './anglo_logo.png.png',
+        'file:///C:/Users/gilly/OneDrive/Softwares/Inspe%C3%A7%C3%A3o%205S/anglo_logo.png',
+        'file:///C:/Users/gilly/OneDrive/Softwares/Inspe%C3%A7%C3%A3o%205S/anglo_logo.png.png',
+        'file:///C:/Users/gilly/OneDrive/Softwares/Inspe%C3%A7%C3%A3o%205S/anglo_logo'
+      ];
+      let logoDataUrl = null;
+      for (const src of logoCandidates) {
+        try {
+          logoDataUrl = await loadLogoDataUrl(src);
+          if (logoDataUrl) break;
+        } catch {}
+      }
+      if (logoDataUrl) {
+        const logoW = 52;
+        const logoH = 16;
+        doc.setFillColor(255, 255, 255);
+        doc.roundedRect(W - margin - logoW - 2, 12, logoW + 4, logoH + 4, 2, 2, 'F');
+        doc.addImage(String(logoDataUrl), 'PNG', W - margin - logoW, 14, logoW, logoH, undefined, 'FAST');
+      }
+    } catch {}
+
+    // Faixa em degradê (roxo -> lilás -> laranja)
+    const gradX = 246;
+    const gradY = 30;
+    const gradW = 46;
+    const gradH = 5;
+    const gradSteps = 24;
+    for (let i = 0; i < gradSteps; i++) {
+      const t = i / (gradSteps - 1);
+      let r, g, b;
+      if (t <= 0.5) {
+        const u = t / 0.5;
+        r = Math.round(79 + (165 - 79) * u);
+        g = Math.round(70 + (180 - 70) * u);
+        b = Math.round(229 + (252 - 229) * u);
+      } else {
+        const u = (t - 0.5) / 0.5;
+        r = Math.round(165 + (245 - 165) * u);
+        g = Math.round(180 + (158 - 180) * u);
+        b = Math.round(252 + (11 - 252) * u);
+      }
+      doc.setFillColor(r, g, b);
+      doc.rect(gradX + (gradW / gradSteps) * i, gradY, (gradW / gradSteps) + 0.3, gradH, 'F');
+    }
+
+    doc.setFillColor(22, 53, 159);
     doc.roundedRect(10, 18, 124, 14, 8, 8, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
@@ -6302,7 +7093,7 @@ async function gerarPDFGerencia() {
 
   // === Function: drawDashCard ===
   function drawDashCard(x, yPos, w, h, title, value, subtitle, tone) {
-    const toneColor = tone || [79, 70, 229];
+    const toneColor = tone || [22, 53, 159];
     doc.setDrawColor(226, 232, 240);
     doc.setFillColor(248, 250, 252);
     doc.roundedRect(x, yPos, w, h, 3, 3, 'FD');
@@ -6346,7 +7137,7 @@ async function gerarPDFGerencia() {
   doc.addPage();
   doc.setFillColor(255, 255, 255);
   doc.rect(0, 0, W, H, 'F');
-  doc.setFillColor(79, 70, 229);
+  doc.setFillColor(22, 53, 159);
   doc.rect(0, 0, W, 28, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
@@ -6361,7 +7152,7 @@ async function gerarPDFGerencia() {
   const cardH = 30;
   const row1Y = 36;
   const row2Y = row1Y + cardH + 8;
-  drawDashCard(margin, row1Y, cardW, cardH, 'Inspeções', totais.inspecoes, 'No mês atual', [79, 70, 229]);
+  drawDashCard(margin, row1Y, cardW, cardH, 'Inspeções', totais.inspecoes, 'No mês atual', [22, 53, 159]);
   drawDashCard(margin + cardW + gap, row1Y, cardW, cardH, 'Média Geral', mediaGerencia !== null ? mediaGerencia.toFixed(2) : '—', 'Nota média da gerência', [14, 165, 233]);
   drawDashCard(margin + (cardW + gap) * 2, row1Y, cardW, cardH, 'Setores Ativos', resumo.filter(r => r.inspecoes > 0).length, 'Com inspeção no mês', [100, 116, 139]);
   drawDashCard(margin, row2Y, cardW, cardH, 'NC Abertas', totais.ncAbertas, 'Pendências identificadas', [244, 63, 94]);
@@ -6432,7 +7223,7 @@ async function gerarPDFGerencia() {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8.5);
       doc.text(r.setor, chartX + 2, yy);
-      doc.setFillColor(79, 70, 229);
+      doc.setFillColor(22, 53, 159);
       doc.roundedRect(chartX + 88, yy - 4.5, barW, 5.5, 1.5, 1.5, 'F');
       doc.setTextColor(22, 53, 159);
       doc.setFont('helvetica', 'bold');
@@ -6668,6 +7459,84 @@ async function gerarPDFSetorial(setor) {
     doc.setDrawColor(203, 213, 225);
     doc.setLineWidth(0.4);
     doc.roundedRect(10, 18, 124, 176, 8, 8);
+
+    // Logo Anglo American (opcional)
+    try {
+      const loadLogoDataUrl = async (src) => {
+        return await new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => {
+            try {
+              if (!(img.naturalWidth > 10 && img.naturalHeight > 10)) throw new Error('Imagem inválida');
+              const canvas = document.createElement('canvas');
+              canvas.width = img.naturalWidth || img.width;
+              canvas.height = img.naturalHeight || img.height;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0);
+              resolve(canvas.toDataURL('image/png'));
+            } catch (e) {
+              reject(e);
+            }
+          };
+          img.onerror = reject;
+          img.src = src;
+        });
+      };
+      const logoCandidates = [
+        'anglo_american_logo.png',
+        './anglo_american_logo.png',
+        new URL('anglo_american_logo.png', window.location.href).href,
+        'logo_anglo_american.png',
+        './logo_anglo_american.png',
+        'anglo_logo',
+        './anglo_logo',
+        'anglo_logo.png',
+        './anglo_logo.png',
+        'anglo_logo.png.png',
+        './anglo_logo.png.png',
+        'file:///C:/Users/gilly/OneDrive/Softwares/Inspe%C3%A7%C3%A3o%205S/anglo_logo.png',
+        'file:///C:/Users/gilly/OneDrive/Softwares/Inspe%C3%A7%C3%A3o%205S/anglo_logo.png.png',
+        'file:///C:/Users/gilly/OneDrive/Softwares/Inspe%C3%A7%C3%A3o%205S/anglo_logo'
+      ];
+      let logoDataUrl = null;
+      for (const src of logoCandidates) {
+        try {
+          logoDataUrl = await loadLogoDataUrl(src);
+          if (logoDataUrl) break;
+        } catch {}
+      }
+      if (logoDataUrl) {
+        const logoW = 52;
+        const logoH = 16;
+        doc.setFillColor(255, 255, 255);
+        doc.roundedRect(W - margin - logoW - 2, 12, logoW + 4, logoH + 4, 2, 2, 'F');
+        doc.addImage(String(logoDataUrl), 'PNG', W - margin - logoW, 14, logoW, logoH, undefined, 'FAST');
+      }
+    } catch {}
+
+    // Faixa em degradê (roxo -> lilás -> laranja)
+    const gradX = 246;
+    const gradY = 30;
+    const gradW = 46;
+    const gradH = 5;
+    const gradSteps = 24;
+    for (let i = 0; i < gradSteps; i++) {
+      const t = i / (gradSteps - 1);
+      let r, g, b;
+      if (t <= 0.5) {
+        const u = t / 0.5;
+        r = Math.round(79 + (165 - 79) * u);
+        g = Math.round(70 + (180 - 70) * u);
+        b = Math.round(229 + (252 - 229) * u);
+      } else {
+        const u = (t - 0.5) / 0.5;
+        r = Math.round(165 + (245 - 165) * u);
+        g = Math.round(180 + (158 - 180) * u);
+        b = Math.round(252 + (11 - 252) * u);
+      }
+      doc.setFillColor(r, g, b);
+      doc.rect(gradX + (gradW / gradSteps) * i, gradY, (gradW / gradSteps) + 0.3, gradH, 'F');
+    }
 
     // Faixa de marca
     doc.setFillColor(22, 53, 159);
@@ -7005,7 +7874,7 @@ async function gerarPDFSetorial(setor) {
 
   doc.setFillColor(255, 255, 255);
   doc.rect(0, 0, W, H, 'F');
-  doc.setFillColor(79, 70, 229);
+  doc.setFillColor(22, 53, 159);
   doc.rect(0, 0, W, 28, 'F');
 
   doc.setTextColor(255, 255, 255);
@@ -7018,7 +7887,7 @@ async function gerarPDFSetorial(setor) {
 
   // === Function: drawDashCard ===
   function drawDashCard(x, yPos, w, h, title, value, subtitle, tone) {
-    const toneColor = tone || [79, 70, 229];
+    const toneColor = tone || [22, 53, 159];
     doc.setDrawColor(226, 232, 240);
     doc.setFillColor(248, 250, 252);
     doc.roundedRect(x, yPos, w, h, 3, 3, 'FD');
@@ -7044,7 +7913,7 @@ async function gerarPDFSetorial(setor) {
   const row1Y = 36;
   const row2Y = row1Y + cardH + 8;
 
-  drawDashCard(margin, row1Y, cardW, cardH, 'Inspeções', totalInspecoes, 'No mês atual', [79, 70, 229]);
+  drawDashCard(margin, row1Y, cardW, cardH, 'Inspeções', totalInspecoes, 'No mês atual', [22, 53, 159]);
   drawDashCard(margin + cardW + gap, row1Y, cardW, cardH, 'Média Geral', mediaGeral !== null ? mediaGeral.toFixed(2) : '—', 'Nota média do setor', [14, 165, 233]);
   drawDashCard(margin + (cardW + gap) * 2, row1Y, cardW, cardH, 'Locais Avaliados', locaisUnicos, 'Subáreas/locais distintos', [100, 116, 139]);
 
@@ -7350,6 +8219,46 @@ async function gerarPDFInsp(id) {
   doc.rect(0, 0, W, 297, 'F');
   doc.setFillColor(71, 85, 105);
   doc.rect(0, 0, W, 4, 'F');
+
+  // Faixa em degradê Anglo American no topo
+  const gradSteps = 24;
+  for (let i = 0; i < gradSteps; i++) {
+    const t = i / (gradSteps - 1);
+    let r = t <= 0.5 ? Math.round(79 + (165 - 79) * (t / 0.5)) : Math.round(165 + (245 - 165) * ((t - 0.5) / 0.5));
+    let g = t <= 0.5 ? Math.round(70 + (180 - 70) * (t / 0.5)) : Math.round(180 + (158 - 180) * ((t - 0.5) / 0.5));
+    let b = t <= 0.5 ? Math.round(229 + (252 - 229) * (t / 0.5)) : Math.round(252 + (11 - 252) * ((t - 0.5) / 0.5));
+    doc.setFillColor(r, g, b);
+    doc.rect((W / gradSteps) * i, 0, (W / gradSteps) + 0.3, 4, 'F');
+  }
+
+  // Logo Anglo American (opcional)
+  try {
+    let logoDataUrl = window._cachedAngloLogo || null;
+    if (!logoDataUrl) {
+      const loadLogoDataUrl = async (src) => {
+        return await new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width; canvas.height = img.height;
+            canvas.getContext('2d').drawImage(img, 0, 0);
+            resolve(canvas.toDataURL('image/png'));
+          };
+          img.onerror = reject; img.src = src;
+        });
+      };
+      const logoCandidates = ['anglo_american_logo.png', './anglo_american_logo.png', 'logo_anglo_american.png', './logo_anglo_american.png'];
+      for (const src of logoCandidates) {
+        try { logoDataUrl = await loadLogoDataUrl(src); if (logoDataUrl) break; } catch {}
+      }
+      if (logoDataUrl) window._cachedAngloLogo = logoDataUrl;
+    }
+    if (logoDataUrl) {
+      const logoW = 52; const logoH = 16;
+      doc.addImage(String(logoDataUrl), 'PNG', W / 2 - logoW / 2, 14, logoW, logoH, undefined, 'FAST');
+    }
+  } catch {}
+
   doc.setTextColor(22, 53, 159);
   doc.setFontSize(28); doc.setFont('helvetica', 'bold');
   doc.text('INSPEÇÃO 5S', W/2, 60, { align: 'center' });
@@ -7999,8 +8908,8 @@ window.addEventListener('load', () => {
   ensureCurrentTecInList();
   if (currentTec) document.getElementById('home-tec-name').textContent = currentTec;
   
-  const savedTheme = localStorage.getItem('aa5s_theme');
-  if (savedTheme === 'light') document.body.classList.add('light-mode');
+  document.body.classList.add('light-mode');
+  localStorage.setItem('aa5s_theme', 'light');
   updateThemeIcon();
   applyDashboardTvMode();
 
