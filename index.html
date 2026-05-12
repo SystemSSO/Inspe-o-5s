@@ -740,6 +740,29 @@ body.light-mode .criterio-section {
   border-color: rgba(240, 165, 0, 0.4);
   color: var(--orange2);
 }
+.draft-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+.draft-remove-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid rgba(244, 63, 94, 0.28);
+  background: rgba(244, 63, 94, 0.08);
+  color: var(--red);
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+.draft-remove-btn:hover {
+  transform: translateY(-1px);
+  background: rgba(244, 63, 94, 0.16);
+  border-color: rgba(244, 63, 94, 0.45);
+}
 body.light-mode .draft-panel {
   background: linear-gradient(135deg, rgba(255, 247, 237, 0.98), rgba(238, 242, 255, 0.98));
   border-color: rgba(240, 165, 0, 0.45);
@@ -752,7 +775,8 @@ body.light-mode .draft-item {
   .draft-panel-header { align-items: flex-start; }
   .draft-count-badge { margin-top: 2px; }
   .draft-item { align-items: stretch; flex-direction: column; }
-  .draft-item .btn-secondary { width: 100%; }
+  .draft-item-actions { width: 100%; }
+  .draft-item .btn-secondary { flex: 1; }
 }
 
 body.light-mode .nc-anterior-section {
@@ -3219,7 +3243,8 @@ function getEmailAutoSettings() {
 
 // === Function: getPowerAutomateEmailUrl ===
 function getPowerAutomateEmailUrl() {
-  const url = String(localStorage.getItem(POWER_AUTOMATE_EMAIL_URL_KEY) || '').trim();
+  const fieldValue = document.getElementById('power-automate-email-url')?.value || '';
+  const url = String(fieldValue || localStorage.getItem(POWER_AUTOMATE_EMAIL_URL_KEY) || '').trim();
   return /^https?:\/\//.test(url) ? url : '';
 }
 
@@ -3395,54 +3420,23 @@ function openInspectionEmailDraft(insp) {
 
 // === Function: sendInspectionEmailAutomatic ===
 async function sendInspectionEmailAutomatic(insp) {
-  if (!insp?.emailAuto?.enabled) return;
+  if (!insp?.emailAuto?.enabled) return false;
   const powerAutomateUrl = getPowerAutomateEmailUrl();
-  if (powerAutomateUrl) {
-    try {
-      const res = await fetch(powerAutomateUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(buildInspectionEmailPayload(insp))
-      });
-      if (!res.ok) throw new Error(`Power Automate HTTP ${res.status}`);
-      toast('E-mail enviado pelo Power Automate.');
-      return;
-    } catch (e) {
-      console.warn('Falha no Power Automate. Tentando fallback.', e);
-      toast('Falha no Power Automate. Tentando fallback.');
-    }
+  if (!powerAutomateUrl) {
+    throw new Error('URL do Power Automate não configurada.');
   }
 
-  const cfg = getSmartsheetConfig();
-  if (!cfg.proxyUrl) {
-    openInspectionEmailDraft(insp);
-    return;
+  const res = await fetch(powerAutomateUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(buildInspectionEmailPayload(insp))
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    throw new Error(detail || `Power Automate HTTP ${res.status}`);
   }
-
-  try {
-    const to = String(insp.emailAuto.to || EMAIL_AUTO_DEFAULT_TO)
-      .split(/[;,]/)
-      .map(v => v.trim())
-      .filter(Boolean);
-    const res = await fetch(cfg.proxyUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({
-        action: 'sendEmail',
-        to,
-        subject: getInspectionEmailSubject(insp),
-        text: buildInspectionEmailBody(insp),
-        html: buildInspectionEmailHtml(insp)
-      })
-    });
-    const payload = await res.json().catch(() => null);
-    if (!res.ok || !payload?.ok) throw new Error(payload?.message || `Erro HTTP ${res.status}`);
-    toast('E-mail automático enviado.');
-  } catch (e) {
-    console.warn('Falha ao enviar e-mail automático. Abrindo rascunho.', e);
-    toast('Falha no envio automático. Abrindo rascunho.');
-    openInspectionEmailDraft(insp);
-  }
+  toast('E-mail enviado pelo Power Automate.');
+  return true;
 }
 
 // === Function: sendInspectionEmailAfterSmartsheet ===
@@ -3885,6 +3879,34 @@ function resumeDraftByKey(key) {
   toast('Rascunho retomado com sucesso.');
 }
 
+// === Function: removeDraftByKey ===
+function removeDraftByKey(key) {
+  if (!key) return;
+  const store = getDraftStore();
+  if (!store.byKey?.[key]) {
+    toast('Rascunho não encontrado.');
+    renderDraftsInNewInspModal();
+    return;
+  }
+  const ok = confirm('Remover este rascunho?');
+  if (!ok) return;
+  const removedDraft = store.byKey[key];
+  delete store.byKey[key];
+  if (store.lastKey === key) {
+    const keys = Object.keys(store.byKey || {});
+    store.lastKey = keys.length
+      ? keys.sort((a, b) => new Date(store.byKey[b]?.__draftUpdatedAt || 0) - new Date(store.byKey[a]?.__draftUpdatedAt || 0))[0]
+      : null;
+  }
+  saveDraftStore(store);
+  const legacy = loadDraft();
+  if (!legacy || legacy.id === removedDraft.id || !Object.keys(store.byKey || {}).length) {
+    localStorage.removeItem(DRAFT_KEY);
+  }
+  renderDraftsInNewInspModal();
+  toast('Rascunho removido.');
+}
+
 // === Function: renderDraftsInNewInspModal ===
 function renderDraftsInNewInspModal() {
   const wrap = document.getElementById('nova-drafts-wrap');
@@ -3925,7 +3947,12 @@ function renderDraftsInNewInspModal() {
           <div class="draft-item-sub">Período: ${periodoTxt} · Atualizado: ${whenTxt}</div>
           ${isMatch ? '<div class="draft-item-tag">Mesmo local selecionado</div>' : ''}
         </div>
-        <button class="btn-secondary" onclick="resumeDraftByKey(decodeURIComponent('${encodeURIComponent(key)}'))">Retomar rascunho</button>
+        <div class="draft-item-actions">
+          <button class="btn-secondary" onclick="resumeDraftByKey(decodeURIComponent('${encodeURIComponent(key)}'))">Retomar rascunho</button>
+          <button class="draft-remove-btn" onclick="removeDraftByKey(decodeURIComponent('${encodeURIComponent(key)}'))" title="Remover rascunho" aria-label="Remover rascunho">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h12"/><path d="M8 6V4h4v2"/><path d="M6 6l1 11h6l1-11"/><path d="M9 10v4M11 10v4"/></svg>
+          </button>
+        </div>
       </div>
     `;
   }).join('');
@@ -4888,12 +4915,14 @@ function sectorCardListHTML() {
       ? `<span style="color:var(--green);font-weight:700">${areaKeys.length} área(s) com registro</span> · <span style="color:var(--red);font-weight:700">Faltam ${faltamAreas} área(s)</span>${ultimaSetor ? ` · <span style="color:var(--text2)">Última em ${formatDate(ultimaSetor.data)}</span>` : ''}`
       : 'Nenhuma área com registro ainda';
 
-    const areasInspecionadasHtml = areaKeys.length ? areaKeys.map(areaKey => {
+    const renderAreaInspecionada = (areaKey) => {
       const ultima = areasMap[areaKey][0];
       const labelArea = areaKey === '__setor__' ? 'Área geral do setor' : areaKey;
       const totalArea = areasMap[areaKey].length;
       const score = ultima.notaGeral;
       const statusClass = score >= 3.5 ? 'status-green' : score >= 2.5 ? 'status-gold' : score >= 1.5 ? 'status-orange' : 'status-red';
+      const scoreTxt = typeof score === 'number' ? score.toFixed(2) : '—';
+      const scoreColor = typeof score === 'number' ? notaCor(score) : 'var(--text2)';
 
       // Filtro para mostrar apenas subáreas que combinem com a busca (se houver busca ativa)
       const searchQuery = document.getElementById('sector-search')?.value.toLowerCase() || '';
@@ -4907,17 +4936,12 @@ function sectorCardListHTML() {
                 <div class="sector-area-name">${labelArea}</div>
                 <div class="sector-area-meta"><strong>${totalArea}</strong> inspeções · Última: ${formatDate(ultima.data)}</div>
               </div>
-              <div style="font-family:var(--font-display); font-weight:700; color:${notaCor(score)}">${score.toFixed(2)}</div>
+              <div style="font-family:var(--font-display); font-weight:700; color:${scoreColor}">${scoreTxt}</div>
             </div>
           </div>`;
-    }).join('') : `
-      <div class="sector-area-item" style="cursor:default">
-        <div class="sector-area-name">Nenhum registro neste setor</div>
-        <div class="sector-area-meta">Use "Nova inspeção" para iniciar o primeiro checklist.</div>
-      </div>
-    `;
+    };
 
-    const areasFaltantesHtml = areasFaltantes.map(area => {
+    const renderAreaPendente = (area) => {
       const searchQuery = document.getElementById('sector-search')?.value.toLowerCase() || '';
       const areaMatch = area.toLowerCase().includes(searchQuery) || setor.toLowerCase().includes(searchQuery);
       if (!areaMatch && searchQuery !== '') return '';
@@ -4932,7 +4956,24 @@ function sectorCardListHTML() {
           <div style="font-family:var(--font-display);font-weight:700;color:var(--red)">Pendente</div>
         </div>
       </div>`;
-    }).join('');
+    };
+
+    const expectedAreaKeys = areasEsperadas.map(area => area === 'Área geral do setor' ? '__setor__' : area);
+    const extraAreaKeys = areaKeys
+      .filter(areaKey => !expectedAreaKeys.includes(areaKey))
+      .sort((a, b) => {
+        const aa = a === '__setor__' ? 'Área geral do setor' : a;
+        const bb = b === '__setor__' ? 'Área geral do setor' : b;
+        return aa.localeCompare(bb, 'pt-BR');
+      });
+    const areasOrdenadasHtml = [
+      ...expectedAreaKeys.map(areaKey => {
+        if (areasMap[areaKey]) return renderAreaInspecionada(areaKey);
+        return renderAreaPendente(areaKey === '__setor__' ? 'Área geral do setor' : areaKey);
+      }),
+      ...extraAreaKeys.map(renderAreaInspecionada)
+    ].join('');
+
     return `
       <div class="sector-card" data-sector="${setor}">
         <div class="sector-card-head" onclick="toggleSectorCard(this)">
@@ -4945,8 +4986,12 @@ function sectorCardListHTML() {
           </div>
         </div>
         <div class="sector-area-list">
-          ${areasInspecionadasHtml}
-          ${areasFaltantes.length ? `<div style="font-size:11px;color:var(--red);font-weight:700;padding:6px 2px 2px">Áreas faltantes (${areasFaltantes.length})</div>${areasFaltantesHtml}` : ''}
+          ${areasOrdenadasHtml || `
+            <div class="sector-area-item" style="cursor:default">
+              <div class="sector-area-name">Nenhum registro neste setor</div>
+              <div class="sector-area-meta">Use "Nova inspeção" para iniciar o primeiro checklist.</div>
+            </div>
+          `}
         </div>
       </div>
     `;
@@ -6091,9 +6136,18 @@ async function salvarInspecao() {
       toast(isEditing ? 'Inspeção editada com sucesso!' : 'Inspeção salva com sucesso!');
     }
 
+    if (!isEditing && savedInsp.emailAuto?.enabled) {
+      try {
+        toast('Enviando e-mail automático...');
+        await sendInspectionEmailAutomatic(savedInsp);
+      } catch (emailError) {
+        console.warn('Inspeção salva, mas o e-mail automático falhou:', emailError);
+        toast(`Inspeção salva, mas o e-mail falhou: ${emailError.message}`);
+      }
+    }
+
     currentInsp = null;
     navTo('home');
-    if (!isEditing) setTimeout(() => sendInspectionEmailAutomatic(savedInsp), 250);
   } catch (e) {
     console.error('Erro ao salvar inspeção:', e);
     toast('Erro ao salvar. Tente novamente.');
@@ -9147,21 +9201,6 @@ function startCloudAutoRefresh() {
   }, 30000);
 }
 
-// === Function: resumeDraftIfExists ===
-function resumeDraftIfExists() {
-  const draft = loadDraft();
-  if (!draft || !draft.id || !draft.sensos) return false;
-  currentInsp = draft;
-  draftUIState = {
-    ...draftUIState,
-    ...(draft.__draftMeta || {})
-  };
-  renderInspecaoForm();
-  navTo('inspecao');
-  toast('Rascunho recuperado automaticamente.');
-  return true;
-}
-
 // INIT
 window.addEventListener('load', () => {
   ensureCurrentTecInList();
@@ -9173,8 +9212,7 @@ window.addEventListener('load', () => {
   applyDashboardTvMode();
 
   renderHome();
-  const resumedDraft = resumeDraftIfExists();
-  if (!currentTec && !resumedDraft) {
+  if (!currentTec) {
     setTimeout(() => openTecModal(), 500);
   }
   syncFromCloud().finally(() => scheduleSyncQueue(0)); // Sincroniza nuvem antes da fila local
