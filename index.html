@@ -6404,11 +6404,37 @@ function renderPendList() {
         if (!isNC && !isResolvida) return;
         latestPendKeys.add(pendKey);
 
+        const crAnterior = inspAnterior?.sensos?.[s.id]?.[ci] || null;
         const reinc = getReincidenciaCount(insp, s.id, ci);
         const reincTxt = (isNC && reinc > 1) ? ` <span style="color:var(--orange2);font-weight:700">[REINCIDÊNCIA: ${reinc}ª vez]</span>` : '';
         const reincResolvida = isResolvida ? getReincidenciasAteConclusao(insp, s.id, ci) : null;
         const fotosNC = isNC ? getFotosNCAbertaComFallback(insp, s.id, ci, cr) : [];
+        const fotosAntesResolucao = isResolvida ? getFotosNCAbertaComFallback(inspAnterior, s.id, ci, crAnterior) : [];
         const fotosResolucao = isResolvida ? getFotosValidasCriterio(cr) : [];
+        const antesDepoisResolvida = isResolvida ? `
+          <div class="nc-compare" style="margin-top:8px">
+            <div class="nc-compare-head">
+              <div class="nc-compare-title">Antes e depois da resolução</div>
+              <span class="nc-verified-pill">
+                <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+              </span>
+            </div>
+            <div class="nc-compare-grid">
+              <div class="nc-compare-col">
+                <div class="nc-compare-lbl">Antes</div>
+                ${fotosAntesResolucao[0]
+                  ? `<div class="nc-compare-thumb" onclick="event.stopPropagation();openImageModal('${fotosAntesResolucao[0].replace(/'/g, "\\'")}')"><img src="${fotosAntesResolucao[0]}" alt="Foto antes"></div>`
+                  : `<div class="nc-compare-empty">Sem foto anterior</div>`}
+              </div>
+              <div class="nc-compare-col">
+                <div class="nc-compare-lbl">Depois</div>
+                ${fotosResolucao[0]
+                  ? `<div class="nc-compare-thumb" onclick="event.stopPropagation();openImageModal('${fotosResolucao[0].replace(/'/g, "\\'")}')"><img src="${fotosResolucao[0]}" alt="Foto depois"></div>`
+                  : `<div class="nc-compare-empty">Foto da resolução não anexada</div>`}
+              </div>
+            </div>
+          </div>
+        ` : '';
 
         const itemHtml = `<div class="pend-item ${isResolvida?'resolvida':''}" ${isNC ? `onclick="iniciarNovaComBase('${insp.id}')" style="cursor:pointer"` : ''}>
           <div class="pend-setor">${insp.setor} · ${s.nome}</div>
@@ -6421,9 +6447,8 @@ function renderPendList() {
           ${isNC && !fotosNC.length ? `<div style="font-size:11px;color:var(--text2);margin-top:4px">Foto da NC: não anexada.</div>` : ''}
           ${isResolvida ? `<div class="pend-status" style="color:var(--green)">✓ Resolvida em ${formatDate(insp.data)}</div>` : ''}
           ${isResolvida ? `<div style="font-size:11px;color:var(--text2);margin-top:3px">Reincidências até concluir: <strong style="color:var(--green)">${reincResolvida?.reincidencias ?? 0}</strong> <span style="color:var(--text2)">(${reincResolvida?.ocorrenciasNC ?? 0} ocorrências NC consecutivas)</span></div>` : ''}
-          ${isResolvida ? `<div style="font-size:11px;color:var(--text2);margin-top:3px">Antes: ${inspAnterior?.sensos?.[s.id]?.[ci]?.obs || 'Sem observação'}<br>Agora: ${cr.obs || 'Sem observação'}</div>` : ''}
-          ${isResolvida && fotosResolucao.length ? `<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:8px">${fotosResolucao.map((foto, idx) => `<img src="${foto}" alt="Evidência da resolução ${idx + 1}" onclick="event.stopPropagation();openImageModal('${foto.replace(/'/g, "\\'")}')" style="width:100%;height:68px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer">`).join('')}</div>` : ''}
-          ${isResolvida && !fotosResolucao.length ? `<div style="font-size:11px;color:var(--text2);margin-top:4px">Foto da resolução: não anexada.</div>` : ''}
+          ${isResolvida ? `<div style="font-size:11px;color:var(--text2);margin-top:3px">Antes: ${crAnterior?.obs || 'Sem observação'}<br>Agora: ${cr.obs || 'Sem observação'}</div>` : ''}
+          ${antesDepoisResolvida}
           <div class="pend-status" style="margin-top:6px;color:${isNC ? 'var(--red)' : 'var(--green)'};font-weight:700">
             ${isNC ? 'Status: Aberta' : 'Status: Resolvida'}
           </div>
@@ -7256,13 +7281,17 @@ async function gerarPDFGerencia() {
       doc.rect(0, 0, W, H, 'F');
     }
 
+    const cardX = (W - 124) / 2;
+    const cardCenter = cardX + 62;
     doc.setFillColor(255, 255, 255);
     if (doc.GState && doc.setGState) doc.setGState(new doc.GState({ opacity: 0.82 }));
-    doc.roundedRect(10, 18, 124, 176, 8, 8, 'F');
+    doc.roundedRect(cardX, 18, 124, 176, 8, 8, 'F');
     if (doc.GState && doc.setGState) doc.setGState(new doc.GState({ opacity: 1 }));
     doc.setDrawColor(203, 213, 225);
     doc.setLineWidth(0.4);
-    doc.roundedRect(10, 18, 124, 176, 8, 8);
+    doc.roundedRect(cardX, 18, 124, 176, 8, 8);
+    doc.setFillColor(22, 53, 159);
+    doc.rect(cardX, 28, 3, 142, 'F');
 
     // Logo Anglo American (opcional)
     try {
@@ -7318,81 +7347,68 @@ async function gerarPDFGerencia() {
       }
     } catch {}
 
-    // Faixa em degradê (roxo -> lilás -> laranja)
-    const gradX = 246;
-    const gradY = 30;
-    const gradW = 46;
-    const gradH = 5;
-    const gradSteps = 24;
-    for (let i = 0; i < gradSteps; i++) {
-      const t = i / (gradSteps - 1);
-      let r, g, b;
-      if (t <= 0.5) {
-        const u = t / 0.5;
-        r = Math.round(79 + (165 - 79) * u);
-        g = Math.round(70 + (180 - 70) * u);
-        b = Math.round(229 + (252 - 229) * u);
-      } else {
-        const u = (t - 0.5) / 0.5;
-        r = Math.round(165 + (245 - 165) * u);
-        g = Math.round(180 + (158 - 180) * u);
-        b = Math.round(252 + (11 - 252) * u);
-      }
-      doc.setFillColor(r, g, b);
-      doc.rect(gradX + (gradW / gradSteps) * i, gradY, (gradW / gradSteps) + 0.3, gradH, 'F');
-    }
-
     doc.setFillColor(22, 53, 159);
-    doc.roundedRect(10, 18, 124, 14, 8, 8, 'F');
+    doc.roundedRect(cardX, 18, 124, 14, 8, 8, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
-    doc.text('RELATÓRIO GERENCIAL', 72, 27, { align: 'center' });
+    doc.text('RELATÓRIO GERENCIAL', cardCenter, 27, { align: 'center' });
 
     doc.setTextColor(22, 53, 159);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(15);
-    doc.text('Housekeeping', 16, 54);
+    doc.setFontSize(20);
+    doc.text('Housekeeping', cardCenter, 52, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(71, 85, 105);
+    doc.text('Segurança do Trabalho', cardCenter, 60, { align: 'center' });
 
     doc.setFillColor(248, 250, 252);
-    doc.roundedRect(16, 72, 112, 30, 4, 4, 'F');
+    doc.roundedRect(cardX + 6, 72, 112, 30, 4, 4, 'F');
     doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(16, 72, 112, 30, 4, 4);
+    doc.roundedRect(cardX + 6, 72, 112, 30, 4, 4);
     doc.setTextColor(100, 116, 139);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
-    doc.text('GERÊNCIA', 20, 79);
+    doc.text('GERÊNCIA', cardX + 10, 79);
     doc.setTextColor(22, 53, 159);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
     const gerLines = doc.splitTextToSize(gerenciaTxt, 104);
-    doc.text(gerLines, 20, 87);
+    doc.text(gerLines, cardX + 10, 87);
 
     doc.setFillColor(248, 250, 252);
-    doc.roundedRect(16, 108, 112, 25, 4, 4, 'F');
+    doc.roundedRect(cardX + 6, 108, 112, 25, 4, 4, 'F');
     doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(16, 108, 112, 25, 4, 4);
+    doc.roundedRect(cardX + 6, 108, 112, 25, 4, 4);
     doc.setTextColor(100, 116, 139);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
-    doc.text('SETORES CONSIDERADOS', 20, 115);
+    doc.text('SETORES CONSIDERADOS', cardX + 10, 115);
     doc.setTextColor(22, 53, 159);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
-    doc.text(String(setores.length), 20, 122);
+    doc.text(String(setores.length), cardX + 10, 122);
 
     doc.setFillColor(248, 250, 252);
-    doc.roundedRect(16, 138, 112, 18, 4, 4, 'F');
+    doc.roundedRect(cardX + 6, 138, 112, 18, 4, 4, 'F');
     doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(16, 138, 112, 18, 4, 4);
+    doc.roundedRect(cardX + 6, 138, 112, 18, 4, 4);
     doc.setTextColor(100, 116, 139);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
-    doc.text('PERÍODO', 20, 145);
+    doc.text('PERÍODO', cardX + 10, 145);
     doc.setTextColor(22, 53, 159);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10.5);
-    doc.text(periodoTxt, 20, 152);
+    doc.text(periodoTxt, cardX + 10, 152);
+    doc.setDrawColor(22, 53, 159);
+    doc.setLineWidth(0.7);
+    doc.line(cardX + 6, 170, cardX + 118, 170);
+    doc.setTextColor(71, 85, 105);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.text('Housekeeping - Relatório digital', cardCenter, 176, { align: 'center' });
   }
 
   // === Function: drawDashCard ===
@@ -7755,14 +7771,19 @@ async function gerarPDFSetorial(setor) {
       doc.rect(0, 0, W, H, 'F');
     }
 
+    const cardX = (W - 124) / 2;
+    const cardCenter = cardX + 62;
+
     // Overlay de leitura para destacar o texto sobre qualquer fundo
     doc.setFillColor(255, 255, 255);
     if (doc.GState && doc.setGState) doc.setGState(new doc.GState({ opacity: 0.82 }));
-    doc.roundedRect(10, 18, 124, 176, 8, 8, 'F');
+    doc.roundedRect(cardX, 18, 124, 176, 8, 8, 'F');
     if (doc.GState && doc.setGState) doc.setGState(new doc.GState({ opacity: 1 }));
     doc.setDrawColor(203, 213, 225);
     doc.setLineWidth(0.4);
-    doc.roundedRect(10, 18, 124, 176, 8, 8);
+    doc.roundedRect(cardX, 18, 124, 176, 8, 8);
+    doc.setFillColor(22, 53, 159);
+    doc.rect(cardX, 28, 3, 142, 'F');
 
     // Logo Anglo American (opcional)
     try {
@@ -7818,94 +7839,74 @@ async function gerarPDFSetorial(setor) {
       }
     } catch {}
 
-    // Faixa em degradê (roxo -> lilás -> laranja)
-    const gradX = 246;
-    const gradY = 30;
-    const gradW = 46;
-    const gradH = 5;
-    const gradSteps = 24;
-    for (let i = 0; i < gradSteps; i++) {
-      const t = i / (gradSteps - 1);
-      let r, g, b;
-      if (t <= 0.5) {
-        const u = t / 0.5;
-        r = Math.round(79 + (165 - 79) * u);
-        g = Math.round(70 + (180 - 70) * u);
-        b = Math.round(229 + (252 - 229) * u);
-      } else {
-        const u = (t - 0.5) / 0.5;
-        r = Math.round(165 + (245 - 165) * u);
-        g = Math.round(180 + (158 - 180) * u);
-        b = Math.round(252 + (11 - 252) * u);
-      }
-      doc.setFillColor(r, g, b);
-      doc.rect(gradX + (gradW / gradSteps) * i, gradY, (gradW / gradSteps) + 0.3, gradH, 'F');
-    }
-
     // Faixa de marca
     doc.setFillColor(22, 53, 159);
-    doc.roundedRect(10, 18, 124, 14, 8, 8, 'F');
+    doc.roundedRect(cardX, 18, 124, 14, 8, 8, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
-    doc.text('RELATÓRIO SETORIAL', 72, 27, { align: 'center' });
+    doc.text('RELATÓRIO SETORIAL', cardCenter, 27, { align: 'center' });
 
     // Título principal
     doc.setTextColor(22, 53, 159);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(15);
-    doc.text('Housekeeping', 16, 54);
+    doc.setFontSize(20);
+    doc.text('Housekeeping', cardCenter, 52, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(71, 85, 105);
+    doc.text('Segurança do Trabalho', cardCenter, 60, { align: 'center' });
 
     // Blocos de informação
     doc.setFillColor(248, 250, 252);
-    doc.roundedRect(16, 72, 112, 30, 4, 4, 'F');
+    doc.roundedRect(cardX + 6, 72, 112, 30, 4, 4, 'F');
     doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(16, 72, 112, 30, 4, 4);
+    doc.roundedRect(cardX + 6, 72, 112, 30, 4, 4);
     doc.setTextColor(100, 116, 139);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
-    doc.text('ÁREA', 20, 79);
+    doc.text('ÁREA', cardX + 10, 79);
     doc.setTextColor(22, 53, 159);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(13);
     const setorLines = doc.splitTextToSize(setorTxt, 104);
-    doc.text(setorLines, 20, 87);
+    doc.text(setorLines, cardX + 10, 87);
 
     doc.setFillColor(248, 250, 252);
-    doc.roundedRect(16, 108, 112, 25, 4, 4, 'F');
+    doc.roundedRect(cardX + 6, 108, 112, 25, 4, 4, 'F');
     doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(16, 108, 112, 25, 4, 4);
+    doc.roundedRect(cardX + 6, 108, 112, 25, 4, 4);
     doc.setTextColor(100, 116, 139);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
-    doc.text('TÉCNICO(A)', 20, 115);
+    doc.text('TÉCNICO(A)', cardX + 10, 115);
     doc.setTextColor(22, 53, 159);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(11);
     const tecnicoLines = doc.splitTextToSize(tecnicoTxt, 104);
-    doc.text(tecnicoLines, 20, 122);
+    doc.text(tecnicoLines, cardX + 10, 122);
 
     doc.setFillColor(248, 250, 252);
-    doc.roundedRect(16, 138, 112, 18, 4, 4, 'F');
+    doc.roundedRect(cardX + 6, 138, 112, 18, 4, 4, 'F');
     doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(16, 138, 112, 18, 4, 4);
+    doc.roundedRect(cardX + 6, 138, 112, 18, 4, 4);
     doc.setTextColor(100, 116, 139);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
-    doc.text('PERÍODO', 20, 145);
+    doc.text('PERÍODO', cardX + 10, 145);
     doc.setTextColor(22, 53, 159);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10.5);
-    doc.text(periodoTxt, 20, 152);
+    doc.text(periodoTxt, cardX + 10, 152);
 
     // Rodapé de assinatura visual
     doc.setDrawColor(22, 53, 159);
     doc.setLineWidth(0.7);
-    doc.line(16, 170, 128, 170);
+    doc.line(cardX + 6, 170, cardX + 118, 170);
     doc.setTextColor(71, 85, 105);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
-    doc.text('Housekeeping - Inspeção digital', 16, 176);
+    doc.text('Housekeeping - Inspeção digital', cardCenter, 176, { align: 'center' });
     return true;
   }
 
@@ -7918,7 +7919,7 @@ async function gerarPDFSetorial(setor) {
 
   // === Function: ensureY ===
   function ensureY(need) {
-    if (y + need > 280) {
+    if (y + need > H - 14) {
       addNewPage();
       y = 18;
     }
@@ -8521,19 +8522,14 @@ async function gerarPDFInsp(id) {
   // CAPA
   doc.setFillColor(255, 255, 255);
   doc.rect(0, 0, W, 297, 'F');
-  doc.setFillColor(71, 85, 105);
-  doc.rect(0, 0, W, 4, 'F');
-
-  // Faixa em degradê Anglo American no topo
-  const gradSteps = 24;
-  for (let i = 0; i < gradSteps; i++) {
-    const t = i / (gradSteps - 1);
-    let r = t <= 0.5 ? Math.round(79 + (165 - 79) * (t / 0.5)) : Math.round(165 + (245 - 165) * ((t - 0.5) / 0.5));
-    let g = t <= 0.5 ? Math.round(70 + (180 - 70) * (t / 0.5)) : Math.round(180 + (158 - 180) * ((t - 0.5) / 0.5));
-    let b = t <= 0.5 ? Math.round(229 + (252 - 229) * (t / 0.5)) : Math.round(252 + (11 - 252) * ((t - 0.5) / 0.5));
-    doc.setFillColor(r, g, b);
-    doc.rect((W / gradSteps) * i, 0, (W / gradSteps) + 0.3, 4, 'F');
-  }
+  doc.setFillColor(22, 53, 159);
+  doc.rect(0, 0, W, 26, 'F');
+  doc.setFillColor(248, 250, 252);
+  doc.roundedRect(18, 46, W - 36, 150, 5, 5, 'F');
+  doc.setDrawColor(226, 232, 240);
+  doc.roundedRect(18, 46, W - 36, 150, 5, 5);
+  doc.setFillColor(22, 53, 159);
+  doc.rect(18, 46, 3, 150, 'F');
 
   // Logo Anglo American (opcional)
   try {
@@ -8559,45 +8555,69 @@ async function gerarPDFInsp(id) {
     }
     if (logoDataUrl) {
       const logoW = 52; const logoH = 16;
-      doc.addImage(String(logoDataUrl), 'PNG', W / 2 - logoW / 2, 14, logoW, logoH, undefined, 'FAST');
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(W - margin - logoW - 4, 7, logoW + 8, logoH + 6, 2, 2, 'F');
+      doc.addImage(String(logoDataUrl), 'PNG', W - margin - logoW, 10, logoW, logoH, undefined, 'FAST');
     }
   } catch {}
 
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(11); doc.setFont('helvetica', 'bold');
+  doc.text('RELATÓRIO DE INSPEÇÃO', margin, 16);
   doc.setTextColor(22, 53, 159);
-  doc.setFontSize(28); doc.setFont('helvetica', 'bold');
-  doc.text('INSPEÇÃO 5S', W/2, 60, { align: 'center' });
+  doc.setFontSize(26); doc.setFont('helvetica', 'bold');
+  doc.text('Inspeção 5S', W/2, 66, { align: 'center' });
+  doc.setFontSize(13); doc.setFont('helvetica', 'normal');
+  doc.setTextColor(71, 85, 105);
+  doc.text('Housekeeping - Checklist digital', W/2, 76, { align: 'center' });
+  doc.setFontSize(18); doc.setFont('helvetica', 'bold');
   doc.setTextColor(22, 53, 159);
-  doc.setFontSize(16); doc.setFont('helvetica', 'normal');
-  doc.text('Relatório de inspeção', W/2, 72, { align: 'center' });
-  doc.setFontSize(20); doc.setFont('helvetica', 'bold'); // Ajustado para acomodar subárea
-  doc.setTextColor(22, 53, 159);
-  doc.text(insp.setor, W/2, 100, { align: 'center', maxWidth: 180 });
-  doc.setFontSize(14); doc.setFont('helvetica', 'normal');
-  doc.setTextColor(22, 53, 159);
-  doc.text(`Período: ${insp.periodo || '—'}`, W/2, 118, { align: 'center' });
-  doc.text(`Data: ${formatDate(insp.data)}`, W/2, 127, { align: 'center' });
-  doc.text(`Técnico: ${insp.tecnico}`, W/2, 136, { align: 'center' });
+  doc.text(insp.setor, W/2, 98, { align: 'center', maxWidth: 156 });
 
-  if (insp.subarea) {
-    doc.text(`Subárea: ${insp.subarea}`, W/2, 145, { align: 'center' });
-  }
+  const infoX = 32;
+  const infoW = W - 64;
+  const infoRows = [
+    ['PERÍODO', insp.periodo || '—'],
+    ['DATA', formatDate(insp.data)],
+    ['TÉCNICO(A)', insp.tecnico || '—'],
+    ['LOCAL', insp.subarea || 'Área geral do setor']
+  ];
+  let infoY = 114;
+  infoRows.forEach(([label, value]) => {
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(infoX, infoY, infoW, 13, 2, 2, 'F');
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(infoX, infoY, infoW, 13, 2, 2);
+    doc.setTextColor(100, 116, 139);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.text(label, infoX + 5, infoY + 5);
+    doc.setTextColor(22, 53, 159);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    doc.text(String(value), infoX + 42, infoY + 8.5, { maxWidth: infoW - 47 });
+    infoY += 16;
+  });
+
   // nota geral
   const ng = insp.notaGeral;
   const ngCor = ng >= 3.5 ? [46,204,113] : ng >= 2.5 ? [240,165,0] : ng >= 1.5 ? [232,96,28] : [231,76,60];
   doc.setFillColor(...ngCor);
-  doc.roundedRect(W/2 - 22, 148, 44, 26, 4, 4, 'F');
+  doc.roundedRect(W/2 - 24, 204, 48, 28, 5, 5, 'F');
   doc.setTextColor(255,255,255);
   doc.setFontSize(20); doc.setFont('helvetica', 'bold');
-  doc.text(ng?.toFixed(2) || '—', W/2, 162, { align: 'center' });
+  doc.text(ng?.toFixed(2) || '—', W/2, 220, { align: 'center' });
   doc.setFontSize(9);
-  doc.text('NOTA GERAL', W/2, 170, { align: 'center' });
+  doc.text('NOTA GERAL', W/2, 228, { align: 'center' });
 
   if (base) {
     doc.setTextColor(22,53,159); doc.setFontSize(11); doc.setFont('helvetica', 'normal');
-    doc.text(`Comparativo com inspeção de ${formatDate(base.data)} (nota ${base.notaGeral?.toFixed(2)||'?'})`, W/2, 185, { align:'center' });
+    doc.text(`Comparativo com inspeção de ${formatDate(base.data)} (nota ${base.notaGeral?.toFixed(2)||'?'})`, W/2, 244, { align:'center' });
   }
 
-  doc.setTextColor(22,53,159); doc.setFontSize(9);
+  doc.setDrawColor(226, 232, 240);
+  doc.line(margin, 270, W - margin, 270);
+  doc.setTextColor(71,85,105); doc.setFontSize(9);
   doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, W/2, 285, { align: 'center' });
   doc.addPage();
 
