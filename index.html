@@ -2182,10 +2182,19 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
           <option value="">— Escolha um setor —</option>
         </select>
       </div>
+      <div class="form-group">
+        <label class="form-label">Destinatário do e-mail</label>
+        <input type="text" class="form-input" id="rel-email-destino" placeholder="destinatario@empresa.com; outro@empresa.com">
+      </div>
       <button class="btn-primary" onclick="gerarPDF()">
         <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 2h7l4 4v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M12 2v4h4"/><path d="M7 13l3 3 3-3M10 10v6"/></svg>
         Gerar PDF
       </button>
+      <button class="btn-secondary" onclick="enviarRelatorioSetorialEmail()" style="margin-top:8px">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h14v10H3z"/><path d="M3 6l7 5 7-5"/><path d="M15 14l3 3M18 14l-3 3"/></svg>
+        Enviar relatório por e-mail
+      </button>
+      <div id="rel-email-status" style="margin-top:8px;color:var(--text2);font-size:12px;line-height:1.35"></div>
     </div>
     <div class="section-title">Gerar relatório por gerência</div>
     <div class="card">
@@ -2370,13 +2379,6 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
     <div class="form-group">
       <label class="form-label">Período de referência</label>
       <input type="month" class="form-input" id="nova-periodo" value="">
-    </div>
-    <div class="form-group">
-      <label class="form-label" style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0">
-        <input type="checkbox" id="nova-email-auto" style="width:18px;height:18px;accent-color:var(--orange)">
-        Enviar e-mail automático após salvar
-      </label>
-      <input type="text" class="form-input" id="nova-email-destino" placeholder="destinatario@empresa.com; outro@empresa.com" style="margin-top:8px">
     </div>
     <div id="nova-drafts-wrap" class="draft-panel" style="display:none">
       <div class="draft-panel-header">
@@ -3373,6 +3375,141 @@ function buildInspectionEmailPayload(insp) {
   };
 }
 
+// === Function: buildPowerAutomateAttachment ===
+function buildPowerAutomateAttachment(fileName, contentBytes, contentType = 'application/pdf') {
+  let cleanName = String(fileName || 'relatorio.pdf')
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9._-]/g, '_')
+    .replace(/_+/g, '_');
+  if (!/\.pdf$/i.test(cleanName)) cleanName += '.pdf';
+  const cleanBytes = String(contentBytes || '').trim();
+  const dataUri = `data:${contentType};base64,${cleanBytes}`;
+  return {
+    name: cleanName,
+    fileName: cleanName,
+    contentType,
+    contentBytes: cleanBytes,
+    content: cleanBytes,
+    dataUri,
+    Name: cleanName,
+    ContentBytes: cleanBytes,
+    Content: cleanBytes,
+    ContentType: contentType,
+    '@odata.type': '#microsoft.graph.fileAttachment'
+  };
+}
+
+// === Function: addAttachmentToEmailPayload ===
+function addAttachmentToEmailPayload(payload, attachment) {
+  const attachmentFile = {
+    Name: attachment.name,
+    ContentBytes: attachment.contentBytes
+  };
+  const attachmentsJson = JSON.stringify([attachmentFile]);
+  return {
+    ...payload,
+    attachmentName: attachment.name,
+    attachmentFileName: attachment.name,
+    fileName: attachment.name,
+    pdfName: attachment.name,
+    attachmentContentType: attachment.contentType,
+    attachmentContentBytes: attachment.contentBytes,
+    attachmentBase64: attachment.contentBytes,
+    attachmentDataUri: attachment.dataUri,
+    fileContent: attachment.contentBytes,
+    fileContentBytes: attachment.contentBytes,
+    pdfBase64: attachment.contentBytes,
+    pdfContentBytes: attachment.contentBytes,
+    pdfDataUri: attachment.dataUri,
+    attachments: [attachment],
+    Attachments: [attachment],
+    attachmentsArray: [attachmentFile],
+    emailAttachments: [attachmentFile],
+    attachmentsJson,
+    attachment
+  };
+}
+
+// === Function: buildInspectionEmailPayloadWithPdf ===
+async function buildInspectionEmailPayloadWithPdf(insp) {
+  const payload = buildInspectionEmailPayload(insp);
+  const report = await gerarPDFInsp(insp.id, { save: false, showToast: false });
+  if (!report?.doc) return payload;
+
+  const dataUri = report.doc.output('datauristring');
+  const contentBytes = String(dataUri || '').split(',')[1] || '';
+  if (!contentBytes) throw new Error('Não foi possível gerar o anexo PDF da inspeção.');
+
+  const attachment = buildPowerAutomateAttachment(report.fileName, contentBytes);
+
+  return addAttachmentToEmailPayload(payload, attachment);
+}
+
+// === Function: getSetorialReportEmailTo ===
+function getSetorialReportEmailTo() {
+  const value = document.getElementById('rel-email-destino')?.value || '';
+  return String(value || localStorage.getItem(EMAIL_AUTO_TO_KEY) || EMAIL_AUTO_DEFAULT_TO).trim();
+}
+
+// === Function: getSetorialReportPeriod ===
+function getSetorialReportPeriod() {
+  const now = new Date();
+  return {
+    ano: now.getFullYear(),
+    mesNumero: now.getMonth() + 1,
+    periodoCodigo: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`,
+    mesNome: now.toLocaleDateString('pt-BR', { month: 'long' })
+  };
+}
+
+// === Function: buildSetorialReportEmailPayload ===
+function buildSetorialReportEmailPayload(setor, attachment) {
+  const periodo = getSetorialReportPeriod();
+  const periodoTitulo = `${periodo.mesNome.charAt(0).toUpperCase()}${periodo.mesNome.slice(1)} de ${periodo.ano}`;
+  const inspecoes = APP.inspecoes
+    .filter(i => (i.setor || '') === setor && (i.periodo || '') === periodo.periodoCodigo)
+    .sort((a, b) => String(a.subarea || '').localeCompare(String(b.subarea || ''), 'pt-BR'));
+  const resumoBase = inspecoes.length ? inspecoes : APP.inspecoes.filter(i => (i.setor || '') === setor);
+  const pontuacaoMedia = averageNumbers(resumoBase.map(item => item.notaGeral));
+  const ncTotal = resumoBase.reduce((acc, item) => {
+    const total = getInspectionNcTotals(item);
+    acc.abertas += total.abertas;
+    acc.resolvidas += total.resolvidas;
+    return acc;
+  }, { abertas: 0, resolvidas: 0 });
+  const unidade = resumoBase[0] ? (UNIDADE_LABELS[getInspectionUnidade(resumoBase[0])] || getInspectionUnidade(resumoBase[0])) : (UNIDADE_LABELS[currentUnidade] || currentUnidade);
+  const linhas = [
+    'Prezados,',
+    '',
+    `Segue em anexo o relatório de Housekeeping do setor ${setor} referente a ${periodoTitulo}.`,
+    '',
+    `Site: ${unidade}`,
+    `Setor: ${setor}`,
+    `Período: ${periodoTitulo}`,
+    `Áreas consideradas: ${resumoBase.length}`,
+    `Pontuação média do setor: ${pontuacaoMedia !== null ? pontuacaoMedia.toFixed(2) : '—'}`,
+    `NC abertas no setor: ${ncTotal.abertas}`,
+    `NC resolvidas no setor: ${ncTotal.resolvidas}`,
+    '',
+    'Link para acesso ao Dashboard de Housekeeping',
+    HOUSEKEEPING_DASHBOARD_URL,
+    '',
+    'Atenciosamente,'
+  ];
+  const text = linhas.join('\n');
+  return addAttachmentToEmailPayload({
+    to: getSetorialReportEmailTo(),
+    subject: `Relatório Housekeeping - ${setor} - ${periodoTitulo}`,
+    text,
+    html: `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.45;color:#1f2937">${linhas.map(line => line ? `<p style="margin:0 0 8px">${escapeHtml(line)}</p>` : '<br>').join('')}</div>`,
+    bodyText: text,
+    bodyHtml: `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.45;color:#1f2937">${linhas.map(line => line ? `<p style="margin:0 0 8px">${escapeHtml(line)}</p>` : '<br>').join('')}</div>`,
+    dashboardUrl: HOUSEKEEPING_DASHBOARD_URL
+  }, attachment);
+}
+
 // === Function: escapeHtml ===
 function escapeHtml(value) {
   return String(value ?? '')
@@ -3440,7 +3577,7 @@ async function sendInspectionEmailAutomatic(insp) {
   const res = await fetch(powerAutomateUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(buildInspectionEmailPayload(insp))
+    body: JSON.stringify(await buildInspectionEmailPayloadWithPdf(insp))
   });
   if (!res.ok) {
     const detail = await res.text().catch(() => '');
@@ -3458,7 +3595,25 @@ async function sendInspectionEmailAfterSmartsheet(insp) {
   const res = await fetch(powerAutomateUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(buildInspectionEmailPayload(insp))
+    body: JSON.stringify(await buildInspectionEmailPayloadWithPdf(insp))
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    throw new Error(getPowerAutomateErrorMessage(detail, res.status));
+  }
+  return true;
+}
+
+// === Function: sendPowerAutomateEmailPayload ===
+async function sendPowerAutomateEmailPayload(payload) {
+  const powerAutomateUrl = getPowerAutomateEmailUrl();
+  if (!powerAutomateUrl) {
+    throw new Error('URL do Power Automate não configurada.');
+  }
+  const res = await fetch(powerAutomateUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
   });
   if (!res.ok) {
     const detail = await res.text().catch(() => '');
@@ -3705,13 +3860,6 @@ async function syncPendingSmartsheetQueue() {
     }
     setSmartsheetStatus(`Enviando ao Smartsheet ${enviadas + 1}/${pendentes.length}: ${insp.subarea || insp.setor || insp.id}`);
     await syncSmartsheetInspection(insp);
-    try {
-      const emailEnviado = await sendInspectionEmailAfterSmartsheet(insp);
-      if (emailEnviado) toast('E-mail enviado pelo Power Automate.');
-    } catch (emailError) {
-      console.warn('Smartsheet enviado, mas falhou o e-mail Power Automate:', emailError);
-      toast('Smartsheet enviado, mas o e-mail falhou.');
-    }
     enviadas += 1;
     APP.smartsheetQueue = APP.smartsheetQueue.filter(id => id !== inspId);
     persistLocalApp(APP);
@@ -5362,8 +5510,6 @@ function iniciarInspecao() {
   const subarea = getNovaSubareaResolvida();
   const selectedSubareaRaw = document.getElementById('nova-subarea-select').value;
   const periodo = document.getElementById('nova-periodo').value;
-  const emailAutoEnabled = document.getElementById('nova-email-auto')?.checked || false;
-  const emailAutoTo = document.getElementById('nova-email-destino')?.value || EMAIL_AUTO_DEFAULT_TO;
   const selectedSector = getSetorConfigAtivo(setor);
 
   document.getElementById('modal-nova-insp').classList.remove('open');
@@ -5373,11 +5519,8 @@ function iniciarInspecao() {
     toast('Selecione o local para iniciar a inspeção.');
     return;
   }
-  setEmailAutoSettings(emailAutoEnabled, emailAutoTo);
-
   const draftMesmoLocal = getDraftBySetorLocal(setor, subarea || '');
   if (draftMesmoLocal && draftMesmoLocal.id && draftMesmoLocal.sensos) {
-    draftMesmoLocal.emailAuto = { enabled: emailAutoEnabled, to: emailAutoTo };
     currentInsp = draftMesmoLocal;
     draftUIState = {
       ...draftUIState,
@@ -5405,8 +5548,7 @@ function iniciarInspecao() {
     inicioEm: new Date().toISOString(),
     sensos: {},
     notaGeral: null,
-    subarea: subarea || null,
-    emailAuto: { enabled: emailAutoEnabled, to: emailAutoTo }
+    subarea: subarea || null
   };
   draftUIState = {
     lastFieldId: null,
@@ -6173,16 +6315,6 @@ async function salvarInspecao() {
       toast(isEditing ? 'Inspeção editada com sucesso!' : 'Inspeção salva com sucesso!');
     }
 
-    if (!isEditing && savedInsp.emailAuto?.enabled) {
-      try {
-        toast('Enviando e-mail automático...');
-        await sendInspectionEmailAutomatic(savedInsp);
-      } catch (emailError) {
-        console.warn('Inspeção salva, mas o e-mail automático falhou:', emailError);
-        toast(`Inspeção salva, mas o e-mail falhou: ${emailError.message}`);
-      }
-    }
-
     currentInsp = null;
     navTo('home');
   } catch (e) {
@@ -6554,6 +6686,8 @@ function renderRelatorios() {
     gerencias.map(g => `<option value="${g}">${g}</option>`).join('');
   const gerSel = document.getElementById('rel-gerencia-select');
   if (gerSel) gerSel.innerHTML = gerOpts;
+  const relEmail = document.getElementById('rel-email-destino');
+  if (relEmail && !relEmail.value) relEmail.value = localStorage.getItem(EMAIL_AUTO_TO_KEY) || EMAIL_AUTO_DEFAULT_TO;
   renderSmartsheetAdminVisibility();
   renderSmartsheetSettings();
 }
@@ -6676,6 +6810,38 @@ function gerarPDF() {
   const setor = document.getElementById('rel-insp-select').value;
   if (!setor) { toast('Selecione um setor'); return; }
   gerarPDFSetorial(setor);
+}
+
+// === Function: enviarRelatorioSetorialEmail ===
+async function enviarRelatorioSetorialEmail() {
+  const setor = document.getElementById('rel-insp-select')?.value || '';
+  if (!setor) { toast('Selecione um setor'); return; }
+  const to = getSetorialReportEmailTo();
+  if (!to) { toast('Informe o destinatário do e-mail.'); return; }
+  const status = document.getElementById('rel-email-status');
+
+  try {
+    toast('Gerando relatório para envio...');
+    if (status) status.textContent = 'Gerando PDF para anexo...';
+    const report = await gerarPDFSetorial(setor, { save: false, showToast: false });
+    const dataUri = report.doc.output('datauristring');
+    const contentBytes = String(dataUri || '').split(',')[1] || '';
+    if (!contentBytes) throw new Error('Não foi possível gerar o anexo PDF.');
+    const attachment = buildPowerAutomateAttachment(report.fileName, contentBytes);
+    const payload = buildSetorialReportEmailPayload(setor, attachment);
+    payload.to = to;
+    localStorage.setItem(EMAIL_AUTO_TO_KEY, to);
+    const pdfKb = Math.round((contentBytes.length * 3 / 4) / 1024);
+    if (status) status.textContent = `PDF gerado: ${report.fileName} (${pdfKb} KB). Enviando ao Power Automate...`;
+    toast('Enviando relatório por e-mail...');
+    await sendPowerAutomateEmailPayload(payload);
+    if (status) status.textContent = `E-mail enviado. PDF enviado ao fluxo: ${report.fileName} (${pdfKb} KB).`;
+    toast('Relatório enviado por e-mail.');
+  } catch (e) {
+    console.error('Erro ao enviar relatório por e-mail:', e);
+    if (status) status.textContent = `Falha ao enviar relatório: ${e.message}`;
+    toast(`Falha ao enviar relatório: ${e.message}`);
+  }
 }
 
 // === Function: editarInspecao ===
@@ -7748,8 +7914,10 @@ function getLatestInspecoesBySetor(setor) {
 }
 
 // === Function: gerarPDFSetorial ===
-async function gerarPDFSetorial(setor) {
-  toast('Gerando relatório setorial...');
+async function gerarPDFSetorial(setor, options = {}) {
+  const shouldSave = options.save !== false;
+  const shouldToast = options.showToast !== false;
+  if (shouldToast) toast('Gerando relatório setorial...');
   const { jsPDF } = window.jspdf;
   // Gera PDF em modo paisagem (horizontal)
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' });
@@ -8536,15 +8704,19 @@ async function gerarPDFSetorial(setor) {
   doc.setFontSize(9);
   doc.text(`Gerado em ${now.toLocaleString('pt-BR')}`, W / 2, 285, { align: 'center' });
 
-  doc.save(`Housekeeping_${setor.replace(/[^a-zA-Z0-9]/g, '_')}_${anoAtual}_${String(now.getMonth()+1).padStart(2,'0')}.pdf`);
-  toast('Relatório setorial gerado com sucesso!');
+  const fileName = `Housekeeping_${setor.replace(/[^a-zA-Z0-9]/g, '_')}_${anoAtual}_${String(now.getMonth()+1).padStart(2,'0')}.pdf`;
+  if (shouldSave) doc.save(fileName);
+  if (shouldToast) toast('Relatório setorial gerado com sucesso!');
+  return { doc, fileName, periodo: periodoAtual, mesAno: mesAnoAtual };
 }
 
 // === Function: gerarPDFInsp ===
-async function gerarPDFInsp(id) {
+async function gerarPDFInsp(id, options = {}) {
   const insp = APP.inspecoes.find(i => i.id === id);
   if (!insp) return;
-  toast('Gerando PDF...');
+  const shouldSave = options.save !== false;
+  const shouldToast = options.showToast !== false;
+  if (shouldToast) toast('Gerando PDF...');
   const baseRef = insp.baseId ? APP.inspecoes.find(i => i.id === insp.baseId) : null;
   const base = sameLocal(insp, baseRef) ? baseRef : null;
   const baseComparativa = base || getInspecaoAnteriorMesmoLocal(insp);
@@ -9211,8 +9383,10 @@ async function gerarPDFInsp(id) {
     }
   }
 
-  doc.save(`5S_${insp.setor.replace(/[^a-zA-Z0-9]/g,'_')}_${insp.periodo||'sem-periodo'}.pdf`);
-  toast('PDF gerado com sucesso!');
+  const fileName = `5S_${insp.setor.replace(/[^a-zA-Z0-9]/g,'_')}_${insp.periodo||'sem-periodo'}.pdf`;
+  if (shouldSave) doc.save(fileName);
+  if (shouldToast) toast('PDF gerado com sucesso!');
+  return { doc, fileName, insp };
 }
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
