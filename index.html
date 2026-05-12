@@ -2776,6 +2776,7 @@ const POWER_AUTOMATE_EMAIL_URL_KEY = 'aa5s_power_automate_email_url';
 const HOUSEKEEPING_DASHBOARD_URL = 'https://app.powerbi.com/groups/me/apps/f448c5c3-a40f-4a08-9a8a-16fb5e2a2887/reports/9a53374f-51f4-43fb-bd64-e3f8f7da18a7/ReportSection?ctid=2864f69d-77c3-4fbe-bbc0-97502052391a&experience=power-bi';
 const SMARTSHEET_DEFAULT_SHEET_URL = 'https://app.smartsheet.com/sheets/6CVRf4FH3j4chhm2Jx2pHfMCXV';
 const SMARTSHEET_DEFAULT_SHEET_ID = '991954921803652';
+const SMARTSHEET_DEFAULT_PROXY_URL = 'https://smartsheet-proxy.gillyardsoares0.workers.dev';
 const SMARTSHEET_API_BASE = 'https://api.smartsheet.com/2.0';
 const SMARTSHEET_MODEL_SENSOS = [
   {
@@ -3054,7 +3055,7 @@ function normalizeSmartsheetConfig(cfg = {}) {
     sheetUrl: String(cfg.sheetUrl || SMARTSHEET_DEFAULT_SHEET_URL).trim(),
     sheetId: String(cfg.sheetId || SMARTSHEET_DEFAULT_SHEET_ID).trim(),
     token: String(cfg.token || '').trim(),
-    proxyUrl: String(cfg.proxyUrl || '').trim()
+    proxyUrl: String(cfg.proxyUrl || SMARTSHEET_DEFAULT_PROXY_URL).trim()
   };
 }
 
@@ -3469,7 +3470,7 @@ function renderSmartsheetSettings() {
   if (url) url.value = cfg.sheetUrl || SMARTSHEET_DEFAULT_SHEET_URL;
   if (sheetId) sheetId.value = cfg.sheetId || '';
   if (token) token.value = cfg.token || '';
-  if (proxyUrl) proxyUrl.value = cfg.proxyUrl || '';
+  if (proxyUrl) proxyUrl.value = cfg.proxyUrl || SMARTSHEET_DEFAULT_PROXY_URL;
   if (powerAutomateUrl) powerAutomateUrl.value = getPowerAutomateEmailUrl();
   const pending = normalizeAppState(APP).smartsheetQueue.length;
   const ready = hasSmartsheetConfig();
@@ -3486,7 +3487,7 @@ function salvarSmartsheetConfig(autoSync = true) {
     sheetUrl: document.getElementById('smartsheet-url')?.value || SMARTSHEET_DEFAULT_SHEET_URL,
     sheetId: document.getElementById('smartsheet-sheet-id')?.value || '',
     token: document.getElementById('smartsheet-token')?.value || '',
-    proxyUrl: document.getElementById('smartsheet-proxy-url')?.value || ''
+    proxyUrl: document.getElementById('smartsheet-proxy-url')?.value || SMARTSHEET_DEFAULT_PROXY_URL
   });
   setPowerAutomateEmailUrl(document.getElementById('power-automate-email-url')?.value || '');
   saveSmartsheetConfig(cfg);
