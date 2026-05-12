@@ -335,8 +335,9 @@ html, body {
   margin-top: 10px;
   padding: 12px;
   border-radius: 14px;
-  border: 1px solid rgba(56, 189, 248, 0.28);
-  background: linear-gradient(180deg, rgba(12, 74, 110, 0.34), rgba(15, 23, 42, 0.55));
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--senso-color, var(--orange2));
+  background: var(--card);
 }
 .criterio-head {
   display: flex;
@@ -388,8 +389,8 @@ html, body {
   margin-top: 9px;
   padding: 9px;
   border-radius: 10px;
-  border: 1px dashed rgba(103, 232, 249, 0.28);
-  background: rgba(8, 47, 73, 0.35);
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.02);
 }
 .criterio-section-title {
   font-size: 11px;
@@ -415,8 +416,10 @@ body.light-mode .s-desc {
   border-color: rgba(15,23,42,0.18);
 }
 body.light-mode .criterio-item {
-  background: linear-gradient(180deg, rgba(224, 242, 254, 0.92), rgba(240, 249, 255, 0.9));
-  border-color: rgba(14, 116, 144, 0.25);
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.1);
+  border-left-color: var(--senso-color, var(--orange2));
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
 }
 body.light-mode .criterio-badge {
   background: rgba(186, 230, 253, 0.55);
@@ -431,8 +434,25 @@ body.light-mode .criterio-auto-ajuste {
   background: rgba(245, 158, 11, 0.14);
 }
 body.light-mode .criterio-section {
-  background: rgba(240, 249, 255, 0.9);
-  border-color: rgba(14, 116, 144, 0.22);
+  background: #f8fafc;
+  border-color: rgba(15, 23, 42, 0.08);
+}
+body.light-mode .criterio-section-title {
+  color: #475569;
+}
+body.light-mode .criterio-nome {
+  color: #0f172a;
+}
+body.light-mode .form-textarea,
+body.light-mode .criterio-section .form-select,
+body.light-mode .criterio-section .form-input {
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.12);
+  color: #0f172a;
+}
+body.light-mode .foto-area {
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.14);
 }
 
 /* ── NC ANTERIOR ── */
@@ -903,25 +923,6 @@ body.light-mode .nc-compare-col {
   box-shadow: var(--shadow);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.2s ease;
 }
-.sector-card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(120% 70% at -10% -20%, rgba(99, 102, 241, 0.22), transparent 55%);
-  opacity: 0.7;
-}
-.sector-card::after {
-  content: "";
-  position: absolute;
-  top: -35%;
-  left: -60%;
-  width: 45%;
-  height: 170%;
-  transform: rotate(20deg);
-  pointer-events: none;
-  background: linear-gradient(90deg, transparent, rgba(125, 211, 252, 0.16), transparent);
-}
 .sector-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
@@ -929,15 +930,6 @@ body.light-mode .nc-compare-col {
 }
 .sector-card.expanded { border-color: var(--orange); background: rgba(99, 102, 241, 0.05); }
 .light-mode .sector-card { background: #ffffff; border-color: rgba(15, 23, 42, 0.08); }
-@keyframes sectorCardSweep {
-  0%, 72%, 100% { opacity: 0; transform: translateX(0) rotate(20deg); }
-  14%, 32% { opacity: 1; }
-  48% { opacity: 0; transform: translateX(290%) rotate(20deg); }
-}
-@keyframes sectorCardFloat {
-  0%, 100% { box-shadow: var(--shadow); }
-  50% { box-shadow: 0 16px 30px rgba(30, 64, 175, 0.2); }
-}
 
 .sector-card-head {
   padding: 18px 20px 16px;
@@ -994,7 +986,6 @@ body.light-mode .nc-compare-col {
   border-radius: 12px;
   padding: 12px;
   cursor: pointer;
-  animation: cardAppear 0.2s ease-out;
   transition: all 0.2s ease, background 0.2s ease, border-color 0.2s ease;
 }
 .sector-area-item:first-child { margin-top: 4px; }
@@ -2233,7 +2224,7 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
       </div>
       <div class="form-group">
         <label class="form-label">URL do fluxo Power Automate (e-mail)</label>
-        <input class="form-input" id="power-automate-email-url" placeholder="https://prod-...logic.azure.com/...">
+        <input class="form-input" id="power-automate-email-url" placeholder="https://prod-...logic.azure.com/..." value="https://default2864f69d77c34fbebbc09750205239.1a.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/87cbc033e57d41b5a7e83bc4909120c0/triggers/manual/paths/invoke?api-version=1">
       </div>
       <div id="smartsheet-status" style="font-size:12px;color:var(--text2);margin:-4px 0 12px"></div>
       <button class="btn-primary" onclick="salvarSmartsheetConfig()">
@@ -2797,6 +2788,7 @@ const EMAIL_AUTO_ENABLED_KEY = 'aa5s_email_auto_enabled';
 const EMAIL_AUTO_TO_KEY = 'aa5s_email_auto_to';
 const EMAIL_AUTO_DEFAULT_TO = 'niquel_incidentes';
 const POWER_AUTOMATE_EMAIL_URL_KEY = 'aa5s_power_automate_email_url';
+const POWER_AUTOMATE_DEFAULT_EMAIL_URL = 'https://default2864f69d77c34fbebbc09750205239.1a.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/87cbc033e57d41b5a7e83bc4909120c0/triggers/manual/paths/invoke?api-version=1';
 const HOUSEKEEPING_DASHBOARD_URL = 'https://app.powerbi.com/groups/me/apps/f448c5c3-a40f-4a08-9a8a-16fb5e2a2887/reports/9a53374f-51f4-43fb-bd64-e3f8f7da18a7/ReportSection?ctid=2864f69d-77c3-4fbe-bbc0-97502052391a&experience=power-bi';
 const SMARTSHEET_DEFAULT_SHEET_URL = 'https://app.smartsheet.com/sheets/6CVRf4FH3j4chhm2Jx2pHfMCXV';
 const SMARTSHEET_DEFAULT_SHEET_ID = '991954921803652';
@@ -3244,13 +3236,13 @@ function getEmailAutoSettings() {
 // === Function: getPowerAutomateEmailUrl ===
 function getPowerAutomateEmailUrl() {
   const fieldValue = document.getElementById('power-automate-email-url')?.value || '';
-  const url = String(fieldValue || localStorage.getItem(POWER_AUTOMATE_EMAIL_URL_KEY) || '').trim();
+  const url = String(fieldValue || localStorage.getItem(POWER_AUTOMATE_EMAIL_URL_KEY) || POWER_AUTOMATE_DEFAULT_EMAIL_URL).trim();
   return /^https?:\/\//.test(url) ? url : '';
 }
 
 // === Function: setPowerAutomateEmailUrl ===
 function setPowerAutomateEmailUrl(url) {
-  localStorage.setItem(POWER_AUTOMATE_EMAIL_URL_KEY, String(url || '').trim());
+  localStorage.setItem(POWER_AUTOMATE_EMAIL_URL_KEY, String(url || POWER_AUTOMATE_DEFAULT_EMAIL_URL).trim());
 }
 
 // === Function: setEmailAutoSettings ===
@@ -3465,7 +3457,7 @@ function renderSmartsheetSettings() {
   if (sheetId) sheetId.value = cfg.sheetId || '';
   if (token) token.value = cfg.token || '';
   if (proxyUrl) proxyUrl.value = cfg.proxyUrl || SMARTSHEET_DEFAULT_PROXY_URL;
-  if (powerAutomateUrl) powerAutomateUrl.value = getPowerAutomateEmailUrl();
+  if (powerAutomateUrl) powerAutomateUrl.value = getPowerAutomateEmailUrl() || POWER_AUTOMATE_DEFAULT_EMAIL_URL;
   const pending = normalizeAppState(APP).smartsheetQueue.length;
   const ready = hasSmartsheetConfig();
   setSmartsheetStatus(
@@ -3483,7 +3475,7 @@ function salvarSmartsheetConfig(autoSync = true) {
     token: document.getElementById('smartsheet-token')?.value || '',
     proxyUrl: document.getElementById('smartsheet-proxy-url')?.value || SMARTSHEET_DEFAULT_PROXY_URL
   });
-  setPowerAutomateEmailUrl(document.getElementById('power-automate-email-url')?.value || '');
+  setPowerAutomateEmailUrl(document.getElementById('power-automate-email-url')?.value || POWER_AUTOMATE_DEFAULT_EMAIL_URL);
   saveSmartsheetConfig(cfg);
   renderSmartsheetSettings();
   toast(hasSmartsheetConfig() ? 'Conexão Smartsheet salva.' : 'Complete o Sheet ID numérico e o token.');
@@ -5631,7 +5623,6 @@ function criterioHTML(s, si, cr, ci, base) {
         <div class="nc-compare-title">Comparativo de Evidência</div>
         <span class="nc-verified-pill">
           <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-          Verificado
         </span>
       </div>
       <div class="nc-compare-grid">
