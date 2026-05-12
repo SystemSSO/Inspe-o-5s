@@ -627,36 +627,132 @@ body.light-mode .criterio-section {
 .draft-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+}
+.draft-panel {
+  margin: 14px 0 12px;
+  padding: 12px;
+  border: 1px solid rgba(240, 165, 0, 0.35);
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(240, 165, 0, 0.14), rgba(99, 102, 241, 0.08));
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+}
+.draft-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.draft-panel-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: rgba(240, 165, 0, 0.18);
+  color: var(--orange2);
+  border: 1px solid rgba(240, 165, 0, 0.3);
+  flex: 0 0 auto;
+}
+.draft-panel-copy {
+  min-width: 0;
+  flex: 1;
+}
+.draft-panel-title {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.1;
+}
+.draft-panel-sub {
+  font-size: 12px;
+  color: var(--text2);
+  margin-top: 3px;
+}
+.draft-count-badge {
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: rgba(240, 165, 0, 0.18);
+  color: var(--orange2);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 .draft-item {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 10px;
-  background: rgba(255,255,255,0.02);
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(255,255,255,0.05);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
+  overflow: hidden;
+}
+.draft-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--orange2);
+  opacity: 0.65;
+}
+.draft-item.match {
+  border-color: var(--orange2);
+  background: rgba(240, 165, 0, 0.15);
+  box-shadow: 0 0 0 1px rgba(240, 165, 0, 0.12);
 }
 .draft-item-main {
   min-width: 0;
+  padding-left: 2px;
 }
 .draft-item-title {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--text);
+  line-height: 1.25;
 }
 .draft-item-sub {
   font-size: 11px;
   color: var(--text2);
-  margin-top: 2px;
+  margin-top: 4px;
+}
+.draft-item-tag {
+  display: inline-flex;
+  margin-top: 7px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.14);
+  color: var(--text2);
+  font-size: 10px;
+  font-weight: 700;
 }
 .draft-item .btn-secondary {
   width: auto;
-  padding: 8px 12px;
-  min-height: 32px;
+  padding: 9px 13px;
+  min-height: 36px;
   font-size: 12px;
+  white-space: nowrap;
+  border-color: rgba(240, 165, 0, 0.4);
+  color: var(--orange2);
+}
+body.light-mode .draft-panel {
+  background: linear-gradient(135deg, rgba(255, 247, 237, 0.98), rgba(238, 242, 255, 0.98));
+  border-color: rgba(240, 165, 0, 0.45);
+}
+body.light-mode .draft-item {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(15, 23, 42, 0.08);
+}
+@media (max-width: 420px) {
+  .draft-panel-header { align-items: flex-start; }
+  .draft-count-badge { margin-top: 2px; }
+  .draft-item { align-items: stretch; flex-direction: column; }
+  .draft-item .btn-secondary { width: 100%; }
 }
 
 body.light-mode .nc-anterior-section {
@@ -2097,7 +2193,7 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
     <div class="card smartsheet-admin-only" style="display:none">
       <div class="form-group">
         <label class="form-label">Link da planilha</label>
-        <input class="form-input" id="smartsheet-url" placeholder="https://app.smartsheet.com/sheets/..." value="https://app.smartsheet.com/sheets/34Cxg2545fF73M6cx6jqQR4HC4mX4GRXHcx6xw21?view=grid">
+        <input class="form-input" id="smartsheet-url" placeholder="https://app.smartsheet.com/sheets/..." value="https://app.smartsheet.com/sheets/6CVRf4FH3j4chhm2Jx2pHfMCXV">
       </div>
       <div class="form-group">
         <label class="form-label">Sheet ID numérico da API</label>
@@ -2126,7 +2222,7 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
       <button class="btn-secondary" onclick="sincronizarTudoSmartsheet()" style="margin-top:8px">
         Enviar todas as inspeções
       </button>
-      <button class="btn-secondary" onclick="scheduleSyncQueue(0)" style="margin-top:8px">
+      <button class="btn-secondary" onclick="sincronizarPendentesSmartsheet()" style="margin-top:8px">
         Enviar pendentes
       </button>
     </div>
@@ -2267,11 +2363,16 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
       </label>
       <input type="text" class="form-input" id="nova-email-destino" placeholder="destinatario@empresa.com; outro@empresa.com" style="margin-top:8px">
     </div>
-    <div id="nova-drafts-wrap" style="display:none">
-      <div class="divider"></div>
-      <div style="font-size:12px;color:var(--orange2);margin-bottom:10px;display:flex;gap:6px;align-items:center">
-        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h12v12H4z"/><path d="M7 8h6M7 11h6"/></svg>
-        Rascunhos em andamento
+    <div id="nova-drafts-wrap" class="draft-panel" style="display:none">
+      <div class="draft-panel-header">
+        <div class="draft-panel-icon">
+          <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h12v12H4z"/><path d="M7 8h6M7 11h5M7 14h4"/></svg>
+        </div>
+        <div class="draft-panel-copy">
+          <div class="draft-panel-title">Rascunhos em andamento</div>
+          <div class="draft-panel-sub" id="nova-drafts-summary"></div>
+        </div>
+        <div class="draft-count-badge" id="nova-drafts-count"></div>
       </div>
       <div id="nova-drafts-list" class="draft-list"></div>
     </div>
@@ -2673,32 +2774,137 @@ const EMAIL_AUTO_TO_KEY = 'aa5s_email_auto_to';
 const EMAIL_AUTO_DEFAULT_TO = 'niquel_incidentes';
 const POWER_AUTOMATE_EMAIL_URL_KEY = 'aa5s_power_automate_email_url';
 const HOUSEKEEPING_DASHBOARD_URL = 'https://app.powerbi.com/groups/me/apps/f448c5c3-a40f-4a08-9a8a-16fb5e2a2887/reports/9a53374f-51f4-43fb-bd64-e3f8f7da18a7/ReportSection?ctid=2864f69d-77c3-4fbe-bbc0-97502052391a&experience=power-bi';
-const SMARTSHEET_DEFAULT_SHEET_URL = 'https://app.smartsheet.com/sheets/34Cxg2545fF73M6cx6jqQR4HC4mX4GRXHcx6xw21?view=grid';
-const SMARTSHEET_DEFAULT_SHEET_ID = '5633228105797508';
+const SMARTSHEET_DEFAULT_SHEET_URL = 'https://app.smartsheet.com/sheets/6CVRf4FH3j4chhm2Jx2pHfMCXV';
+const SMARTSHEET_DEFAULT_SHEET_ID = '991954921803652';
 const SMARTSHEET_API_BASE = 'https://api.smartsheet.com/2.0';
+const SMARTSHEET_MODEL_SENSOS = [
+  {
+    id: 's1',
+    comentarioKey: 'comentario_s1',
+    recomendacaoKey: 'recomendacao_s1',
+    mediaKey: 'senso_1',
+    comentarioTitle: 'Comentário - Senso Utilização',
+    recomendacaoTitle: 'Recomendação - Senso Utilização',
+    mediaTitle: 'Senso 01 - Utilização',
+    criterioTitles: [
+      'Foi observada a disposição de materiais (sucata, m',
+      'Foram observados produtos químicos fracionados em',
+      'Foram observados vazamentos em tubulações, torneir',
+      'Foram observados armários, cadeiras, mesas danific',
+      'Foram observadas proteções de equipamentos retirad',
+      'Foram observados botoeiras, chaves ou cordões de e',
+      'Foram observados documentos, procedimentos ou regi',
+      'Foram observados equipamentos de emergência não in',
+      'Foram observadas proteções de canaletas inadequada',
+      'Foram observadas condições de calçadas, piso, guar',
+      'Foram observadas condições de iluminação insatisfa',
+      'Foram observados telhas, grades, portões e estrutu',
+      'Foram observadas ferramentas em estado ruim de con'
+    ]
+  },
+  {
+    id: 's2',
+    comentarioKey: 'comentario_s2',
+    recomendacaoKey: 'recomendacao_s2',
+    mediaKey: 'senso_2',
+    comentarioTitle: 'Comentário - Senso Organização',
+    recomendacaoTitle: 'Recomendação - Senso Organização',
+    mediaTitle: 'Senso 02 - Organização',
+    criterioTitles: [
+      'Foi observado o armazenamento inadequado de peças,',
+      'Foram observadas estruturas de armazenamento (prat',
+      'Foram observadas saídas de emergência ou equipamen',
+      'Foram observados equipamentos de emergência armaze',
+      'Foi observado algum material armazenado com risco',
+      'Foi observado que as rotas de trânsito de veículos',
+      'Armazenamento de Procedimentos e Documentação'
+    ]
+  },
+  {
+    id: 's3',
+    comentarioKey: 'comentario_s3',
+    recomendacaoKey: 'recomendacao_s3',
+    mediaKey: 'senso_3',
+    comentarioTitle: 'Comentário - Senso Limpeza',
+    recomendacaoTitle: 'Recomendação - Senso Limpeza',
+    mediaTitle: 'Senso 03 - Limpeza',
+    criterioTitles: [
+      'Foram observadas condições inadequadas de limpeza',
+      'Vias de Acesso e Ruas Internas',
+      'Estruturas da Área',
+      'Foram observadas áreas com vegetação alta em áreas',
+      'Foram observadas áreas com vegetação alta ao redor',
+      'Foram observados EPIs ou materiais descartados de',
+      'Foram observados resíduos destinados em locais ina',
+      'Foram observadas condições inadequadas de conserva'
+    ]
+  },
+  {
+    id: 's4',
+    comentarioKey: 'comentario_s4',
+    recomendacaoKey: 'recomendacao_s4',
+    mediaKey: 'senso_4',
+    comentarioTitle: 'Comentário - Senso Padronização',
+    recomendacaoTitle: 'Recomendação - Senso Padronização',
+    mediaTitle: 'Senso 04 - Padronização',
+    criterioTitles: [
+      'Foram observados acessórios de içamentos, cintos d',
+      'Foram observados equipamentos de contratadas sem s',
+      'Foram observados veículos e máquinas sem selo de i',
+      'Foram observados controles visuais inadequados, au',
+      'Foram observadas faixas de segurança e delimitaçõe',
+      'O que acontece quando há materiais ou ações fora d'
+    ]
+  },
+  {
+    id: 's5',
+    comentarioKey: 'comentario_s5',
+    recomendacaoKey: 'recomendacao_s5',
+    mediaKey: 'senso_5',
+    comentarioTitle: 'Comentário - Senso Disciplina',
+    recomendacaoTitle: 'Recomendação - Senso Disciplina',
+    mediaTitle: 'Senso 05 - Disciplina',
+    criterioTitles: [
+      'Foi observado alguma execução de atividade fora do',
+      'Foi observado descumprimento de qualquer norma de',
+      'Foi observado o desconhecimento das metas da área',
+      'Foi observado os indicadores de housekeeping, visi',
+      'Foi observado gerenciamento interno (relatório/evi',
+      'Foi observado a existência de operadores não habil'
+    ]
+  }
+];
 const SMARTSHEET_COLUMNS = [
+  { key: 'localizacao', title: 'Localização', aliases: ['Localizacao', 'Local Inspecionado', 'Local', 'Subárea', 'Subarea', 'Setor'] },
   { key: 'site', title: 'Site', aliases: ['Unidade', 'UN'] },
-  { key: 'area_dashboard', title: 'Área', aliases: ['Area', 'Housekeeping'] },
-  { key: 'data_original', title: 'Data Original', aliases: ['Período', 'Periodo', 'Mês', 'Mes', 'Referência', 'Referencia'] },
-  { key: 'mes_ano', title: 'Mês/Ano', aliases: ['Mes/Ano', 'Período Dashboard', 'Periodo Dashboard'] },
-  { key: 'ano', title: 'Ano', aliases: ['Year'] },
-  { key: 'mes_numero', title: 'Mês Número', aliases: ['Mes Numero', 'Mês Num', 'Mes Num'] },
-  { key: 'mes_nome', title: 'Mês', aliases: ['Mes'] },
-  { key: 'nome', title: 'Nome', aliases: ['Técnico', 'Tecnico', 'Auditor', 'Responsável', 'Responsavel'] },
-  { key: 'localizacao', title: 'Localização', aliases: ['Localizacao', 'Setor', 'Gerência', 'Gerencia', 'Departamento'] },
-  { key: 'local_inspecionado', title: 'Local Inspecionado', aliases: ['Local', 'Subárea', 'Subarea'] },
-  { key: 'tempo', title: 'Tempo', aliases: ['Duração', 'Duracao', 'Tempo de Inspeção', 'Tempo de Inspecao'] },
-  { key: 'pontuacao_final', title: 'Pontuação Final', aliases: ['Pontuacao Final', 'Nota Geral', 'Média Final', 'Media Final', 'Resultado'] },
-  { key: 'senso_1', title: 'Senso 1 de Utilização', aliases: ['Senso 1', 'Utilização', 'Utilizacao'] },
-  { key: 'senso_2', title: 'Senso 2 de Organização', aliases: ['Senso 2', 'Organização', 'Organizacao'] },
-  { key: 'senso_3', title: 'Senso 3 de Limpeza', aliases: ['Senso 3', 'Limpeza'] },
-  { key: 'senso_4', title: 'Senso 4 de Padronização', aliases: ['Senso 4', 'Padronização', 'Padronizacao'] },
-  { key: 'senso_5', title: 'Senso 5 de Disciplina', aliases: ['Senso 5', 'Autodisciplina', 'Disciplina'] },
-  { key: 'nc_abertas_total', title: 'NC Abertas', aliases: ['Não Conformidades Abertas', 'Nao Conformidades Abertas'] },
-  { key: 'nc_resolvidas_total', title: 'NC Resolvidas', aliases: ['Não Conformidades Resolvidas', 'Nao Conformidades Resolvidas'] },
   { key: 'data_envio', title: 'Data de Envio da Inspeção', aliases: ['Data Envio', 'Data de Envio', 'Enviado Em'] },
-  { key: 'id_inspecao', title: 'ID Inspeção', aliases: ['ID Inspecao', 'ID'] },
-  { key: 'atualizado_em', title: 'Atualizado Em', aliases: ['Atualizado'] }
+  { key: 'data_original', title: 'Data Original', aliases: ['Período', 'Periodo', 'Mês', 'Mes', 'Referência', 'Referencia'] },
+  { key: 'nome', title: 'Nome', aliases: ['Técnico', 'Tecnico', 'Auditor', 'Responsável', 'Responsavel'] },
+  { key: 'area_dashboard', title: 'Área', aliases: ['Area', 'Housekeeping'] },
+  { key: 'responsavel_comunicado', title: 'Responsável Comunicado', aliases: ['Responsavel Comunicado'] },
+  { key: 'tempo', title: 'Tempo', aliases: ['Duração', 'Duracao', 'Tempo de Inspeção', 'Tempo de Inspecao'] },
+  ...SMARTSHEET_MODEL_SENSOS.flatMap((s, si) => [
+    ...s.criterioTitles.map((title, ci) => ({
+      key: criterioSmartsheetKey(s.id, ci),
+      title,
+      aliases: [
+        `${si + 1}S ${ci + 1}`,
+        `${SENSOS[si]?.nome || `Senso ${si + 1}`} - Critério ${ci + 1}`,
+        `${SENSOS[si]?.nome || `Senso ${si + 1}`} - C${ci + 1}`,
+        `Critério ${ci + 1} - ${SENSOS[si]?.nome || `Senso ${si + 1}`}`,
+        SENSOS[si]?.criterios?.[ci] || ''
+      ].filter(Boolean)
+    })),
+    { key: s.comentarioKey, title: s.comentarioTitle },
+    { key: s.recomendacaoKey, title: s.recomendacaoTitle },
+    { key: s.mediaKey, title: s.mediaTitle, aliases: [`Senso ${String(si + 1).padStart(2, '0')}`, `Senso ${si + 1}`] }
+  ]),
+  { key: 'pontuacao_final', title: 'Pontuação Final', aliases: ['Pontuacao Final', 'Nota Geral', 'Média Final', 'Media Final', 'Resultado'] },
+  { key: 'contato_gerente', title: 'Contato de Envio - Gerente' },
+  { key: 'contato_coordenador', title: 'Contato de Envio - Coordenador' },
+  { key: 'contato_supervisor', title: 'Contato de Envio - Supervisor' },
+  { key: 'contato_tecnico', title: 'Contato de Envio - Técnico' },
+  { key: 'contato_seguranca', title: 'Contato de Envio - Segurança', aliases: ['Contato de Envio - Seguranca'] }
 ];
 
 let areaEditorState = { setor: '', items: [] };
@@ -2925,22 +3131,7 @@ function criterioSmartsheetKey(sId, ci) {
 
 // === Function: getSmartsheetColumns ===
 function getSmartsheetColumns() {
-  const criterioColumns = [];
-  SENSOS.forEach((s, si) => {
-    (s.criterios || []).forEach((criterio, ci) => {
-      criterioColumns.push({
-        key: criterioSmartsheetKey(s.id, ci),
-        title: `${si + 1}S ${ci + 1}`,
-        aliases: [
-          `${s.nome} - Critério ${ci + 1}`,
-          `${s.nome} - C${ci + 1}`,
-          `Critério ${ci + 1} - ${s.nome}`,
-          criterio
-        ]
-      });
-    });
-  });
-  return [...SMARTSHEET_COLUMNS, ...criterioColumns];
+  return SMARTSHEET_COLUMNS;
 }
 
 // === Function: getUnidadeShortCode ===
@@ -3027,7 +3218,8 @@ function getEmailAutoSettings() {
 
 // === Function: getPowerAutomateEmailUrl ===
 function getPowerAutomateEmailUrl() {
-  return localStorage.getItem(POWER_AUTOMATE_EMAIL_URL_KEY) || '';
+  const url = String(localStorage.getItem(POWER_AUTOMATE_EMAIL_URL_KEY) || '').trim();
+  return /^https?:\/\//.test(url) ? url : '';
 }
 
 // === Function: setPowerAutomateEmailUrl ===
@@ -3050,31 +3242,70 @@ function applyEmailAutoSettingsToModal() {
   if (to) to.value = cfg.to;
 }
 
+// === Function: getInspecoesResumoSetor ===
+function getInspecoesResumoSetor(insp) {
+  if (!insp) return [];
+  const unidade = getInspectionUnidade(insp);
+  const periodo = insp.periodo || '';
+  const setor = insp.setor || '';
+  return APP.inspecoes
+    .filter(item =>
+      getInspectionUnidade(item) === unidade &&
+      (item.periodo || '') === periodo &&
+      (item.setor || '') === setor
+    )
+    .sort((a, b) => String(a.subarea || '').localeCompare(String(b.subarea || ''), 'pt-BR'));
+}
+
+// === Function: averageNumbers ===
+function averageNumbers(values) {
+  const valid = values.filter(value => typeof value === 'number' && Number.isFinite(value));
+  if (!valid.length) return null;
+  return valid.reduce((sum, value) => sum + value, 0) / valid.length;
+}
+
 // === Function: buildInspectionEmailBody ===
 function buildInspectionEmailBody(insp) {
   const periodo = formatPeriodoTitulo(insp.periodo, insp.data);
-  const ncTotals = getInspectionNcTotals(insp);
+  const inspecoesSetor = getInspecoesResumoSetor(insp);
+  const resumoBase = inspecoesSetor.length ? inspecoesSetor : [insp];
+  const pontuacaoMedia = averageNumbers(resumoBase.map(item => item.notaGeral));
+  const ncTotalSetor = resumoBase.reduce((acc, item) => {
+    const total = getInspectionNcTotals(item);
+    acc.abertas += total.abertas;
+    acc.resolvidas += total.resolvidas;
+    return acc;
+  }, { abertas: 0, resolvidas: 0 });
+
   const linhasSensos = SENSOS.map((s, idx) => {
-    const media = calcMediaSFinal(insp, s.id, getInspecaoAnteriorMesmoLocal(insp));
-    return `${idx + 1}. ${s.nome}: ${media.toFixed(2)}`;
+    const media = averageNumbers(resumoBase.map(item => calcMediaSFinal(item, s.id, getInspecaoAnteriorMesmoLocal(item))));
+    return `${idx + 1}. ${s.nome}: ${media !== null ? media.toFixed(2) : '—'}`;
+  }).join('\n');
+
+  const linhasAreas = resumoBase.map((item, idx) => {
+    const total = getInspectionNcTotals(item);
+    const nota = typeof item.notaGeral === 'number' ? item.notaGeral.toFixed(2) : '—';
+    return `${idx + 1}. ${item.subarea || 'Área geral do setor'} - Nota ${nota} - NC abertas: ${total.abertas} - NC resolvidas: ${total.resolvidas}`;
   }).join('\n');
 
   return [
     'Prezados,',
     '',
-    `Segue o fechamento da inspeção de Housekeeping de ${periodo}.`,
+    `Segue o resumo do Housekeeping do setor ${insp.setor || ''} referente a ${periodo}.`,
     '',
     `Site: ${UNIDADE_LABELS[getInspectionUnidade(insp)] || getInspectionUnidade(insp)}`,
     `Setor: ${insp.setor || ''}`,
-    `Área: ${insp.subarea || 'Área geral do setor'}`,
-    `Técnico: ${insp.tecnico || ''}`,
-    `Pontuação final: ${typeof insp.notaGeral === 'number' ? insp.notaGeral.toFixed(2) : '—'}`,
-    `Tempo de inspeção: ${getInspectionDurationText(insp) || '—'}`,
-    `NC abertas: ${ncTotals.abertas}`,
-    `NC resolvidas: ${ncTotals.resolvidas}`,
+    `Período: ${periodo}`,
+    `Áreas inspecionadas: ${resumoBase.length}`,
+    `Pontuação média do setor: ${pontuacaoMedia !== null ? pontuacaoMedia.toFixed(2) : '—'}`,
+    `NC abertas no setor: ${ncTotalSetor.abertas}`,
+    `NC resolvidas no setor: ${ncTotalSetor.resolvidas}`,
     '',
-    'Pontuação por senso:',
+    'Pontuação média por senso:',
     linhasSensos,
+    '',
+    'Resumo por área:',
+    linhasAreas,
     '',
     'Link para acesso ao Dashboard de Housekeeping',
     HOUSEKEEPING_DASHBOARD_URL,
@@ -3099,6 +3330,8 @@ function buildInspectionEmailPayload(insp) {
   return {
     to: String(insp.emailAuto?.to || EMAIL_AUTO_DEFAULT_TO).trim(),
     subject: getInspectionEmailSubject(insp),
+    text: buildInspectionEmailBody(insp),
+    html: buildInspectionEmailHtml(insp),
     bodyText: buildInspectionEmailBody(insp),
     bodyHtml: buildInspectionEmailHtml(insp),
     dashboardUrl: HOUSEKEEPING_DASHBOARD_URL,
@@ -3142,8 +3375,11 @@ function buildInspectionEmailHtml(insp) {
 
 // === Function: getInspectionEmailSubject ===
 function getInspectionEmailSubject(insp) {
-  const periodo = formatPeriodoTitulo(insp.periodo, insp.data).replace(/^./, c => c.toUpperCase());
-  return `Housekeeping ${getUnidadeShortCode(getInspectionUnidade(insp))} - ${insp.setor || ''} - ${periodo}`;
+  const periodoParts = getPeriodoParts(insp.periodo, insp.data);
+  const mes = periodoParts.mesNome
+    ? `${periodoParts.mesNome.charAt(0).toUpperCase()}${periodoParts.mesNome.slice(1)}`
+    : 'Período';
+  return `Housekeeping ${getUnidadeShortCode(getInspectionUnidade(insp))} - ${insp.setor || ''} - ${mes}`;
 }
 
 // === Function: openInspectionEmailDraft ===
@@ -3208,6 +3444,20 @@ async function sendInspectionEmailAutomatic(insp) {
   }
 }
 
+// === Function: sendInspectionEmailAfterSmartsheet ===
+async function sendInspectionEmailAfterSmartsheet(insp) {
+  const powerAutomateUrl = getPowerAutomateEmailUrl();
+  if (!powerAutomateUrl) return false;
+
+  const res = await fetch(powerAutomateUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(buildInspectionEmailPayload(insp))
+  });
+  if (!res.ok) throw new Error(`Power Automate HTTP ${res.status}`);
+  return true;
+}
+
 // === Function: renderSmartsheetSettings ===
 function renderSmartsheetSettings() {
   const cfg = getSmartsheetConfig();
@@ -3231,7 +3481,7 @@ function renderSmartsheetSettings() {
 }
 
 // === Function: salvarSmartsheetConfig ===
-function salvarSmartsheetConfig() {
+function salvarSmartsheetConfig(autoSync = true) {
   const cfg = normalizeSmartsheetConfig({
     sheetUrl: document.getElementById('smartsheet-url')?.value || SMARTSHEET_DEFAULT_SHEET_URL,
     sheetId: document.getElementById('smartsheet-sheet-id')?.value || '',
@@ -3242,7 +3492,7 @@ function salvarSmartsheetConfig() {
   saveSmartsheetConfig(cfg);
   renderSmartsheetSettings();
   toast(hasSmartsheetConfig() ? 'Conexão Smartsheet salva.' : 'Complete o Sheet ID numérico e o token.');
-  if (hasSmartsheetConfig()) scheduleSyncQueue(0);
+  if (autoSync && hasSmartsheetConfig()) scheduleSyncQueue(0);
 }
 
 // === Function: smartsheetFetch ===
@@ -3297,7 +3547,9 @@ async function getSmartsheetColumnMap(autoCreate = true) {
   let columns = sortSmartsheetColumns(Array.isArray(data.data) ? data.data : []);
   const buildIndex = (cols) => {
     const byTitle = {};
-    cols.forEach(c => { byTitle[normalizeColumnTitle(c.title)] = c; });
+    cols
+      .filter(c => !c.systemColumnType)
+      .forEach(c => { byTitle[normalizeColumnTitle(c.title)] = c; });
     return byTitle;
   };
   let byTitle = buildIndex(columns);
@@ -3336,36 +3588,44 @@ function truncateSmartsheetValue(value) {
   return text.length > 3900 ? `${text.slice(0, 3900)}...` : text;
 }
 
+// === Function: getSensoSmartsheetText ===
+function getSensoSmartsheetText(insp, sId, field) {
+  return (insp.sensos?.[sId] || [])
+    .map((cr, ci) => {
+      const text = String(cr?.[field] || '').trim();
+      return text ? `${sId.replace('s', '')}.${ci + 1} - ${text};` : '';
+    })
+    .filter(Boolean)
+    .join('\n');
+}
+
 // === Function: buildSmartsheetRowsFromInspection ===
 function buildSmartsheetRowsFromInspection(insp, columnMap) {
   const rows = [];
   const sentAt = new Date();
-  const periodoParts = getPeriodoParts(insp.periodo, insp.data);
-  const ncTotals = getInspectionNcTotals(insp);
   const inspAnterior = getInspecaoAnteriorMesmoLocal(insp);
   const values = {
     site: UNIDADE_LABELS[getInspectionUnidade(insp)] || getInspectionUnidade(insp),
     area_dashboard: getDashboardAreaLabel(insp),
     data_original: formatPeriodoOriginal(insp.periodo, insp.data),
-    mes_ano: periodoParts.mesAno,
-    ano: periodoParts.ano,
-    mes_numero: periodoParts.mesNumero,
-    mes_nome: periodoParts.mesNome,
     nome: insp.tecnico || '',
-    localizacao: insp.setor || '',
-    local_inspecionado: insp.subarea || '',
+    localizacao: insp.subarea || insp.setor || '',
+    responsavel_comunicado: '',
     tempo: getInspectionDurationText(insp),
     pontuacao_final: typeof insp.notaGeral === 'number' ? Number(insp.notaGeral.toFixed(2)) : '',
-    nc_abertas_total: ncTotals.abertas,
-    nc_resolvidas_total: ncTotals.resolvidas,
     data_envio: sentAt.toLocaleString('pt-BR'),
-    id_inspecao: insp.id,
-    atualizado_em: sentAt.toISOString()
+    contato_gerente: '',
+    contato_coordenador: '',
+    contato_supervisor: '',
+    contato_tecnico: '',
+    contato_seguranca: ''
   };
 
   SENSOS.forEach((s, si) => {
     const mediaSenso = calcMediaSFinal(insp, s.id, inspAnterior);
     values[`senso_${si + 1}`] = Number(mediaSenso.toFixed(2));
+    values[`comentario_s${si + 1}`] = getSensoSmartsheetText(insp, s.id, 'obs');
+    values[`recomendacao_s${si + 1}`] = getSensoSmartsheetText(insp, s.id, 'sugestao');
     (insp.sensos?.[s.id] || []).forEach((cr, ci) => {
       values[criterioSmartsheetKey(s.id, ci)] = cr?.nota ?? '';
     });
@@ -3389,25 +3649,44 @@ async function syncSmartsheetInspection(insp) {
   const columnMap = await getSmartsheetColumnMap(true);
   const rows = buildSmartsheetRowsFromInspection(insp, columnMap);
   const cfg = getSmartsheetConfig();
+  const totalCells = rows.reduce((sum, row) => sum + (row.cells?.length || 0), 0);
+  if (!totalCells) {
+    throw new Error('Nenhuma coluna do Smartsheet foi reconhecida para envio.');
+  }
+  const createdRowIds = [];
   for (let i = 0; i < rows.length; i += 500) {
-    await smartsheetFetch(`/sheets/${cfg.sheetId}/rows`, {
+    const response = await smartsheetFetch(`/sheets/${cfg.sheetId}/rows`, {
       method: 'POST',
       body: JSON.stringify(rows.slice(i, i + 500))
     });
+    const createdRows = Array.isArray(response?.result) ? response.result : [];
+    if (!createdRows.length) {
+      throw new Error('O Smartsheet não confirmou a criação da linha.');
+    }
+    createdRowIds.push(...createdRows.map(row => row.id).filter(Boolean));
   }
+  console.info('Smartsheet: inspeção enviada', {
+    sheetId: cfg.sheetId,
+    inspectionId: insp.id,
+    rowIds: createdRowIds,
+    cells: totalCells
+  });
+  return createdRowIds;
 }
 
 // === Function: syncPendingSmartsheetQueue ===
 async function syncPendingSmartsheetQueue() {
-  if (!hasSmartsheetConfig()) return;
+  if (!hasSmartsheetConfig()) return 0;
   if (!navigator.onLine) {
     setSyncStatus('offline', 'Modo offline');
-    return;
+    return 0;
   }
   APP = normalizeAppState(APP);
   const pendentes = [...APP.smartsheetQueue];
-  if (!pendentes.length) return;
+  if (!pendentes.length) return 0;
 
+  let enviadas = 0;
+  setSmartsheetStatus(`Enviando ${pendentes.length} inspeção(ões) ao Smartsheet...`);
   for (const inspId of pendentes) {
     const insp = APP.inspecoes.find(i => i.id === inspId);
     if (!insp) {
@@ -3415,22 +3694,38 @@ async function syncPendingSmartsheetQueue() {
       persistLocalApp(APP);
       continue;
     }
+    setSmartsheetStatus(`Enviando ao Smartsheet ${enviadas + 1}/${pendentes.length}: ${insp.subarea || insp.setor || insp.id}`);
     await syncSmartsheetInspection(insp);
+    try {
+      const emailEnviado = await sendInspectionEmailAfterSmartsheet(insp);
+      if (emailEnviado) toast('E-mail enviado pelo Power Automate.');
+    } catch (emailError) {
+      console.warn('Smartsheet enviado, mas falhou o e-mail Power Automate:', emailError);
+      toast('Smartsheet enviado, mas o e-mail falhou.');
+    }
+    enviadas += 1;
     APP.smartsheetQueue = APP.smartsheetQueue.filter(id => id !== inspId);
     persistLocalApp(APP);
   }
   renderSmartsheetSettings();
+  const cfg = getSmartsheetConfig();
+  if (enviadas) {
+    setSmartsheetStatus(`Smartsheet: ${enviadas} inspeção(ões) enviada(s) para Sheet ID ${cfg.sheetId}.`);
+    toast(`${enviadas} inspeção(ões) enviada(s) ao Smartsheet.`);
+  }
+  return enviadas;
 }
 
 // === Function: testarSmartsheetConexao ===
 async function testarSmartsheetConexao() {
-  salvarSmartsheetConfig();
+  salvarSmartsheetConfig(false);
   if (!hasSmartsheetConfig()) return;
   setSmartsheetStatus('Testando conexão...');
   try {
     const cfg = getSmartsheetConfig();
     const sheet = await smartsheetFetch(`/sheets/${cfg.sheetId}?pageSize=1`);
-    setSmartsheetStatus(`Conectado: ${sheet.name || 'planilha encontrada'}.`);
+    const totalRows = Number(sheet.totalRowCount ?? sheet.rows?.length ?? 0);
+    setSmartsheetStatus(`Conectado: ${sheet.name || 'planilha encontrada'} | Sheet ID ${cfg.sheetId} | ${totalRows} linha(s).`);
     toast('Conexão Smartsheet OK.');
   } catch (e) {
     console.error('Erro Smartsheet:', e);
@@ -3440,13 +3735,33 @@ async function testarSmartsheetConexao() {
 }
 
 // === Function: sincronizarTudoSmartsheet ===
-function sincronizarTudoSmartsheet() {
-  salvarSmartsheetConfig();
+async function sincronizarTudoSmartsheet() {
+  salvarSmartsheetConfig(false);
   if (!hasSmartsheetConfig()) return;
   APP.inspecoes.forEach(insp => enqueueSmartsheetInspection(insp.id));
   renderSmartsheetSettings();
-  scheduleSyncQueue(0);
-  toast('Inspeções colocadas na fila do Smartsheet.');
+  try {
+    const enviadas = await syncPendingSmartsheetQueue();
+    if (!enviadas) setSmartsheetStatus('Nenhuma inspeção pendente para enviar ao Smartsheet.');
+  } catch (e) {
+    console.error('Erro ao enviar Smartsheet:', e);
+    setSmartsheetStatus(`Falha ao enviar ao Smartsheet: ${e.message}`, true);
+    toast('Falha ao enviar ao Smartsheet.');
+  }
+}
+
+// === Function: sincronizarPendentesSmartsheet ===
+async function sincronizarPendentesSmartsheet() {
+  salvarSmartsheetConfig(false);
+  if (!hasSmartsheetConfig()) return;
+  try {
+    const enviadas = await syncPendingSmartsheetQueue();
+    if (!enviadas) setSmartsheetStatus('Nenhuma inspeção pendente para enviar ao Smartsheet.');
+  } catch (e) {
+    console.error('Erro ao enviar pendentes Smartsheet:', e);
+    setSmartsheetStatus(`Falha ao enviar pendentes: ${e.message}`, true);
+    toast('Falha ao enviar pendentes ao Smartsheet.');
+  }
 }
 
 // === Function: getPeriodoParts ===
@@ -3477,79 +3792,6 @@ function chunkArray(items, size = 300) {
   const chunks = [];
   for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size));
   return chunks;
-}
-
-// === Function: formatarSmartsheetPlanilha ===
-async function formatarSmartsheetPlanilha() {
-  salvarSmartsheetConfig();
-  if (!hasSmartsheetConfig()) return;
-
-  const ok = confirm('Isto vai apagar todas as linhas atuais do Smartsheet e reorganizar/renomear as colunas conforme o app. Deseja continuar?');
-  if (!ok) return;
-  const confirmacao = prompt('Digite FORMATAR para confirmar.');
-  if (confirmacao !== 'FORMATAR') {
-    toast('Formatação cancelada.');
-    return;
-  }
-
-  setSmartsheetStatus('Formatando planilha Smartsheet...');
-  try {
-    const cfg = getSmartsheetConfig();
-    const expectedColumns = getSmartsheetColumns();
-
-    const sheet = await smartsheetFetch(`/sheets/${cfg.sheetId}?includeAll=true`);
-    const rowIds = (sheet.rows || []).map(r => r.id).filter(Boolean);
-    for (const ids of chunkArray(rowIds, 300)) {
-      await smartsheetFetch(`/sheets/${cfg.sheetId}/rows?ids=${ids.join(',')}&ignoreRowsNotFound=true`, {
-        method: 'DELETE'
-      });
-    }
-
-    let columnsResp = await smartsheetFetch(`/sheets/${cfg.sheetId}/columns?includeAll=true`);
-    let columns = sortSmartsheetColumns(Array.isArray(columnsResp.data) ? columnsResp.data : []);
-
-    if (columns.length < expectedColumns.length) {
-      const novas = expectedColumns.slice(columns.length).map((col, idx) => ({
-        title: col.title,
-        type: 'TEXT_NUMBER',
-        index: columns.length + idx,
-        width: 160
-      }));
-      await smartsheetFetch(`/sheets/${cfg.sheetId}/columns`, {
-        method: 'POST',
-        body: JSON.stringify(novas)
-      });
-      columnsResp = await smartsheetFetch(`/sheets/${cfg.sheetId}/columns?includeAll=true`);
-      columns = sortSmartsheetColumns(Array.isArray(columnsResp.data) ? columnsResp.data : []);
-    }
-
-    for (let i = 0; i < expectedColumns.length; i++) {
-      const col = columns[i];
-      const expected = expectedColumns[i];
-      if (!col) continue;
-      if (col.title !== expected.title || col.index !== i) {
-        await smartsheetFetch(`/sheets/${cfg.sheetId}/columns/${col.id}`, {
-          method: 'PUT',
-          body: JSON.stringify({ title: expected.title, index: i })
-        });
-      }
-    }
-
-    const extras = columns.slice(expectedColumns.length).filter(c => !c.primary).reverse();
-    for (const col of extras) {
-      await smartsheetFetch(`/sheets/${cfg.sheetId}/columns/${col.id}`, { method: 'DELETE' });
-    }
-
-    APP.smartsheetQueue = [];
-    persistLocalApp(APP);
-    renderSmartsheetSettings();
-    setSmartsheetStatus(`Planilha formatada: ${rowIds.length} linha(s) removida(s), ${expectedColumns.length} coluna(s) padronizada(s).`);
-    toast('Planilha Smartsheet formatada.');
-  } catch (e) {
-    console.error('Erro ao formatar Smartsheet:', e);
-    setSmartsheetStatus(`Falha ao formatar: ${e.message}`, true);
-    toast('Falha ao formatar Smartsheet.');
-  }
 }
 
 // === Function: loadDraft ===
@@ -3646,6 +3888,8 @@ function resumeDraftByKey(key) {
 function renderDraftsInNewInspModal() {
   const wrap = document.getElementById('nova-drafts-wrap');
   const list = document.getElementById('nova-drafts-list');
+  const summary = document.getElementById('nova-drafts-summary');
+  const count = document.getElementById('nova-drafts-count');
   if (!wrap || !list) return;
 
   const setorSel = document.getElementById('nova-setor-select')?.value || '';
@@ -3656,10 +3900,17 @@ function renderDraftsInNewInspModal() {
   if (!entries.length) {
     wrap.style.display = 'none';
     list.innerHTML = '';
+    if (summary) summary.textContent = '';
+    if (count) count.textContent = '';
     return;
   }
 
   wrap.style.display = 'block';
+  const newest = entries[0]?.draft?.__draftUpdatedAt
+    ? new Date(entries[0].draft.__draftUpdatedAt).toLocaleString('pt-BR')
+    : '';
+  if (summary) summary.textContent = newest ? `Última atualização: ${newest}` : 'Retome uma inspeção salva no aparelho';
+  if (count) count.textContent = `${entries.length} ${entries.length === 1 ? 'rascunho' : 'rascunhos'}`;
   list.innerHTML = entries.map(({ key, draft }) => {
     const setorTxt = draft.setor || 'Setor não informado';
     const subareaTxt = draft.subarea || 'Área geral';
@@ -3667,12 +3918,13 @@ function renderDraftsInNewInspModal() {
     const periodoTxt = draft.periodo || 'Sem período';
     const isMatch = matchKey && key === matchKey;
     return `
-      <div class="draft-item" style="${isMatch ? 'border-color:var(--orange2);background:rgba(99,102,241,0.14);' : ''}">
+      <div class="draft-item${isMatch ? ' match' : ''}">
         <div class="draft-item-main">
           <div class="draft-item-title">${setorTxt} · ${subareaTxt}</div>
           <div class="draft-item-sub">Período: ${periodoTxt} · Atualizado: ${whenTxt}</div>
+          ${isMatch ? '<div class="draft-item-tag">Mesmo local selecionado</div>' : ''}
         </div>
-        <button class="btn-secondary" onclick="resumeDraftByKey(decodeURIComponent('${encodeURIComponent(key)}'))">Retomar</button>
+        <button class="btn-secondary" onclick="resumeDraftByKey(decodeURIComponent('${encodeURIComponent(key)}'))">Retomar rascunho</button>
       </div>
     `;
   }).join('');
@@ -3820,9 +4072,15 @@ async function syncPendingQueue() {
       persistLocalApp(APP);
     }
 
-    await syncPendingSmartsheetQueue();
+    let smartsheetEnviadas = 0;
+    try {
+      smartsheetEnviadas = await syncPendingSmartsheetQueue();
+    } catch (smartsheetError) {
+      console.warn("Firebase sincronizado, mas o Smartsheet ficou pendente:", smartsheetError);
+      setSmartsheetStatus(`Smartsheet pendente: ${smartsheetError.message}`, true);
+    }
     persistLocalApp(APP);
-    setSyncStatus('synced', 'Sincronizado');
+    setSyncStatus('synced', smartsheetEnviadas ? `Sincronizado (${smartsheetEnviadas} Smartsheet)` : 'Sincronizado');
   } catch (e) {
     console.warn("Falha ao sincronizar agora. Tentaremos novamente ao reconectar.", e);
     setSyncStatus(navigator.onLine ? 'syncing' : 'offline', navigator.onLine ? 'Aguardando nova tentativa...' : 'Modo offline');
