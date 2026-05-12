@@ -5161,7 +5161,8 @@ function getPendenciasResolvidas(insp, baseComparativa = null) {
         obsAnterior: crAnterior.obs || '',
         notaAtual,
         obsAtual: crAtual?.obs || '',
-        fotosAtual: Array.isArray(crAtual?.fotos) ? crAtual.fotos : [],
+        fotosAnterior: getFotosNCAbertaComFallback(baseRef, s.id, ci, crAnterior),
+        fotosAtual: getFotosValidasCriterio(crAtual),
         dataBase: baseRef.data
       });
     });
@@ -5742,9 +5743,7 @@ function setNota(sId, ci, nota) {
   currentInsp.sensos[sId][ci].autoReincidenciaFrom = null;
   currentInsp.sensos[sId][ci].autoReincidenciaTo = null;
   const tinhaNCAnterior = hasPendenciaAnterior(sId, ci);
-  const btnResolvido = document.getElementById(`btn-resolved-${sId}-${ci}`);
-  const resolvidoMarcadoManual = !!btnResolvido?.classList.contains('active') || currentInsp.sensos[sId][ci].ncResolvida === true;
-  if (nota <= 3 && tinhaNCAnterior && !resolvidoMarcadoManual) currentInsp.sensos[sId][ci].ncResolvida = false;
+  if (nota <= 3) currentInsp.sensos[sId][ci].ncResolvida = false;
   currentInsp.sensos[sId][ci].ncAberta = nota <= 3 && currentInsp.sensos[sId][ci].ncResolvida !== true;
   [0,1,2,3,4].forEach(n => {
     const btn = document.getElementById(`nb-${sId}-${ci}-${n}`);
@@ -5756,20 +5755,36 @@ function setNota(sId, ci, nota) {
     obs.style.borderColor = '';
     
     // Marcar automaticamente como resolvido se houver NC anterior e nota >= 4
-    const btn = document.getElementById(`btn-resolved-${sId}-${ci}`);
-    if (btn && !btn.classList.contains('active')) {
-      btn.classList.add('active');
-      btn.innerHTML = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10l4 4L16 6"/></svg><span>Resolvido ✓</span>';
-    }
+    updateResolvedButton(sId, ci, true);
     if (tinhaNCAnterior) currentInsp.sensos[sId][ci].ncResolvida = true;
     if (tinhaNCAnterior) currentInsp.sensos[sId][ci].ncAberta = false;
-  } else if (obs && !obs.value.trim()) {
-    obs.style.borderColor = 'var(--red)';
+  } else {
+    updateResolvedButton(sId, ci, false);
+    if (obs && !obs.value.trim()) obs.style.borderColor = 'var(--red)';
   }
   updateScoreMini(sId);
   updateProgresso();
   updateNotaGeral();
   scheduleDraftSave();
+}
+
+// === Function: updateNotaButtons ===
+function updateNotaButtons(sId, ci) {
+  const notaAtual = currentInsp?.sensos?.[sId]?.[ci]?.nota ?? null;
+  [0,1,2,3,4].forEach(n => {
+    const btn = document.getElementById(`nb-${sId}-${ci}-${n}`);
+    if (btn) btn.className = 'nota-btn' + (n === notaAtual ? ` sel-${n}` : '');
+  });
+}
+
+// === Function: updateResolvedButton ===
+function updateResolvedButton(sId, ci, isResolved) {
+  const btn = document.getElementById(`btn-resolved-${sId}-${ci}`);
+  if (!btn) return;
+  btn.classList.toggle('active', isResolved);
+  btn.innerHTML = isResolved
+    ? '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10l4 4L16 6"/></svg><span>Resolvido ✓</span>'
+    : '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10l4 4L16 6"/></svg><span>Marcar como resolvido</span>';
 }
 
 // === Function: setObs ===
@@ -5798,19 +5813,28 @@ function toggleResolved(sId, ci) {
   touchDraftContext({ lastSensoId: sId, lastCriterioIndex: ci, lastAction: 'resolved', lastFieldId: `btn-resolved-${sId}-${ci}` });
   const btn = document.getElementById(`btn-resolved-${sId}-${ci}`);
   if (!btn) return;
+  const criterio = currentInsp.sensos[sId][ci];
   
   if (btn.classList.contains('active')) {
-    btn.classList.remove('active');
-    btn.innerHTML = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10l4 4L16 6"/></svg><span>Marcar como resolvido</span>';
-    currentInsp.sensos[sId][ci].ncResolvida = false;
-    currentInsp.sensos[sId][ci].ncAberta = (currentInsp.sensos[sId][ci].nota ?? null) !== null && currentInsp.sensos[sId][ci].nota <= 3;
+    updateResolvedButton(sId, ci, false);
+    criterio.ncResolvida = false;
+    if (criterio.nota === 4) criterio.nota = null;
+    criterio.ncAberta = (criterio.nota ?? null) !== null && criterio.nota <= 3;
   } else {
-    btn.classList.add('active');
-    btn.innerHTML = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10l4 4L16 6"/></svg><span>Resolvido ✓</span>';
-    currentInsp.sensos[sId][ci].ncResolvida = true;
-    currentInsp.sensos[sId][ci].ncAberta = false;
+    updateResolvedButton(sId, ci, true);
+    criterio.nota = 4;
+    criterio.autoReincidenciaFrom = null;
+    criterio.autoReincidenciaTo = null;
+    criterio.ncResolvida = true;
+    criterio.ncAberta = false;
+    const obs = document.getElementById(`obs-${sId}-${ci}`);
+    if (obs) obs.style.borderColor = '';
   }
   
+  updateNotaButtons(sId, ci);
+  updateScoreMini(sId);
+  updateProgresso();
+  updateNotaGeral();
   scheduleDraftSave();
 }
 
@@ -7281,17 +7305,18 @@ async function gerarPDFGerencia() {
       doc.rect(0, 0, W, H, 'F');
     }
 
-    const cardX = (W - 124) / 2;
-    const cardCenter = cardX + 62;
+    const cardW = 150;
+    const cardX = (W - cardW) / 2;
+    const cardCenter = cardX + cardW / 2;
     doc.setFillColor(255, 255, 255);
     if (doc.GState && doc.setGState) doc.setGState(new doc.GState({ opacity: 0.82 }));
-    doc.roundedRect(cardX, 18, 124, 176, 8, 8, 'F');
+    doc.roundedRect(cardX, 18, cardW, 176, 8, 8, 'F');
     if (doc.GState && doc.setGState) doc.setGState(new doc.GState({ opacity: 1 }));
     doc.setDrawColor(203, 213, 225);
     doc.setLineWidth(0.4);
-    doc.roundedRect(cardX, 18, 124, 176, 8, 8);
+    doc.roundedRect(cardX, 18, cardW, 176, 8, 8);
     doc.setFillColor(22, 53, 159);
-    doc.rect(cardX, 28, 3, 142, 'F');
+    doc.rect(cardX, 34, 3, 128, 'F');
 
     // Logo Anglo American (opcional)
     try {
@@ -7348,15 +7373,15 @@ async function gerarPDFGerencia() {
     } catch {}
 
     doc.setFillColor(22, 53, 159);
-    doc.roundedRect(cardX, 18, 124, 14, 8, 8, 'F');
+    doc.roundedRect(cardX, 18, cardW, 16, 8, 8, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
-    doc.text('RELATÓRIO GERENCIAL', cardCenter, 27, { align: 'center' });
+    doc.text('RELATÓRIO GERENCIAL', cardCenter, 28, { align: 'center' });
 
     doc.setTextColor(22, 53, 159);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(20);
+    doc.setFontSize(23);
     doc.text('Housekeeping', cardCenter, 52, { align: 'center' });
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
@@ -7364,51 +7389,51 @@ async function gerarPDFGerencia() {
     doc.text('Segurança do Trabalho', cardCenter, 60, { align: 'center' });
 
     doc.setFillColor(248, 250, 252);
-    doc.roundedRect(cardX + 6, 72, 112, 30, 4, 4, 'F');
+    doc.roundedRect(cardX + 10, 72, cardW - 20, 30, 4, 4, 'F');
     doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(cardX + 6, 72, 112, 30, 4, 4);
+    doc.roundedRect(cardX + 10, 72, cardW - 20, 30, 4, 4);
     doc.setTextColor(100, 116, 139);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
-    doc.text('GERÊNCIA', cardX + 10, 79);
+    doc.text('GERÊNCIA', cardX + 15, 79);
     doc.setTextColor(22, 53, 159);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
-    const gerLines = doc.splitTextToSize(gerenciaTxt, 104);
-    doc.text(gerLines, cardX + 10, 87);
+    const gerLines = doc.splitTextToSize(gerenciaTxt, cardW - 30);
+    doc.text(gerLines, cardX + 15, 87);
 
     doc.setFillColor(248, 250, 252);
-    doc.roundedRect(cardX + 6, 108, 112, 25, 4, 4, 'F');
+    doc.roundedRect(cardX + 10, 108, 62, 28, 4, 4, 'F');
     doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(cardX + 6, 108, 112, 25, 4, 4);
+    doc.roundedRect(cardX + 10, 108, 62, 28, 4, 4);
     doc.setTextColor(100, 116, 139);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
-    doc.text('SETORES CONSIDERADOS', cardX + 10, 115);
+    doc.text('SETORES', cardX + 15, 116);
     doc.setTextColor(22, 53, 159);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.text(String(setores.length), cardX + 10, 122);
+    doc.setFontSize(18);
+    doc.text(String(setores.length), cardX + 15, 128);
 
     doc.setFillColor(248, 250, 252);
-    doc.roundedRect(cardX + 6, 138, 112, 18, 4, 4, 'F');
+    doc.roundedRect(cardX + 78, 108, 62, 28, 4, 4, 'F');
     doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(cardX + 6, 138, 112, 18, 4, 4);
+    doc.roundedRect(cardX + 78, 108, 62, 28, 4, 4);
     doc.setTextColor(100, 116, 139);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
-    doc.text('PERÍODO', cardX + 10, 145);
+    doc.text('PERÍODO', cardX + 83, 116);
     doc.setTextColor(22, 53, 159);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10.5);
-    doc.text(periodoTxt, cardX + 10, 152);
+    doc.setFontSize(9.5);
+    doc.text(periodoTxt, cardX + 83, 128, { maxWidth: 52 });
     doc.setDrawColor(22, 53, 159);
     doc.setLineWidth(0.7);
-    doc.line(cardX + 6, 170, cardX + 118, 170);
+    doc.line(cardX + 10, 166, cardX + cardW - 10, 166);
     doc.setTextColor(71, 85, 105);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
-    doc.text('Housekeeping - Relatório digital', cardCenter, 176, { align: 'center' });
+    doc.text('Housekeeping - Relatório digital', cardCenter, 173, { align: 'center' });
   }
 
   // === Function: drawDashCard ===
@@ -7574,11 +7599,11 @@ async function gerarPDFGerencia() {
       const sugLines = doc.splitTextToSize(`Sugestão: ${item.sugestao}`, W - margin * 2 - 8);
       const fotos = Array.isArray(item.fotos) ? item.fotos : [];
       const fotosDataUrl = (await Promise.all(fotos.map(imageToDataUrl))).filter(Boolean);
-      const fotosPorLinha = 4;
+      const fotosPorLinha = 2;
       const linhasFotos = fotosDataUrl.length ? Math.ceil(fotosDataUrl.length / fotosPorLinha) : 0;
-      const fotoW = 42;
-      const fotoH = 28;
-      const gapFoto = 3;
+      const fotoW = 82;
+      const fotoH = 58;
+      const gapFoto = 6;
       const hFotos = linhasFotos ? (linhasFotos * fotoH) + ((linhasFotos - 1) * gapFoto) : 0;
       const h = 12 + criterioLines.length * 4 + obsLines.length * 4 + sugLines.length * 4 + hFotos + 8;
       if (y + h > 196) y = novaPaginaComCabecalho('Não Conformidades por Setor', `${gerencia} · ${mesAnoAtual}`);
@@ -7607,7 +7632,7 @@ async function gerarPDFGerencia() {
 
       let yConsumidoManual = false;
       if (fotosDataUrl.length) {
-        const fotosPorPagina = fotosPorLinha * 4;
+        const fotosPorPagina = fotosPorLinha * 2;
         const chunks = splitArrayIntoChunks(fotosDataUrl, fotosPorPagina);
         if (chunks.length > 1) yConsumidoManual = true;
         for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
@@ -7771,19 +7796,20 @@ async function gerarPDFSetorial(setor) {
       doc.rect(0, 0, W, H, 'F');
     }
 
-    const cardX = (W - 124) / 2;
-    const cardCenter = cardX + 62;
+    const cardW = 150;
+    const cardX = (W - cardW) / 2;
+    const cardCenter = cardX + cardW / 2;
 
     // Overlay de leitura para destacar o texto sobre qualquer fundo
     doc.setFillColor(255, 255, 255);
     if (doc.GState && doc.setGState) doc.setGState(new doc.GState({ opacity: 0.82 }));
-    doc.roundedRect(cardX, 18, 124, 176, 8, 8, 'F');
+    doc.roundedRect(cardX, 18, cardW, 176, 8, 8, 'F');
     if (doc.GState && doc.setGState) doc.setGState(new doc.GState({ opacity: 1 }));
     doc.setDrawColor(203, 213, 225);
     doc.setLineWidth(0.4);
-    doc.roundedRect(cardX, 18, 124, 176, 8, 8);
+    doc.roundedRect(cardX, 18, cardW, 176, 8, 8);
     doc.setFillColor(22, 53, 159);
-    doc.rect(cardX, 28, 3, 142, 'F');
+    doc.rect(cardX, 34, 3, 128, 'F');
 
     // Logo Anglo American (opcional)
     try {
@@ -7841,16 +7867,16 @@ async function gerarPDFSetorial(setor) {
 
     // Faixa de marca
     doc.setFillColor(22, 53, 159);
-    doc.roundedRect(cardX, 18, 124, 14, 8, 8, 'F');
+    doc.roundedRect(cardX, 18, cardW, 16, 8, 8, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
-    doc.text('RELATÓRIO SETORIAL', cardCenter, 27, { align: 'center' });
+    doc.text('RELATÓRIO SETORIAL', cardCenter, 28, { align: 'center' });
 
     // Título principal
     doc.setTextColor(22, 53, 159);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(20);
+    doc.setFontSize(23);
     doc.text('Housekeeping', cardCenter, 52, { align: 'center' });
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
@@ -7859,50 +7885,50 @@ async function gerarPDFSetorial(setor) {
 
     // Blocos de informação
     doc.setFillColor(248, 250, 252);
-    doc.roundedRect(cardX + 6, 72, 112, 30, 4, 4, 'F');
+    doc.roundedRect(cardX + 10, 72, cardW - 20, 30, 4, 4, 'F');
     doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(cardX + 6, 72, 112, 30, 4, 4);
+    doc.roundedRect(cardX + 10, 72, cardW - 20, 30, 4, 4);
     doc.setTextColor(100, 116, 139);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
-    doc.text('ÁREA', cardX + 10, 79);
+    doc.text('ÁREA', cardX + 15, 79);
     doc.setTextColor(22, 53, 159);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(13);
-    const setorLines = doc.splitTextToSize(setorTxt, 104);
-    doc.text(setorLines, cardX + 10, 87);
+    const setorLines = doc.splitTextToSize(setorTxt, cardW - 30);
+    doc.text(setorLines, cardX + 15, 87);
 
     doc.setFillColor(248, 250, 252);
-    doc.roundedRect(cardX + 6, 108, 112, 25, 4, 4, 'F');
+    doc.roundedRect(cardX + 10, 108, cardW - 20, 28, 4, 4, 'F');
     doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(cardX + 6, 108, 112, 25, 4, 4);
+    doc.roundedRect(cardX + 10, 108, cardW - 20, 28, 4, 4);
     doc.setTextColor(100, 116, 139);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
-    doc.text('TÉCNICO(A)', cardX + 10, 115);
+    doc.text('TÉCNICO(A)', cardX + 15, 116);
     doc.setTextColor(22, 53, 159);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(11);
-    const tecnicoLines = doc.splitTextToSize(tecnicoTxt, 104);
-    doc.text(tecnicoLines, cardX + 10, 122);
+    const tecnicoLines = doc.splitTextToSize(tecnicoTxt, cardW - 30);
+    doc.text(tecnicoLines, cardX + 15, 124);
 
     doc.setFillColor(248, 250, 252);
-    doc.roundedRect(cardX + 6, 138, 112, 18, 4, 4, 'F');
+    doc.roundedRect(cardX + 10, 142, cardW - 20, 18, 4, 4, 'F');
     doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(cardX + 6, 138, 112, 18, 4, 4);
+    doc.roundedRect(cardX + 10, 142, cardW - 20, 18, 4, 4);
     doc.setTextColor(100, 116, 139);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
-    doc.text('PERÍODO', cardX + 10, 145);
+    doc.text('PERÍODO', cardX + 15, 149);
     doc.setTextColor(22, 53, 159);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10.5);
-    doc.text(periodoTxt, cardX + 10, 152);
+    doc.text(periodoTxt, cardX + 55, 149);
 
     // Rodapé de assinatura visual
     doc.setDrawColor(22, 53, 159);
     doc.setLineWidth(0.7);
-    doc.line(cardX + 6, 170, cardX + 118, 170);
+    doc.line(cardX + 10, 170, cardX + cardW - 10, 170);
     doc.setTextColor(71, 85, 105);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
@@ -7947,6 +7973,26 @@ async function gerarPDFSetorial(setor) {
       });
     } catch {
       return null;
+    }
+  }
+
+  function drawSetorialImageInsideBox(dataUrl, x, yBox, w, h) {
+    try {
+      const props = doc.getImageProperties(dataUrl);
+      const ratio = props.width / props.height;
+      let dw = w;
+      let dh = dw / ratio;
+      if (dh > h) {
+        dh = h;
+        dw = dh * ratio;
+      }
+      const dx = x + (w - dw) / 2;
+      const dy = yBox + (h - dh) / 2;
+      doc.addImage(dataUrl, dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG', dx, dy, dw, dh, undefined, 'FAST');
+    } catch {
+      doc.setTextColor(100, 116, 139);
+      doc.setFontSize(7);
+      doc.text('Foto indisponível', x + w / 2, yBox + h / 2, { align: 'center' });
     }
   }
 
@@ -8049,6 +8095,7 @@ async function gerarPDFSetorial(setor) {
           obsAnterior: crAnterior.obs || 'Sem observação.',
           obsAtual: crAtual?.obs || 'Sem observação.',
           sugestaoAtual: crAtual?.sugestao || 'Não informada.',
+          fotosAnterior: getFotosNCAbertaComFallback(inspAnterior, s.id, ci, crAnterior),
           fotosResolucao: getFotosValidasCriterio(crAtual),
           ocorrenciasNC: reinc.ocorrenciasNC,
           reincidencias: reinc.reincidencias,
@@ -8095,6 +8142,7 @@ async function gerarPDFSetorial(setor) {
           obsAnterior: crAnterior.obs || 'Sem observação.',
           obsAtual: crAtual?.obs || 'Sem observação.',
           sugestaoAtual: crAtual?.sugestao || 'Não informada.',
+          fotosAnterior: getFotosNCAbertaComFallback(inspAnteriorOrigem, s.id, ci, crAnterior),
           fotosResolucao: getFotosValidasCriterio(crAtual),
           ocorrenciasNC: reinc.ocorrenciasNC,
           reincidencias: reinc.reincidencias,
@@ -8270,11 +8318,11 @@ async function gerarPDFSetorial(setor) {
         ? `NC corresponsável - Origem: ${nc.origemSetor} · ${nc.origemLocal} | Destino: ${nc.destinoSetor}`
         : '';
       const correspLines = correspTxt ? doc.splitTextToSize(correspTxt, W - margin * 2 - 8) : [];
-      const fotosPorLinha = 4;
-      const fotoW = 42;
-      const fotoH = 28;
-      const gapFoto = 3;
-      const fotosPorPagina = fotosPorLinha * 4;
+      const fotosPorLinha = 2;
+      const fotoW = 82;
+      const fotoH = 58;
+      const gapFoto = 6;
+      const fotosPorPagina = fotosPorLinha * 2;
       const chunks = splitArrayIntoChunks(fotosDataUrl, fotosPorPagina);
       const linhasBase = criterioLines.length + obsLines.length + sugLines.length + reincLines.length + correspLines.length;
       const lineH = 4.4;
@@ -8369,8 +8417,8 @@ async function gerarPDFSetorial(setor) {
   } else {
     for (let idx = 0; idx < resolvidasList.length; idx++) {
       const item = resolvidasList[idx];
-      const fotosTodas = Array.isArray(item.fotosResolucao) ? item.fotosResolucao : [];
-      const fotosDataUrl = (await Promise.all(fotosTodas.map(toDataUrl))).filter(Boolean);
+      const fotoAntesDataUrl = (await toDataUrl((Array.isArray(item.fotosAnterior) ? item.fotosAnterior : [])[0])) || null;
+      const fotoDepoisDataUrl = (await toDataUrl((Array.isArray(item.fotosResolucao) ? item.fotosResolucao : [])[0])) || null;
       const titulo = `${idx + 1}. ${item.senso} · ${item.local} · Resolvido em ${formatDate(item.dataResolucao)}`;
       const criterioLines = doc.splitTextToSize(`Critério: ${item.criterio}`, W - margin * 2 - 8);
       const antesLines = doc.splitTextToSize(`Antes: ${item.obsAnterior}`, W - margin * 2 - 8);
@@ -8381,21 +8429,13 @@ async function gerarPDFSetorial(setor) {
         ? `Resolvida pelo corresponsável - Origem: ${item.origemSetor} · ${item.origemLocal} | Destino: ${item.destinoSetor}`
         : '';
       const correspLines = correspTxt ? doc.splitTextToSize(correspTxt, W - margin * 2 - 8) : [];
-      const fotosPorLinha = 4;
-      const fotoW = 42;
-      const fotoH = 28;
-      const gapFoto = 3;
-      const fotosPorPagina = fotosPorLinha * 4;
-      const chunks = splitArrayIntoChunks(fotosDataUrl, fotosPorPagina);
+      const comparativoH = 100;
       const linhasBase = criterioLines.length + antesLines.length + agoraLines.length + sugLines.length + reincLines.length + correspLines.length;
       const lineH = 4.4;
-      const blocos = chunks.length ? chunks : [[]];
+      const blocos = [0];
 
       for (let part = 0; part < blocos.length; part++) {
-        const fotosParte = blocos[part];
-        const linhasFotos = fotosParte.length ? Math.ceil(fotosParte.length / fotosPorLinha) : 0;
-        const hFotos = linhasFotos ? (linhasFotos * fotoH) + ((linhasFotos - 1) * gapFoto) : 0;
-        const h = 14 + (linhasBase * lineH) + hFotos + 16;
+        const h = 14 + (linhasBase * lineH) + comparativoH + 16;
         ensureY(h + 10);
 
         doc.setFillColor(240, 253, 244);
@@ -8435,35 +8475,34 @@ async function gerarPDFSetorial(setor) {
         doc.text(`Origem da NC: ${formatDate(item.dataAnterior)}`, margin + 3, by);
         by += 5;
 
-        if (fotosParte.length) {
-          for (let fi = 0; fi < fotosParte.length; fi++) {
-            const dataUrl = fotosParte[fi];
-            const col = fi % fotosPorLinha;
-            const row = Math.floor(fi / fotosPorLinha);
-            const fx = margin + 3 + col * (fotoW + gapFoto);
-            const fy = by + row * (fotoH + gapFoto);
-            doc.setDrawColor(203, 213, 225);
-            doc.roundedRect(fx, fy, fotoW, fotoH, 1.5, 1.5);
-            try {
-              const props = doc.getImageProperties(dataUrl);
-              const ratio = props.width / props.height;
-              let dw = fotoW;
-              let dh = dw / ratio;
-              if (dh > fotoH) { dh = fotoH; dw = dh * ratio; }
-              const dx = fx + (fotoW - dw) / 2;
-              const dy = fy + (fotoH - dh) / 2;
-              doc.addImage(dataUrl, dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG', dx, dy, dw, dh, undefined, 'FAST');
-            } catch {
-              doc.setTextColor(22, 53, 159);
-              doc.setFontSize(7);
-              doc.text('Foto indisponível', fx + fotoW / 2, fy + fotoH / 2, { align: 'center' });
-            }
+        const compX = margin + 3;
+        const compW = W - margin * 2 - 6;
+        const gapComp = 4;
+        const colW = (compW - gapComp) / 2;
+        const imgH = 78;
+        doc.setFillColor(236, 253, 245);
+        doc.setDrawColor(167, 243, 208);
+        doc.roundedRect(compX, by, compW, comparativoH - 4, 2, 2, 'FD');
+        doc.setTextColor(21, 128, 61);
+        doc.setFont('helvetica','bold');
+        doc.setFontSize(8);
+        doc.text('COMPARATIVO DE EVIDÊNCIA', compX + 3, by + 5);
+        [['ANTES', fotoAntesDataUrl], ['DEPOIS', fotoDepoisDataUrl]].forEach(([label, dataUrl], col) => {
+          const fx = compX + 3 + col * (colW + gapComp);
+          const fy = by + 8;
+          doc.setFillColor(255, 255, 255);
+          doc.setDrawColor(220, 230, 242);
+          doc.roundedRect(fx, fy, colW - 3, 85, 1.5, 1.5, 'FD');
+          doc.setTextColor(71, 85, 105);
+          doc.setFontSize(7);
+          doc.text(label, fx + 2, fy + 5);
+          if (dataUrl) drawSetorialImageInsideBox(dataUrl, fx + 2, fy + 7, colW - 7, imgH);
+          else {
+            doc.setTextColor(100, 116, 139);
+            doc.setFont('helvetica','normal');
+            doc.text(label === 'ANTES' ? 'Sem foto anterior' : 'Sem foto da resolução', fx + 2, fy + 50);
           }
-        } else {
-          doc.setTextColor(22, 53, 159);
-          doc.setFontSize(7.5);
-          doc.text('Sem foto de evidência.', margin + 3, by + 4);
-        }
+        });
 
         y += h + 4;
       }
@@ -8497,6 +8536,8 @@ async function gerarPDFInsp(id) {
 
   // === Function: imageUrlToDataURL ===
   async function imageUrlToDataURL(url) {
+    if (!url) return null;
+    if (typeof url === 'string' && url.startsWith('data:image/')) return url;
     try {
       const resp = await fetch(url);
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
@@ -8519,17 +8560,39 @@ async function gerarPDFInsp(id) {
   // === Function: checkY ===
   function checkY(need) { if (y + need > 280) addPage(); }
 
+  // === Function: drawImageInsideBox ===
+  function drawImageInsideBox(dataUrl, x, yBox, w, h) {
+    try {
+      const props = doc.getImageProperties(dataUrl);
+      const ratio = props.width / props.height;
+      let drawW = w;
+      let drawH = drawW / ratio;
+      if (drawH > h) {
+        drawH = h;
+        drawW = drawH * ratio;
+      }
+      const xi = x + (w - drawW) / 2;
+      const yi = yBox + (h - drawH) / 2;
+      doc.addImage(dataUrl, dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG', xi, yi, drawW, drawH, undefined, 'FAST');
+    } catch {
+      doc.setTextColor(100,116,139);
+      doc.setFont('helvetica','normal');
+      doc.setFontSize(7.5);
+      doc.text('Foto indisponível.', x + 3, yBox + h / 2);
+    }
+  }
+
   // CAPA
   doc.setFillColor(255, 255, 255);
   doc.rect(0, 0, W, 297, 'F');
   doc.setFillColor(22, 53, 159);
-  doc.rect(0, 0, W, 26, 'F');
+  doc.rect(0, 0, W, 30, 'F');
   doc.setFillColor(248, 250, 252);
-  doc.roundedRect(18, 46, W - 36, 150, 5, 5, 'F');
+  doc.roundedRect(22, 48, W - 44, 158, 5, 5, 'F');
   doc.setDrawColor(226, 232, 240);
-  doc.roundedRect(18, 46, W - 36, 150, 5, 5);
+  doc.roundedRect(22, 48, W - 44, 158, 5, 5);
   doc.setFillColor(22, 53, 159);
-  doc.rect(18, 46, 3, 150, 'F');
+  doc.rect(22, 58, 3, 130, 'F');
 
   // Logo Anglo American (opcional)
   try {
@@ -8563,56 +8626,56 @@ async function gerarPDFInsp(id) {
 
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(11); doc.setFont('helvetica', 'bold');
-  doc.text('RELATÓRIO DE INSPEÇÃO', margin, 16);
+  doc.text('RELATÓRIO DE INSPEÇÃO', margin, 18);
   doc.setTextColor(22, 53, 159);
-  doc.setFontSize(26); doc.setFont('helvetica', 'bold');
-  doc.text('Inspeção 5S', W/2, 66, { align: 'center' });
-  doc.setFontSize(13); doc.setFont('helvetica', 'normal');
+  doc.setFontSize(28); doc.setFont('helvetica', 'bold');
+  doc.text('Inspeção 5S', W/2, 70, { align: 'center' });
+  doc.setFontSize(12); doc.setFont('helvetica', 'normal');
   doc.setTextColor(71, 85, 105);
-  doc.text('Housekeeping - Checklist digital', W/2, 76, { align: 'center' });
-  doc.setFontSize(18); doc.setFont('helvetica', 'bold');
+  doc.text('Housekeeping - Checklist digital', W/2, 80, { align: 'center' });
+  doc.setFontSize(17); doc.setFont('helvetica', 'bold');
   doc.setTextColor(22, 53, 159);
-  doc.text(insp.setor, W/2, 98, { align: 'center', maxWidth: 156 });
+  doc.text(insp.setor, W/2, 100, { align: 'center', maxWidth: 146 });
 
-  const infoX = 32;
-  const infoW = W - 64;
+  const infoX = 34;
+  const infoW = W - 68;
   const infoRows = [
     ['PERÍODO', insp.periodo || '—'],
     ['DATA', formatDate(insp.data)],
     ['TÉCNICO(A)', insp.tecnico || '—'],
     ['LOCAL', insp.subarea || 'Área geral do setor']
   ];
-  let infoY = 114;
+  let infoY = 116;
   infoRows.forEach(([label, value]) => {
     doc.setFillColor(255, 255, 255);
-    doc.roundedRect(infoX, infoY, infoW, 13, 2, 2, 'F');
+    doc.roundedRect(infoX, infoY, infoW, 14, 2, 2, 'F');
     doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(infoX, infoY, infoW, 13, 2, 2);
+    doc.roundedRect(infoX, infoY, infoW, 14, 2, 2);
     doc.setTextColor(100, 116, 139);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(7.5);
-    doc.text(label, infoX + 5, infoY + 5);
+    doc.text(label, infoX + 5, infoY + 5.5);
     doc.setTextColor(22, 53, 159);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9.5);
-    doc.text(String(value), infoX + 42, infoY + 8.5, { maxWidth: infoW - 47 });
-    infoY += 16;
+    doc.text(String(value), infoX + 44, infoY + 9, { maxWidth: infoW - 49 });
+    infoY += 17;
   });
 
   // nota geral
   const ng = insp.notaGeral;
   const ngCor = ng >= 3.5 ? [46,204,113] : ng >= 2.5 ? [240,165,0] : ng >= 1.5 ? [232,96,28] : [231,76,60];
   doc.setFillColor(...ngCor);
-  doc.roundedRect(W/2 - 24, 204, 48, 28, 5, 5, 'F');
+  doc.roundedRect(W/2 - 28, 216, 56, 30, 5, 5, 'F');
   doc.setTextColor(255,255,255);
   doc.setFontSize(20); doc.setFont('helvetica', 'bold');
-  doc.text(ng?.toFixed(2) || '—', W/2, 220, { align: 'center' });
+  doc.text(ng?.toFixed(2) || '—', W/2, 234, { align: 'center' });
   doc.setFontSize(9);
-  doc.text('NOTA GERAL', W/2, 228, { align: 'center' });
+  doc.text('NOTA GERAL', W/2, 242, { align: 'center' });
 
   if (base) {
     doc.setTextColor(22,53,159); doc.setFontSize(11); doc.setFont('helvetica', 'normal');
-    doc.text(`Comparativo com inspeção de ${formatDate(base.data)} (nota ${base.notaGeral?.toFixed(2)||'?'})`, W/2, 244, { align:'center' });
+    doc.text(`Comparativo com inspeção de ${formatDate(base.data)} (nota ${base.notaGeral?.toFixed(2)||'?'})`, W/2, 258, { align:'center' });
   }
 
   doc.setDrawColor(226, 232, 240);
@@ -8749,9 +8812,9 @@ async function gerarPDFInsp(id) {
       const critLines = doc.splitTextToSize(`${item.senso} · Critério ${item.criterioIndice} - ${item.criterioTexto}`, W - margin * 2 - 8);
       const obsLines = item.obs ? doc.splitTextToSize(`Obs: ${item.obs}`, W - margin * 2 - 8) : [];
       const fotosDataUrl = (await Promise.all((Array.isArray(item.fotos) ? item.fotos : []).map(imageUrlToDataURL))).filter(Boolean);
-      const fotosPorLinha = 4;
+      const fotosPorLinha = 2;
       const linhasFotos = fotosDataUrl.length ? Math.ceil(fotosDataUrl.length / fotosPorLinha) : 0;
-      const imgH = linhasFotos ? (linhasFotos * 26 + (linhasFotos - 1) * 2) : 0;
+      const imgH = linhasFotos ? (linhasFotos * 62 + (linhasFotos - 1) * 4) : 0;
       const blocoH = 20 + origemLines.length * 4 + correspLines.length * 4 + critLines.length * 4 + obsLines.length * 4 + imgH;
 
       if (y + blocoH > 280) {
@@ -8779,9 +8842,9 @@ async function gerarPDFInsp(id) {
       }
       if (fotosDataUrl.length) {
         const areaW = W - margin * 2 - 10;
-        const gap = 2;
+        const gap = 4;
         const cellW = (areaW - (gap * (fotosPorLinha - 1))) / fotosPorLinha;
-        const thumbH = 26;
+        const thumbH = 62;
         for (let i = 0; i < fotosDataUrl.length; i++) {
           const fotoDataUrl = fotosDataUrl[i];
           try {
@@ -8834,11 +8897,10 @@ async function gerarPDFInsp(id) {
       const critLines = doc.splitTextToSize(item.criterioTexto, W - margin * 2 - 8);
       const antLines = doc.splitTextToSize(`Antes (nota ${item.notaAnterior}): ${item.obsAnterior || 'Sem observação.'}`, W - margin * 2 - 8);
       const atualLines = doc.splitTextToSize(`Agora (nota ${item.notaAtual}): ${item.obsAtual || 'Sem observação.'}`, W - margin * 2 - 8);
-      const fotosDataUrl = (await Promise.all((Array.isArray(item.fotosAtual) ? item.fotosAtual : []).map(imageUrlToDataURL))).filter(Boolean);
-      const fotosPorLinha = 4;
-      const linhasFotos = fotosDataUrl.length ? Math.ceil(fotosDataUrl.length / fotosPorLinha) : 0;
-      const imgH = linhasFotos ? (linhasFotos * 26 + (linhasFotos - 1) * 2) : 0;
-      const blocoH = 16 + critLines.length * 4 + antLines.length * 4 + atualLines.length * 4 + imgH + 6;
+      const fotoAntesDataUrl = (await imageUrlToDataURL((Array.isArray(item.fotosAnterior) ? item.fotosAnterior : [])[0])) || null;
+      const fotoDepoisDataUrl = (await imageUrlToDataURL((Array.isArray(item.fotosAtual) ? item.fotosAtual : [])[0])) || null;
+      const comparativoH = 116;
+      const blocoH = 16 + critLines.length * 4 + antLines.length * 4 + atualLines.length * 4 + comparativoH + 10;
 
       if (y + blocoH > 280) {
         doc.addPage();
@@ -8871,42 +8933,39 @@ async function gerarPDFInsp(id) {
       doc.setTextColor(22,101,52); doc.setFont('helvetica','bold');
       doc.text(atualLines, margin+5, by); by += atualLines.length * 4 + 2;
 
-      if (fotosDataUrl.length) {
-        const areaW = W - margin * 2 - 10;
-        const gap = 2;
-        const cellW = (areaW - (gap * (fotosPorLinha - 1))) / fotosPorLinha;
-        const thumbH = 26;
-        for (let i = 0; i < fotosDataUrl.length; i++) {
-          const fotoDataUrl = fotosDataUrl[i];
-          try {
-            const props = doc.getImageProperties(fotoDataUrl);
-            const ratio = props.width / props.height;
-            const col = i % fotosPorLinha;
-            const row = Math.floor(i / fotosPorLinha);
-            const boxX = margin + 5 + col * (cellW + gap);
-            const boxY = by + row * (thumbH + gap);
-            let drawW = cellW;
-            let drawH = drawW / ratio;
-            if (drawH > thumbH) {
-              drawH = thumbH;
-              drawW = drawH * ratio;
-            }
-            const x = boxX + (cellW - drawW) / 2;
-            const yImg = boxY + (thumbH - drawH) / 2;
-            doc.addImage(fotoDataUrl, fotoDataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG', x, yImg, drawW, drawH, undefined, 'FAST');
-          } catch {
-            doc.setTextColor(22,53,159); doc.setFont('helvetica','normal');
-            const col = i % fotosPorLinha;
-            const row = Math.floor(i / fotosPorLinha);
-            const boxX = margin + 5 + col * (cellW + gap);
-            const boxY = by + row * (thumbH + gap);
-            doc.text('Foto indisponível.', boxX + 1, boxY + 5);
-          }
+      const compX = margin + 5;
+      const compW = W - margin * 2 - 10;
+      const gap = 4;
+      const colW = (compW - gap) / 2;
+      const labelH = 7;
+      const imgH = 90;
+      doc.setFillColor(236, 253, 245);
+      doc.setDrawColor(167, 243, 208);
+      doc.roundedRect(compX, by, compW, comparativoH - 4, 3, 3, 'FD');
+      doc.setTextColor(21, 128, 61);
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(8);
+      doc.text('COMPARATIVO DE EVIDÊNCIA', compX + 3, by + 5);
+
+      [['ANTES', fotoAntesDataUrl], ['DEPOIS', fotoDepoisDataUrl]].forEach(([label, dataUrl], idx) => {
+        const x = compX + 3 + idx * (colW + gap);
+        const yBox = by + 9;
+        doc.setFillColor(255, 255, 255);
+        doc.setDrawColor(220, 230, 242);
+        doc.roundedRect(x, yBox, colW - 3, labelH + imgH + 3, 2, 2, 'FD');
+        doc.setTextColor(71, 85, 105);
+        doc.setFont('helvetica','bold');
+        doc.setFontSize(7);
+        doc.text(label, x + 3, yBox + 5);
+        if (dataUrl) {
+          drawImageInsideBox(dataUrl, x + 3, yBox + labelH + 1, colW - 9, imgH);
+        } else {
+          doc.setTextColor(100,116,139);
+          doc.setFont('helvetica','normal');
+          doc.setFontSize(7.5);
+          doc.text(label === 'ANTES' ? 'Sem foto anterior' : 'Sem foto da resolução', x + 3, yBox + 56);
         }
-      } else {
-        doc.setTextColor(22,53,159); doc.setFont('helvetica','normal');
-        doc.text('Evidência fotográfica: não anexada.', margin+5, by+4);
-      }
+      });
 
       y += blocoH + 6;
     }
