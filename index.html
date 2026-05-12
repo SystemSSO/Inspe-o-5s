@@ -3520,6 +3520,49 @@ function escapeHtml(value) {
     .replace(/'/g, '&#039;');
 }
 
+// === Function: sanitizePdfText ===
+function sanitizePdfText(value) {
+  if (Array.isArray(value)) return value.map(sanitizePdfText);
+  if (value === null || value === undefined) return value;
+  return String(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[–—]/g, '-')
+    .replace(/[•·]/g, '-')
+    .replace(/ª/g, 'a')
+    .replace(/º/g, 'o')
+    .replace(/©/g, '(c)')
+    .replace(/✓/g, 'OK')
+    .replace(/�/g, '')
+    .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, '');
+}
+
+// === Function: sanitizePdfFileName ===
+function sanitizePdfFileName(value, fallback = 'relatorio') {
+  const clean = String(value || fallback)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9._-]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  return clean || fallback;
+}
+
+// === Function: patchPdfTextEncoding ===
+function patchPdfTextEncoding(doc) {
+  if (!doc || doc.__textEncodingPatched) return doc;
+  const originalText = doc.text.bind(doc);
+  const originalSplitTextToSize = doc.splitTextToSize.bind(doc);
+  doc.text = function patchedText(text, ...args) {
+    return originalText(sanitizePdfText(text), ...args);
+  };
+  doc.splitTextToSize = function patchedSplitTextToSize(text, ...args) {
+    return originalSplitTextToSize(sanitizePdfText(text), ...args);
+  };
+  doc.__textEncodingPatched = true;
+  return doc;
+}
+
 // === Function: buildInspectionEmailHtml ===
 function buildInspectionEmailHtml(insp) {
   const text = buildInspectionEmailBody(insp);
@@ -7404,6 +7447,7 @@ async function gerarPDFGerencia() {
 
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' });
+  patchPdfTextEncoding(doc);
   const W = 297, H = 210, margin = 20;
   let y = 18;
 
@@ -7895,7 +7939,7 @@ async function gerarPDFGerencia() {
     }
   }
 
-  doc.save(`Housekeeping_Gerencia_${gerencia.replace(/[^a-zA-Z0-9]/g, '_')}_${periodoAtual}.pdf`);
+  doc.save(`Housekeeping_Gerencia_${sanitizePdfFileName(gerencia)}_${periodoAtual}.pdf`);
   toast('Relatório da gerência gerado com sucesso!');
 }
 
@@ -7921,6 +7965,7 @@ async function gerarPDFSetorial(setor, options = {}) {
   const { jsPDF } = window.jspdf;
   // Gera PDF em modo paisagem (horizontal)
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' });
+  patchPdfTextEncoding(doc);
   const W = 297, H = 210, margin = 20;
   const now = new Date();
   const mesAtual = now.toLocaleDateString('pt-BR', { month: 'long' });
@@ -8187,6 +8232,7 @@ async function gerarPDFSetorial(setor, options = {}) {
   }
 
   const inspsMes = APP.inspecoes.filter(i => {
+    if (i.periodo) return i.periodo === periodoAtual;
     const d = new Date(i.data);
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   });
@@ -8702,9 +8748,9 @@ async function gerarPDFSetorial(setor, options = {}) {
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(22, 53, 159);
   doc.setFontSize(9);
-  doc.text(`Gerado em ${now.toLocaleString('pt-BR')}`, W / 2, 285, { align: 'center' });
+  doc.text(`Gerado em ${now.toLocaleString('pt-BR')}`, W / 2, H - 8, { align: 'center' });
 
-  const fileName = `Housekeeping_${setor.replace(/[^a-zA-Z0-9]/g, '_')}_${anoAtual}_${String(now.getMonth()+1).padStart(2,'0')}.pdf`;
+  const fileName = `Housekeeping_${sanitizePdfFileName(setor)}_${anoAtual}_${String(now.getMonth()+1).padStart(2,'0')}.pdf`;
   if (shouldSave) doc.save(fileName);
   if (shouldToast) toast('Relatório setorial gerado com sucesso!');
   return { doc, fileName, periodo: periodoAtual, mesAno: mesAnoAtual };
@@ -8725,6 +8771,7 @@ async function gerarPDFInsp(id, options = {}) {
 
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  patchPdfTextEncoding(doc);
   const W = 210, margin = 14;
   let y = 0;
 
@@ -9383,7 +9430,7 @@ async function gerarPDFInsp(id, options = {}) {
     }
   }
 
-  const fileName = `5S_${insp.setor.replace(/[^a-zA-Z0-9]/g,'_')}_${insp.periodo||'sem-periodo'}.pdf`;
+  const fileName = `5S_${sanitizePdfFileName(insp.setor)}_${sanitizePdfFileName(insp.periodo || 'sem-periodo')}.pdf`;
   if (shouldSave) doc.save(fileName);
   if (shouldToast) toast('PDF gerado com sucesso!');
   return { doc, fileName, insp };
