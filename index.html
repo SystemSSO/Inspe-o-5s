@@ -2032,10 +2032,6 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 2h7l4 4v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M12 2v4h4M7 9h6M7 12h6M7 15h4"/></svg>
       Relatórios
     </button>
-    <button class="nav-btn" onclick="navTo('dashboard')">
-      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="10" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="15" width="6" height="2" rx="1"/></svg>
-      Dashboard
-    </button>
   </div>
 </div>
 
@@ -2117,10 +2113,6 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 2h7l4 4v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M12 2v4h4M7 9h6M7 12h6M7 15h4"/></svg>
       Relatórios
     </button>
-    <button class="nav-btn" onclick="navTo('dashboard')">
-      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="10" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="15" width="6" height="2" rx="1"/></svg>
-      Dashboard
-    </button>
   </div>
 </div>
 
@@ -2154,10 +2146,6 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
     <button class="nav-btn" onclick="navTo('relatorios')">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 2h7l4 4v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M12 2v4h4M7 9h6M7 12h6M7 15h4"/></svg>
       Relatórios
-    </button>
-    <button class="nav-btn" onclick="navTo('dashboard')">
-      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="10" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="15" width="6" height="2" rx="1"/></svg>
-      Dashboard
     </button>
   </div>
 </div>
@@ -2272,52 +2260,6 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
     <button class="nav-btn active" onclick="navTo('relatorios')">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 2h7l4 4v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M12 2v4h4M7 9h6M7 12h6M7 15h4"/></svg>
       Relatórios
-    </button>
-    <button class="nav-btn" onclick="navTo('dashboard')">
-      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="10" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="15" width="6" height="2" rx="1"/></svg>
-      Dashboard
-    </button>
-  </div>
-</div>
-
-<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-     SCREEN: DASHBOARD (AO VIVO)
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
-<div class="screen" id="screen-dashboard">
-  <div class="app-header">
-    <div class="logo">5S</div>
-    <div>
-      <div style="font-family:var(--font-display);font-size:17px;font-weight:700">Dashboard</div>
-      <div style="font-size:10px;color:var(--text2)">Acompanhamento em tempo real</div>
-    </div>
-    <div class="spacer"></div>
-    <button class="btn-icon" onclick="toggleDashboardTvMode()" title="Alternar modo TV" aria-label="Alternar modo TV">
-      <span id="tv-mode-btn-label" style="font-family:var(--font-display);font-weight:700;font-size:12px">TV OFF</span>
-    </button>
-  </div>
-  <div class="scroll-body">
-    <div class="dash-live-wrap" id="dashboard-content"></div>
-  </div>
-  <div class="bottom-nav">
-    <button class="nav-btn" onclick="navTo('home')">
-      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9.5L10 3l7 6.5V17a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/></svg>
-      Início
-    </button>
-    <button class="nav-btn" onclick="navTo('historico')">
-      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="14" height="13" rx="1.5"/><path d="M7 2v4M13 2v4M3 9h14"/></svg>
-      Histórico
-    </button>
-    <button class="nav-btn" onclick="navTo('pendencias')">
-      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="7.5"/><path d="M10 6v4.5l3 2"/></svg>
-      Pendências
-    </button>
-    <button class="nav-btn" onclick="navTo('relatorios')">
-      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 2h7l4 4v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M12 2v4h4M7 9h6M7 12h6M7 15h4"/></svg>
-      Relatórios
-    </button>
-    <button class="nav-btn active" onclick="navTo('dashboard')">
-      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="10" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="15" width="6" height="2" rx="1"/></svg>
-      Dashboard
     </button>
   </div>
 </div>
@@ -4611,9 +4553,16 @@ function confirmarUnidade() {
 
 // === Function: navTo ===
 function navTo(id) {
+  if (id === 'dashboard') {
+    stopDashboardLive();
+    document.body.classList.remove('dashboard-tv');
+    id = 'home';
+  }
   if (currentInsp && id !== 'inspecao') saveDraftNow();
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById('screen-' + id).classList.add('active');
+  const targetScreen = document.getElementById('screen-' + id);
+  if (!targetScreen) return;
+  targetScreen.classList.add('active');
   if (id !== 'dashboard') stopDashboardLive();
   document.body.classList.remove('dashboard-tv');
   if (id === 'home') renderHome();
