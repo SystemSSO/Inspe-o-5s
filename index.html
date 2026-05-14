@@ -2192,14 +2192,19 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
           <option value="">— Escolha uma gerência —</option>
         </select>
       </div>
+      <div class="form-group">
+        <label class="form-label">Destinatário do e-mail</label>
+        <input type="text" class="form-input" id="rel-gerencia-email-destino" placeholder="destinatario@angloamerican.com; outro@angloamerican.com">
+      </div>
       <button class="btn-primary" onclick="gerarPDFGerencia()">
         <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 2h7l4 4v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M12 2v4h4"/><path d="M7 13l3 3 3-3M10 10v6"/></svg>
         Gerar PDF 
       </button>
-      <button class="btn-secondary" onclick="gerarExcelGeral()" style="margin-top:8px">
-        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 2h9l3 3v13H4z"/><path d="M13 2v3h3"/><path d="M7 8l6 6M13 8l-6 6"/></svg>
-        Exportar Excel (Geral)
+      <button class="btn-secondary" onclick="enviarRelatorioGerenciaEmail()" style="margin-top:8px">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h14v10H3z"/><path d="M3 6l7 5 7-5"/><path d="M15 14l3 3M18 14l-3 3"/></svg>
+        Enviar relatório por e-mail
       </button>
+      <div id="rel-gerencia-email-status" style="margin-top:8px;color:var(--text2);font-size:12px;line-height:1.35"></div>
     </div>
     <div class="section-title smartsheet-admin-only" style="display:none">Integração Smartsheet</div>
     <div class="card smartsheet-admin-only" style="display:none">
@@ -2210,10 +2215,6 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
       <div class="form-group">
         <label class="form-label">Sheet ID numérico da API</label>
         <input class="form-input" id="smartsheet-sheet-id" inputmode="numeric" placeholder="Ex.: 1234567890123456">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Token de acesso Smartsheet</label>
-        <input class="form-input" id="smartsheet-token" type="password" placeholder="Cole o token Bearer aqui">
       </div>
       <div class="form-group">
         <label class="form-label">URL do proxy Smartsheet (recomendado)</label>
@@ -2740,7 +2741,6 @@ const HOUSEKEEPING_DASHBOARD_URL = 'https://app.powerbi.com/groups/me/apps/f448c
 const SMARTSHEET_DEFAULT_SHEET_URL = 'https://app.smartsheet.com/sheets/6CVRf4FH3j4chhm2Jx2pHfMCXV';
 const SMARTSHEET_DEFAULT_SHEET_ID = '991954921803652';
 const SMARTSHEET_DEFAULT_PROXY_URL = 'https://smartsheet-proxy.gillyardsoares0.workers.dev';
-const SMARTSHEET_API_BASE = 'https://api.smartsheet.com/2.0';
 const SMARTSHEET_MODEL_SENSOS = [
   {
     id: 's1',
@@ -3017,7 +3017,6 @@ function normalizeSmartsheetConfig(cfg = {}) {
   return {
     sheetUrl: String(cfg.sheetUrl || SMARTSHEET_DEFAULT_SHEET_URL).trim(),
     sheetId: String(cfg.sheetId || SMARTSHEET_DEFAULT_SHEET_ID).trim(),
-    token: String(cfg.token || '').trim(),
     proxyUrl: String(cfg.proxyUrl || SMARTSHEET_DEFAULT_PROXY_URL).trim()
   };
 }
@@ -3026,7 +3025,12 @@ function normalizeSmartsheetConfig(cfg = {}) {
 function getSmartsheetConfig() {
   try {
     const raw = localStorage.getItem(SMARTSHEET_CONFIG_KEY);
-    return normalizeSmartsheetConfig(raw ? JSON.parse(raw) : {});
+    const parsed = raw ? JSON.parse(raw) : {};
+    const cfg = normalizeSmartsheetConfig(parsed);
+    if (parsed && Object.prototype.hasOwnProperty.call(parsed, 'token')) {
+      localStorage.setItem(SMARTSHEET_CONFIG_KEY, JSON.stringify(cfg));
+    }
+    return cfg;
   } catch {
     return normalizeSmartsheetConfig();
   }
@@ -3034,13 +3038,14 @@ function getSmartsheetConfig() {
 
 // === Function: saveSmartsheetConfig ===
 function saveSmartsheetConfig(cfg) {
-  localStorage.setItem(SMARTSHEET_CONFIG_KEY, JSON.stringify(normalizeSmartsheetConfig(cfg)));
+  const cleanCfg = normalizeSmartsheetConfig(cfg);
+  localStorage.setItem(SMARTSHEET_CONFIG_KEY, JSON.stringify(cleanCfg));
 }
 
 // === Function: hasSmartsheetConfig ===
 function hasSmartsheetConfig() {
   const cfg = getSmartsheetConfig();
-  return /^\d+$/.test(cfg.sheetId) && (cfg.token.length > 10 || /^https?:\/\//.test(cfg.proxyUrl));
+  return /^\d+$/.test(cfg.sheetId) && /^https?:\/\//.test(cfg.proxyUrl);
 }
 
 // === Function: setSmartsheetStatus ===
@@ -3465,6 +3470,12 @@ function getSetorialReportEmailTo() {
   return normalizeLegacyEmailRecipientValue(value || localStorage.getItem(EMAIL_AUTO_TO_KEY)) || EMAIL_AUTO_DEFAULT_TO;
 }
 
+// === Function: getGerenciaReportEmailTo ===
+function getGerenciaReportEmailTo() {
+  const value = document.getElementById('rel-gerencia-email-destino')?.value || '';
+  return normalizeLegacyEmailRecipientValue(value || localStorage.getItem(EMAIL_AUTO_TO_KEY)) || EMAIL_AUTO_DEFAULT_TO;
+}
+
 // === Function: getSetorialReportPeriod ===
 function getSetorialReportPeriod() {
   const now = new Date();
@@ -3476,30 +3487,316 @@ function getSetorialReportPeriod() {
   };
 }
 
+// === Function: inspectionBelongsToReportPeriod ===
+function inspectionBelongsToReportPeriod(insp, periodo) {
+  if (!insp || !periodo) return false;
+  if (insp.periodo) return insp.periodo === periodo.periodoCodigo;
+  const data = new Date(insp.data);
+  if (Number.isNaN(data.getTime())) return false;
+  return data.getMonth() + 1 === periodo.mesNumero && data.getFullYear() === periodo.ano;
+}
+
+// === Function: getInspectionsForReportPeriod ===
+function getInspectionsForReportPeriod(periodo = getSetorialReportPeriod()) {
+  return APP.inspecoes.filter(i => inspectionBelongsToReportPeriod(i, periodo));
+}
+
 // === Function: getSetorialReportInspections ===
 function getSetorialReportInspections(setor) {
   const periodo = getSetorialReportPeriod();
-  const inspecoesPeriodo = APP.inspecoes
-    .filter(i => (i.setor || '') === setor && (i.periodo || '') === periodo.periodoCodigo)
-    .sort((a, b) => String(a.subarea || '').localeCompare(String(b.subarea || ''), 'pt-BR'));
-  if (inspecoesPeriodo.length) return inspecoesPeriodo;
-  return APP.inspecoes
+  return getInspectionsForReportPeriod(periodo)
     .filter(i => (i.setor || '') === setor)
     .sort((a, b) => String(a.subarea || '').localeCompare(String(b.subarea || ''), 'pt-BR'));
 }
 
-// === Function: buildSetorialReportEmailPayload ===
-function buildSetorialReportEmailPayload(setor, attachment) {
+// === Function: getGerenciaReportInspections ===
+function getGerenciaReportInspections(gerencia) {
+  const gerMap = getGerenciasMap();
+  const setores = (gerMap[gerencia] || []).filter(s => SETORES.some(x => x.nome === s));
+  const periodo = getSetorialReportPeriod();
+  return getInspectionsForReportPeriod(periodo)
+    .filter(i => setores.includes(i.setor))
+    .sort((a, b) =>
+      String(a.setor || '').localeCompare(String(b.setor || ''), 'pt-BR') ||
+      String(a.subarea || '').localeCompare(String(b.subarea || ''), 'pt-BR')
+    );
+}
+
+// === Function: getSetorialReportDashboardData ===
+function getSetorialReportDashboardData(setor) {
   const periodo = getSetorialReportPeriod();
   const periodoTitulo = `${periodo.mesNome.charAt(0).toUpperCase()}${periodo.mesNome.slice(1)} de ${periodo.ano}`;
-  const resumoBase = getSetorialReportInspections(setor);
-  const pontuacaoMedia = averageNumbers(resumoBase.map(item => item.notaGeral));
-  const ncTotal = resumoBase.reduce((acc, item) => {
-    const total = getInspectionNcTotals(item);
-    acc.abertas += total.abertas;
-    acc.resolvidas += total.resolvidas;
+  const inspsPeriodo = getInspectionsForReportPeriod(periodo);
+  const inspsSetor = inspsPeriodo.filter(i => i.setor === setor);
+
+  const ncList = [];
+  const latestOwnByCrit = {};
+  [...inspsSetor]
+    .sort((a, b) => new Date(b.data) - new Date(a.data))
+    .forEach(insp => {
+      SENSOS.forEach(s => {
+        (insp.sensos?.[s.id] || []).forEach((cr, ci) => {
+          const key = `${localKey(insp)}||${s.id}||${ci}`;
+          if (latestOwnByCrit[key]) return;
+          latestOwnByCrit[key] = { insp, s, ci, cr };
+        });
+      });
+    });
+
+  Object.values(latestOwnByCrit).forEach(({ insp, s, ci, cr }) => {
+    if (!criterioTemNCAberta(cr)) return;
+    ncList.push({
+      data: insp.data,
+      local: localLabel(insp),
+      senso: s.nome,
+      criterio: s.criterios[ci],
+      reincidencia: getReincidenciaCount(insp, s.id, ci),
+      obs: cr.obs || 'Sem observação.',
+      sugestao: cr.sugestao || 'Não informada.',
+      fotos: getFotosNCAbertaComFallback(insp, s.id, ci, cr),
+      origemTipo: 'propria',
+      origemSetor: insp.setor,
+      origemLocal: localLabel(insp),
+      destinoSetor: (cr.encaminharSetor || insp.setor),
+      destinoLocal: localLabel(insp)
+    });
+  });
+
+  const latestEncByCrit = {};
+  [...inspsPeriodo]
+    .filter(i => i.setor !== setor)
+    .sort((a, b) => new Date(b.data) - new Date(a.data))
+    .forEach(insp => {
+      SENSOS.forEach(s => {
+        (insp.sensos?.[s.id] || []).forEach((cr, ci) => {
+          const key = `${insp.setor}||${localKey(insp)}||${s.id}||${ci}`;
+          if (latestEncByCrit[key]) return;
+          latestEncByCrit[key] = { insp, s, ci, cr };
+        });
+      });
+    });
+
+  Object.values(latestEncByCrit).forEach(({ insp, s, ci, cr }) => {
+    if (!criterioTemNCAberta(cr)) return;
+    if ((cr.encaminharSetor || '') !== setor) return;
+    ncList.push({
+      data: insp.data,
+      local: localLabel(insp),
+      senso: s.nome,
+      criterio: s.criterios[ci],
+      reincidencia: getReincidenciaCount(insp, s.id, ci),
+      obs: cr.obs || 'Sem observação.',
+      sugestao: cr.sugestao || 'Não informada.',
+      fotos: getFotosNCAbertaComFallback(insp, s.id, ci, cr),
+      origemTipo: 'encaminhada',
+      origemSetor: insp.setor,
+      origemLocal: localLabel(insp),
+      destinoSetor: setor,
+      destinoLocal: localLabel(insp)
+    });
+  });
+
+  const resolvidasList = [];
+  const latestMesSetorPorLocal = getLatestInspecoesBySetor(setor)
+    .filter(i => inspectionBelongsToReportPeriod(i, periodo));
+
+  latestMesSetorPorLocal.forEach(insp => {
+    const inspAnterior = getInspecaoAnteriorMesmoLocal(insp);
+    if (!inspAnterior) return;
+
+    SENSOS.forEach(s => {
+      (insp.sensos?.[s.id] || []).forEach((crAtual, ci) => {
+        const crAnterior = inspAnterior.sensos?.[s.id]?.[ci] || {};
+        const notaAnterior = crAnterior.nota ?? null;
+        const notaAtual = crAtual?.nota ?? null;
+        const resolveuAgora = notaAnterior !== null && notaAnterior <= 3 && notaAtual !== null && notaAtual >= 4;
+        if (!resolveuAgora) return;
+
+        const reinc = getReincidenciasAteConclusao(insp, s.id, ci);
+        const destinoSetor = crAnterior.encaminharSetor || crAtual?.encaminharSetor || insp.setor;
+        resolvidasList.push({
+          dataResolucao: insp.data,
+          dataAnterior: inspAnterior.data,
+          local: localLabel(insp),
+          senso: s.nome,
+          criterio: s.criterios[ci],
+          obsAnterior: crAnterior.obs || 'Sem observação.',
+          obsAtual: crAtual?.obs || 'Sem observação.',
+          sugestaoAtual: crAtual?.sugestao || 'Não informada.',
+          fotosAnterior: getFotosNCAbertaComFallback(inspAnterior, s.id, ci, crAnterior),
+          fotosResolucao: getFotosValidasCriterio(crAtual),
+          ocorrenciasNC: reinc.ocorrenciasNC,
+          reincidencias: reinc.reincidencias,
+          origemSetor: insp.setor,
+          origemLocal: localLabel(insp),
+          destinoSetor,
+          resolvidaPorCorresponsavel: destinoSetor !== insp.setor
+        });
+      });
+    });
+  });
+
+  const latestOutrosPorLocal = {};
+  getInspectionsForReportPeriod(periodo)
+    .filter(i => i.setor !== setor)
+    .forEach(i => {
+      const k = localKey(i);
+      if (!latestOutrosPorLocal[k] || new Date(i.data) > new Date(latestOutrosPorLocal[k].data)) {
+        latestOutrosPorLocal[k] = i;
+      }
+    });
+
+  Object.values(latestOutrosPorLocal).forEach(inspOrigem => {
+    const inspAnteriorOrigem = getInspecaoAnteriorMesmoLocal(inspOrigem);
+    if (!inspAnteriorOrigem) return;
+
+    SENSOS.forEach(s => {
+      (inspOrigem.sensos?.[s.id] || []).forEach((crAtual, ci) => {
+        const crAnterior = inspAnteriorOrigem.sensos?.[s.id]?.[ci] || {};
+        const notaAnterior = crAnterior.nota ?? null;
+        const notaAtual = crAtual?.nota ?? null;
+        const destinoSetor = crAnterior.encaminharSetor || crAtual?.encaminharSetor || '';
+        const resolveuAgora = notaAnterior !== null && notaAnterior <= 3 && notaAtual !== null && notaAtual >= 4;
+        if (!resolveuAgora) return;
+        if (destinoSetor !== setor) return;
+
+        const reinc = getReincidenciasAteConclusao(inspOrigem, s.id, ci);
+        resolvidasList.push({
+          dataResolucao: inspOrigem.data,
+          dataAnterior: inspAnteriorOrigem.data,
+          local: localLabel(inspOrigem),
+          senso: s.nome,
+          criterio: s.criterios[ci],
+          obsAnterior: crAnterior.obs || 'Sem observação.',
+          obsAtual: crAtual?.obs || 'Sem observação.',
+          sugestaoAtual: crAtual?.sugestao || 'Não informada.',
+          fotosAnterior: getFotosNCAbertaComFallback(inspAnteriorOrigem, s.id, ci, crAnterior),
+          fotosResolucao: getFotosValidasCriterio(crAtual),
+          ocorrenciasNC: reinc.ocorrenciasNC,
+          reincidencias: reinc.reincidencias,
+          origemSetor: inspOrigem.setor,
+          origemLocal: localLabel(inspOrigem),
+          destinoSetor,
+          resolvidaPorCorresponsavel: true
+        });
+      });
+    });
+  });
+
+  const notasValidas = inspsSetor.map(i => i.notaGeral).filter(n => typeof n === 'number');
+  const mediaGeral = notasValidas.length
+    ? (notasValidas.reduce((acc, n) => acc + n, 0) / notasValidas.length)
+    : null;
+  const rankingLocais = {};
+  inspsSetor.forEach(insp => {
+    if (typeof insp.notaGeral !== 'number') return;
+    const lk = localKey(insp);
+    if (!rankingLocais[lk]) rankingLocais[lk] = { label: localLabel(insp), notas: [] };
+    rankingLocais[lk].notas.push(insp.notaGeral);
+  });
+  const rankingMedias = Object.values(rankingLocais)
+    .map(item => ({
+      label: item.label,
+      media: item.notas.reduce((a, b) => a + b, 0) / item.notas.length
+    }))
+    .sort((a, b) => b.media - a.media);
+
+  return {
+    periodo,
+    periodoTitulo,
+    inspsPeriodo,
+    inspsSetor,
+    ncList,
+    resolvidasList,
+    totalInspecoes: inspsSetor.length,
+    locaisUnicos: new Set(inspsSetor.map(i => localKey(i))).size,
+    mediaGeral,
+    totalNCAbertas: ncList.length,
+    totalNCRecebidas: ncList.filter(n => n.origemTipo === 'encaminhada').length,
+    totalResolvidas: resolvidasList.length,
+    rankingMedias,
+    melhorLocal: rankingMedias[0] || null,
+    piorLocal: rankingMedias[rankingMedias.length - 1] || null
+  };
+}
+
+// === Function: getGerenciaReportDashboardData ===
+function getGerenciaReportDashboardData(gerencia) {
+  const periodo = getSetorialReportPeriod();
+  const periodoTitulo = `${periodo.mesNome.charAt(0).toUpperCase()}${periodo.mesNome.slice(1)} de ${periodo.ano}`;
+  const gerMap = getGerenciasMap();
+  const setores = (gerMap[gerencia] || []).filter(s => SETORES.some(x => x.nome === s));
+  const inspsPeriodo = getGerenciaReportInspections(gerencia);
+  const ncDetalhes = [];
+
+  const resumo = setores.map(setor => {
+    const inspsSetor = inspsPeriodo.filter(i => i.setor === setor);
+    const notas = inspsSetor.map(i => i.notaGeral).filter(n => typeof n === 'number');
+    const media = notas.length ? (notas.reduce((a, b) => a + b, 0) / notas.length) : null;
+    let ncAbertas = 0;
+    let ncResolvidas = 0;
+
+    inspsSetor.forEach(insp => {
+      const anterior = getInspecaoAnteriorMesmoLocal(insp);
+      SENSOS.forEach(s => {
+        (insp.sensos?.[s.id] || []).forEach((cr, ci) => {
+          if (criterioTemNCAberta(cr)) {
+            ncAbertas++;
+            ncDetalhes.push({
+              tipo: 'aberta',
+              setor,
+              local: localLabel(insp),
+              data: insp.data,
+              senso: s.nome,
+              criterio: s.criterios[ci],
+              obs: cr?.obs || 'Sem observação.',
+              sugestao: cr?.sugestao || 'Não informada.',
+              nota: cr?.nota ?? null,
+              fotos: getFotosNCAbertaComFallback(insp, s.id, ci, cr)
+            });
+          }
+          const crAnt = anterior?.sensos?.[s.id]?.[ci] || null;
+          const notaAnt = crAnt?.nota ?? null;
+          const notaAtual = cr?.nota ?? null;
+          if (notaAnt !== null && notaAnt <= 3 && notaAtual !== null && notaAtual >= 4) {
+            ncResolvidas++;
+            ncDetalhes.push({
+              tipo: 'resolvida',
+              setor,
+              local: localLabel(insp),
+              data: insp.data,
+              senso: s.nome,
+              criterio: s.criterios[ci],
+              obs: cr?.obs || 'Sem observação.',
+              sugestao: cr?.sugestao || 'Não informada.',
+              nota: cr?.nota ?? null,
+              fotos: getFotosValidasCriterio(cr)
+            });
+          }
+        });
+      });
+    });
+
+    return { setor, inspecoes: inspsSetor.length, media, ncAbertas, ncResolvidas };
+  }).sort((a, b) => (b.media ?? -1) - (a.media ?? -1));
+
+  const totais = resumo.reduce((acc, r) => {
+    acc.inspecoes += r.inspecoes;
+    acc.ncAbertas += r.ncAbertas;
+    acc.ncResolvidas += r.ncResolvidas;
+    if (typeof r.media === 'number') { acc.somaMedia += r.media; acc.countMedia += 1; }
     return acc;
-  }, { abertas: 0, resolvidas: 0 });
+  }, { inspecoes: 0, ncAbertas: 0, ncResolvidas: 0, somaMedia: 0, countMedia: 0 });
+
+  const mediaGerencia = totais.countMedia ? (totais.somaMedia / totais.countMedia) : null;
+  return { periodo, periodoTitulo, setores, inspsPeriodo, resumo, totais, mediaGerencia, ncDetalhes };
+}
+
+// === Function: buildSetorialReportEmailPayload ===
+function buildSetorialReportEmailPayload(setor, attachment) {
+  const resumo = getSetorialReportDashboardData(setor);
+  const periodoTitulo = resumo.periodoTitulo;
+  const resumoBase = resumo.inspsSetor;
   const unidade = resumoBase[0] ? (UNIDADE_LABELS[getInspectionUnidade(resumoBase[0])] || getInspectionUnidade(resumoBase[0])) : (UNIDADE_LABELS[currentUnidade] || currentUnidade);
   const linhas = [
     'Prezados,',
@@ -3509,10 +3806,11 @@ function buildSetorialReportEmailPayload(setor, attachment) {
     `Site: ${unidade}`,
     `Setor: ${setor}`,
     `Período: ${periodoTitulo}`,
-    `Áreas consideradas: ${resumoBase.length}`,
-    `Pontuação média do setor: ${pontuacaoMedia !== null ? pontuacaoMedia.toFixed(2) : '—'}`,
-    `NC abertas no setor: ${ncTotal.abertas}`,
-    `NC resolvidas no setor: ${ncTotal.resolvidas}`,
+    `Áreas consideradas: ${resumo.locaisUnicos}`,
+    `Inspeções consideradas: ${resumo.totalInspecoes}`,
+    `Pontuação média do setor: ${resumo.mediaGeral !== null ? resumo.mediaGeral.toFixed(2) : '—'}`,
+    `NC abertas no setor: ${resumo.totalNCAbertas}`,
+    `NC resolvidas no setor: ${resumo.totalResolvidas}`,
     '',
     'Link para acesso ao Dashboard de Housekeeping',
     HOUSEKEEPING_DASHBOARD_URL,
@@ -3527,6 +3825,41 @@ function buildSetorialReportEmailPayload(setor, attachment) {
     html: `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.45;color:#1f2937">${linhas.map(line => line ? `<p style="margin:0 0 8px">${escapeHtml(line)}</p>` : '<br>').join('')}</div>`,
     bodyText: text,
     bodyHtml: `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.45;color:#1f2937">${linhas.map(line => line ? `<p style="margin:0 0 8px">${escapeHtml(line)}</p>` : '<br>').join('')}</div>`,
+    dashboardUrl: HOUSEKEEPING_DASHBOARD_URL
+  }, attachment);
+}
+
+// === Function: buildGerenciaReportEmailPayload ===
+function buildGerenciaReportEmailPayload(gerencia, attachment, to) {
+  const resumo = getGerenciaReportDashboardData(gerencia);
+  const periodoTitulo = resumo.periodoTitulo;
+  const linhas = [
+    'Prezados,',
+    '',
+    `Segue em anexo o relatório gerencial de Housekeeping da gerência ${gerencia} referente a ${periodoTitulo}.`,
+    '',
+    `Gerência: ${gerencia}`,
+    `Período: ${periodoTitulo}`,
+    `Setores mapeados: ${resumo.setores.length}`,
+    `Inspeções consideradas: ${resumo.totais.inspecoes}`,
+    `Pontuação média da gerência: ${resumo.mediaGerencia !== null ? resumo.mediaGerencia.toFixed(2) : '—'}`,
+    `NC abertas: ${resumo.totais.ncAbertas}`,
+    `NC resolvidas: ${resumo.totais.ncResolvidas}`,
+    '',
+    'Link para acesso ao Dashboard de Housekeeping',
+    HOUSEKEEPING_DASHBOARD_URL,
+    '',
+    'Atenciosamente,'
+  ];
+  const text = linhas.join('\n');
+  const html = `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.45;color:#1f2937">${linhas.map(line => line ? `<p style="margin:0 0 8px">${escapeHtml(line)}</p>` : '<br>').join('')}</div>`;
+  return addAttachmentToEmailPayload({
+    to,
+    subject: `Relatório Gerencial Housekeeping - ${gerencia} - ${periodoTitulo}`,
+    text,
+    html,
+    bodyText: text,
+    bodyHtml: html,
     dashboardUrl: HOUSEKEEPING_DASHBOARD_URL
   }, attachment);
 }
@@ -3706,12 +4039,10 @@ function renderSmartsheetSettings() {
   const cfg = getSmartsheetConfig();
   const url = document.getElementById('smartsheet-url');
   const sheetId = document.getElementById('smartsheet-sheet-id');
-  const token = document.getElementById('smartsheet-token');
   const proxyUrl = document.getElementById('smartsheet-proxy-url');
   const powerAutomateUrl = document.getElementById('power-automate-email-url');
   if (url) url.value = cfg.sheetUrl || SMARTSHEET_DEFAULT_SHEET_URL;
   if (sheetId) sheetId.value = cfg.sheetId || '';
-  if (token) token.value = cfg.token || '';
   if (proxyUrl) proxyUrl.value = cfg.proxyUrl || SMARTSHEET_DEFAULT_PROXY_URL;
   if (powerAutomateUrl) powerAutomateUrl.value = getPowerAutomateEmailUrl() || POWER_AUTOMATE_DEFAULT_EMAIL_URL;
   const pending = normalizeAppState(APP).smartsheetQueue.length;
@@ -3719,7 +4050,7 @@ function renderSmartsheetSettings() {
   setSmartsheetStatus(
     ready
       ? `Conexão salva. ${pending} inspeção(ões) pendente(s) para envio.`
-      : `Informe o Sheet ID e configure o proxy ou token. ${pending} inspeção(ões) aguardando configuração.`
+      : `Informe o Sheet ID e configure o proxy Smartsheet. ${pending} inspeção(ões) aguardando configuração.`
   );
 }
 
@@ -3728,13 +4059,12 @@ function salvarSmartsheetConfig(autoSync = true) {
   const cfg = normalizeSmartsheetConfig({
     sheetUrl: document.getElementById('smartsheet-url')?.value || SMARTSHEET_DEFAULT_SHEET_URL,
     sheetId: document.getElementById('smartsheet-sheet-id')?.value || '',
-    token: document.getElementById('smartsheet-token')?.value || '',
     proxyUrl: document.getElementById('smartsheet-proxy-url')?.value || SMARTSHEET_DEFAULT_PROXY_URL
   });
   setPowerAutomateEmailUrl(document.getElementById('power-automate-email-url')?.value || POWER_AUTOMATE_DEFAULT_EMAIL_URL);
   saveSmartsheetConfig(cfg);
   renderSmartsheetSettings();
-  toast(hasSmartsheetConfig() ? 'Conexão Smartsheet salva.' : 'Complete o Sheet ID numérico e o token.');
+  toast(hasSmartsheetConfig() ? 'Conexão Smartsheet salva.' : 'Complete o Sheet ID numérico e a URL do proxy.');
   if (autoSync && hasSmartsheetConfig()) scheduleSyncQueue(0);
 }
 
@@ -3743,41 +4073,24 @@ async function smartsheetFetch(path, options = {}) {
   try {
     const cfg = getSmartsheetConfig();
     if (!/^\d+$/.test(cfg.sheetId)) throw new Error('Sheet ID numérico não configurado.');
-    if (cfg.proxyUrl) {
-      const res = await fetch(cfg.proxyUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({
-          sheetId: cfg.sheetId,
-          path,
-          method: options.method || 'GET',
-          body: options.body ? JSON.parse(options.body) : null
-        })
-      });
-      const payload = await res.json();
-      if (!res.ok) throw new Error(payload?.message || `Proxy Smartsheet HTTP ${res.status}`);
-      if (!payload.ok) throw new Error(payload.message || 'Falha no proxy Smartsheet.');
-      return payload.data;
-    }
-    if (!cfg.token) throw new Error('Token Smartsheet não configurado.');
-    const res = await fetch(`${SMARTSHEET_API_BASE}${path}`, {
-      ...options,
-      headers: {
-        'Authorization': `Bearer ${cfg.token}`,
-        'Content-Type': 'application/json',
-        'smartsheet-integration-source': 'APPLICATION,Housekeeping,Inspecao-5S',
-        ...(options.headers || {})
-      }
+    if (!/^https?:\/\//.test(cfg.proxyUrl)) throw new Error('URL do proxy Smartsheet não configurada.');
+    const res = await fetch(cfg.proxyUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        sheetId: cfg.sheetId,
+        path,
+        method: options.method || 'GET',
+        body: options.body ? JSON.parse(options.body) : null
+      })
     });
-    if (!res.ok) {
-      let detail = '';
-      try { detail = (await res.json())?.message || ''; } catch {}
-      throw new Error(detail || `Erro Smartsheet HTTP ${res.status}`);
-    }
-    return res.json();
+    const payload = await res.json();
+    if (!res.ok) throw new Error(payload?.message || `Proxy Smartsheet HTTP ${res.status}`);
+    if (!payload.ok) throw new Error(payload.message || 'Falha no proxy Smartsheet.');
+    return payload.data;
   } catch (e) {
     if (String(e?.message || '').includes('Failed to fetch')) {
-      throw new Error('O navegador bloqueou a chamada direta ao Smartsheet (CORS). Configure a URL do proxy Smartsheet.');
+      throw new Error('Não foi possível chamar o proxy Smartsheet. Verifique internet e URL do proxy.');
     }
     throw e;
   }
@@ -6587,10 +6900,15 @@ function openDetalhe(id) {
   }
 
   html += `<div style="margin-top:16px;display:flex;gap:8px">
-    <button class="btn-secondary" onclick="editarInspecao('${insp.id}')" style="flex:1">
-      <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 14.5V17h2.5L15 7.5 12.5 5 3 14.5z"/><path d="M11.5 6.5l2 2"/></svg>
-      Editar inspeção
-    </button>
+    ${isInspectionEmailSent(insp)
+      ? `<button class="btn-secondary" disabled style="flex:1;opacity:.65;cursor:not-allowed">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 10V7a4 4 0 0 1 8 0v3"/><rect x="4" y="10" width="12" height="7" rx="2"/></svg>
+          Edição bloqueada
+        </button>`
+      : `<button class="btn-secondary" onclick="editarInspecao('${insp.id}')" style="flex:1">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 14.5V17h2.5L15 7.5 12.5 5 3 14.5z"/><path d="M11.5 6.5l2 2"/></svg>
+          Editar inspeção
+        </button>`}
     <button class="btn-secondary" onclick="iniciarNovaComBase('${insp.id}')" style="flex:1">
       <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="8"/><path d="M10 6v8M6 10h8"/></svg>
       Nova inspeção aqui
@@ -6819,6 +7137,8 @@ function renderRelatorios() {
   if (gerSel) gerSel.innerHTML = gerOpts;
   const relEmail = document.getElementById('rel-email-destino');
   if (relEmail && !relEmail.value) relEmail.value = normalizeLegacyEmailRecipientValue(localStorage.getItem(EMAIL_AUTO_TO_KEY)) || EMAIL_AUTO_DEFAULT_TO;
+  const relGerenciaEmail = document.getElementById('rel-gerencia-email-destino');
+  if (relGerenciaEmail && !relGerenciaEmail.value) relGerenciaEmail.value = normalizeLegacyEmailRecipientValue(localStorage.getItem(EMAIL_AUTO_TO_KEY)) || EMAIL_AUTO_DEFAULT_TO;
   renderSmartsheetAdminVisibility();
   renderSmartsheetSettings();
 }
@@ -7006,10 +7326,81 @@ async function enviarRelatorioSetorialEmail() {
   }
 }
 
+// === Function: enviarRelatorioGerenciaEmail ===
+async function enviarRelatorioGerenciaEmail() {
+  const gerencia = document.getElementById('rel-gerencia-select')?.value || '';
+  if (!gerencia) { toast('Selecione uma gerência'); return; }
+  const to = getGerenciaReportEmailTo();
+  if (!to) { toast('Informe o destinatário do e-mail.'); return; }
+  try {
+    assertOnlyAngloAmericanEmails(to);
+  } catch (e) {
+    const status = document.getElementById('rel-gerencia-email-status');
+    if (status) status.textContent = e.message;
+    toast(e.message);
+    return;
+  }
+
+  const status = document.getElementById('rel-gerencia-email-status');
+  const periodo = getSetorialReportPeriod();
+  const periodoTitulo = `${periodo.mesNome.charAt(0).toUpperCase()}${periodo.mesNome.slice(1)} de ${periodo.ano}`;
+  const gerMap = getGerenciasMap();
+  const setores = (gerMap[gerencia] || []).filter(s => SETORES.some(x => x.nome === s));
+  const inspecoesRelatorio = getGerenciaReportInspections(gerencia);
+  const destinatarios = parseEmailRecipients(to);
+  const jaEnviadas = inspecoesRelatorio.filter(isInspectionEmailSent).length;
+  const confirmar = confirm([
+    'Confirmar envio do relatório gerencial por e-mail?',
+    '',
+    `Gerência: ${gerencia}`,
+    `Período: ${periodoTitulo}`,
+    `Setores mapeados: ${setores.length}`,
+    `Inspeções incluídas: ${inspecoesRelatorio.length}`,
+    `Já enviadas anteriormente: ${jaEnviadas}`,
+    `Destinatário(s): ${destinatarios.join('; ')}`,
+    '',
+    'Após o envio, as inspeções incluídas ficarão bloqueadas para remoção.'
+  ].join('\n'));
+  if (!confirmar) {
+    if (status) status.textContent = 'Envio cancelado antes da geração do PDF.';
+    toast('Envio cancelado.');
+    return;
+  }
+
+  try {
+    toast('Gerando relatório gerencial para envio...');
+    if (status) status.textContent = 'Gerando PDF da gerência para anexo...';
+    const report = await gerarPDFGerencia({ save: false, showToast: false });
+    if (!report?.doc) throw new Error('Não foi possível gerar o PDF da gerência.');
+    const dataUri = report.doc.output('datauristring');
+    const contentBytes = String(dataUri || '').split(',')[1] || '';
+    if (!contentBytes) throw new Error('Não foi possível gerar o anexo PDF da gerência.');
+    const attachment = buildPowerAutomateAttachment(report.fileName, contentBytes);
+    const payload = buildGerenciaReportEmailPayload(gerencia, attachment, to);
+    localStorage.setItem(EMAIL_AUTO_TO_KEY, to);
+    const pdfKb = Math.round((contentBytes.length * 3 / 4) / 1024);
+    if (status) status.textContent = `PDF gerado: ${report.fileName} (${pdfKb} KB). Enviando ao Power Automate...`;
+    toast('Enviando relatório gerencial por e-mail...');
+    await sendPowerAutomateEmailPayload(payload);
+    const sentCount = markInspectionsAsEmailSent(inspecoesRelatorio.map(item => item.id), to, 'relatorio_gerencial');
+    await saveData(APP);
+    if (status) status.textContent = `E-mail enviado. PDF enviado ao fluxo: ${report.fileName} (${pdfKb} KB).`;
+    toast(`Relatório gerencial enviado por e-mail. ${sentCount} inspeção(ões) bloqueada(s) para remoção.`);
+  } catch (e) {
+    console.error('Erro ao enviar relatório gerencial por e-mail:', e);
+    if (status) status.textContent = `Falha ao enviar relatório gerencial: ${e.message}`;
+    toast(`Falha ao enviar relatório gerencial: ${e.message}`);
+  }
+}
+
 // === Function: editarInspecao ===
 function editarInspecao(id) {
   const insp = APP.inspecoes.find(i => i.id === id);
   if (!insp) { toast('Inspeção não encontrada.'); return; }
+  if (isInspectionEmailSent(insp)) {
+    toast('Esta inspeção já foi enviada por e-mail e não pode ser editada.');
+    return;
+  }
   document.getElementById('modal-detalhe').classList.remove('open');
   currentInsp = JSON.parse(JSON.stringify(insp));
   currentInsp.__isEditing = true;
@@ -7493,7 +7884,9 @@ function gerarExcelGeral() {
 }
 
 // === Function: gerarPDFGerencia ===
-async function gerarPDFGerencia() {
+async function gerarPDFGerencia(options = {}) {
+  const shouldSave = options.save !== false;
+  const shouldToast = options.showToast !== false;
   const gerencia = document.getElementById('rel-gerencia-select')?.value || '';
   if (!gerencia) { toast('Selecione uma gerência'); return; }
 
@@ -7501,72 +7894,13 @@ async function gerarPDFGerencia() {
   const setores = (gerMap[gerencia] || []).filter(s => SETORES.some(x => x.nome === s));
   if (!setores.length) { toast('Nenhum setor mapeado para esta gerência'); return; }
 
-  const now = new Date();
-  const periodoAtual = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const mesAnoAtual = now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-  const inspsPeriodo = APP.inspecoes.filter(i => (i.periodo || '') === periodoAtual && setores.includes(i.setor));
-  const ncDetalhes = [];
-
-  const resumo = setores.map(setor => {
-    const inspsSetor = inspsPeriodo.filter(i => i.setor === setor);
-    const notas = inspsSetor.map(i => i.notaGeral).filter(n => typeof n === 'number');
-    const media = notas.length ? (notas.reduce((a, b) => a + b, 0) / notas.length) : null;
-    let ncAbertas = 0;
-    let ncResolvidas = 0;
-
-    inspsSetor.forEach(insp => {
-      const anterior = getInspecaoAnteriorMesmoLocal(insp);
-      SENSOS.forEach(s => {
-        (insp.sensos?.[s.id] || []).forEach((cr, ci) => {
-          if (criterioTemNCAberta(cr)) {
-            ncAbertas++;
-            ncDetalhes.push({
-              tipo: 'aberta',
-              setor,
-              local: localLabel(insp),
-              data: insp.data,
-              senso: s.nome,
-              criterio: s.criterios[ci],
-              obs: cr?.obs || 'Sem observação.',
-              sugestao: cr?.sugestao || 'Não informada.',
-              nota: cr?.nota ?? null,
-              fotos: getFotosNCAbertaComFallback(insp, s.id, ci, cr)
-            });
-          }
-          const crAnt = anterior?.sensos?.[s.id]?.[ci] || null;
-          const notaAnt = crAnt?.nota ?? null;
-          const notaAtual = cr?.nota ?? null;
-          if (notaAnt !== null && notaAnt <= 3 && notaAtual !== null && notaAtual >= 4) {
-            ncResolvidas++;
-            ncDetalhes.push({
-              tipo: 'resolvida',
-              setor,
-              local: localLabel(insp),
-              data: insp.data,
-              senso: s.nome,
-              criterio: s.criterios[ci],
-              obs: cr?.obs || 'Sem observação.',
-              sugestao: cr?.sugestao || 'Não informada.',
-              nota: cr?.nota ?? null,
-              fotos: getFotosValidasCriterio(cr)
-            });
-          }
-        });
-      });
-    });
-
-    return { setor, inspecoes: inspsSetor.length, media, ncAbertas, ncResolvidas };
-  }).sort((a, b) => (b.media ?? -1) - (a.media ?? -1));
-
-  const totais = resumo.reduce((acc, r) => {
-    acc.inspecoes += r.inspecoes;
-    acc.ncAbertas += r.ncAbertas;
-    acc.ncResolvidas += r.ncResolvidas;
-    if (typeof r.media === 'number') { acc.somaMedia += r.media; acc.countMedia += 1; }
-    return acc;
-  }, { inspecoes: 0, ncAbertas: 0, ncResolvidas: 0, somaMedia: 0, countMedia: 0 });
-
-  const mediaGerencia = totais.countMedia ? (totais.somaMedia / totais.countMedia) : null;
+  const gerenciaData = getGerenciaReportDashboardData(gerencia);
+  const periodoAtual = gerenciaData.periodo.periodoCodigo;
+  const mesAnoAtual = gerenciaData.periodoTitulo;
+  const resumo = gerenciaData.resumo;
+  const totais = gerenciaData.totais;
+  const mediaGerencia = gerenciaData.mediaGerencia;
+  const ncDetalhes = gerenciaData.ncDetalhes;
 
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' });
@@ -7819,7 +8153,7 @@ async function gerarPDFGerencia() {
   doc.setFontSize(18);
   doc.text('Objetivo do Relatório', margin, y);
   y += 12;
-  const objetivoTxt = `Este relatório apresenta a consolidação mensal de Housekeeping da gerência ${gerencia}, com análise integrada dos setores mapeados para apoiar a priorização de ações, melhoria contínua e tomada de decisão operacional.`;
+  const objetivoTxt = `Este relatório apresenta a consolidação de Housekeeping da gerência ${gerencia} no período selecionado, com análise integrada dos setores mapeados para apoiar a priorização de ações, melhoria contínua e tomada de decisão operacional.`;
   const objetivoLines = doc.splitTextToSize(objetivoTxt, W - margin * 2 - 10);
   doc.setDrawColor(226, 232, 240);
   doc.setFillColor(248, 250, 252);
@@ -8062,8 +8396,10 @@ async function gerarPDFGerencia() {
     }
   }
 
-  doc.save(`Housekeeping_Gerencia_${sanitizePdfFileName(gerencia)}_${periodoAtual}.pdf`);
-  toast('Relatório da gerência gerado com sucesso!');
+  const fileName = `Housekeeping_Gerencia_${sanitizePdfFileName(gerencia)}_${periodoAtual}.pdf`;
+  if (shouldSave) doc.save(fileName);
+  if (shouldToast) toast('Relatório da gerência gerado com sucesso!');
+  return { doc, fileName, gerencia, periodo: periodoAtual, mesAno: mesAnoAtual };
 }
 
 // === Function: getLatestInspecoesBySetor ===
@@ -8354,193 +8690,19 @@ async function gerarPDFSetorial(setor, options = {}) {
     }
   }
 
-  const inspsMes = APP.inspecoes.filter(i => {
-    if (i.periodo) return i.periodo === periodoAtual;
-    const d = new Date(i.data);
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-  });
-
-  const inspsMesSetor = inspsMes.filter(i => i.setor === setor);
-
-  const ncList = [];
-  const latestOwnByCrit = {};
-  [...inspsMesSetor]
-    .sort((a, b) => new Date(b.data) - new Date(a.data))
-    .forEach(insp => {
-      SENSOS.forEach(s => {
-        (insp.sensos[s.id] || []).forEach((cr, ci) => {
-          const key = `${localKey(insp)}||${s.id}||${ci}`;
-          if (latestOwnByCrit[key]) return;
-          latestOwnByCrit[key] = { insp, s, ci, cr };
-        });
-      });
-    });
-  Object.values(latestOwnByCrit).forEach(({ insp, s, ci, cr }) => {
-    if (!criterioTemNCAberta(cr)) return;
-    ncList.push({
-      data: insp.data,
-      local: localLabel(insp),
-      senso: s.nome,
-      criterio: s.criterios[ci],
-      reincidencia: getReincidenciaCount(insp, s.id, ci),
-      obs: cr.obs || 'Sem observação.',
-      sugestao: cr.sugestao || 'Não informada.',
-      fotos: getFotosNCAbertaComFallback(insp, s.id, ci, cr),
-      origemTipo: 'propria',
-      origemSetor: insp.setor,
-      origemLocal: localLabel(insp),
-      destinoSetor: (cr.encaminharSetor || insp.setor),
-      destinoLocal: localLabel(insp)
-    });
-  });
-
-  // Inclui apenas o estado mais recente das NCs encaminhadas para este setor.
-  const latestEncByCrit = {};
-  [...inspsMes]
-    .filter(i => i.setor !== setor)
-    .sort((a, b) => new Date(b.data) - new Date(a.data))
-    .forEach(insp => {
-      SENSOS.forEach(s => {
-        (insp.sensos[s.id] || []).forEach((cr, ci) => {
-          const key = `${insp.setor}||${localKey(insp)}||${s.id}||${ci}`;
-          if (latestEncByCrit[key]) return;
-          latestEncByCrit[key] = { insp, s, ci, cr };
-        });
-      });
-    });
-  Object.values(latestEncByCrit).forEach(({ insp, s, ci, cr }) => {
-    if (!criterioTemNCAberta(cr)) return;
-    if ((cr.encaminharSetor || '') !== setor) return;
-    ncList.push({
-      data: insp.data,
-      local: localLabel(insp),
-      senso: s.nome,
-      criterio: s.criterios[ci],
-      reincidencia: getReincidenciaCount(insp, s.id, ci),
-      obs: cr.obs || 'Sem observação.',
-      sugestao: cr.sugestao || 'Não informada.',
-      fotos: getFotosNCAbertaComFallback(insp, s.id, ci, cr),
-      origemTipo: 'encaminhada',
-      origemSetor: insp.setor,
-      origemLocal: localLabel(insp),
-      destinoSetor: setor,
-      destinoLocal: localLabel(insp)
-    });
-  });
-
-  const resolvidasList = [];
-  const latestMesSetorPorLocal = getLatestInspecoesBySetor(setor)
-    .filter(i => (i.periodo || '') === periodoAtual);
-  latestMesSetorPorLocal.forEach(insp => {
-    const inspAnterior = getInspecaoAnteriorMesmoLocal(insp);
-    if (!inspAnterior) return;
-
-    SENSOS.forEach(s => {
-      (insp.sensos[s.id] || []).forEach((crAtual, ci) => {
-        const crAnterior = inspAnterior.sensos?.[s.id]?.[ci] || {};
-        const notaAnterior = crAnterior.nota ?? null;
-        const notaAtual = crAtual?.nota ?? null;
-        const resolveuAgora = notaAnterior !== null && notaAnterior <= 3 && notaAtual !== null && notaAtual >= 4;
-        if (!resolveuAgora) return;
-
-        const reinc = getReincidenciasAteConclusao(insp, s.id, ci);
-        const destinoSetor = crAnterior.encaminharSetor || crAtual?.encaminharSetor || insp.setor;
-        resolvidasList.push({
-          dataResolucao: insp.data,
-          dataAnterior: inspAnterior.data,
-          local: localLabel(insp),
-          senso: s.nome,
-          criterio: s.criterios[ci],
-          obsAnterior: crAnterior.obs || 'Sem observação.',
-          obsAtual: crAtual?.obs || 'Sem observação.',
-          sugestaoAtual: crAtual?.sugestao || 'Não informada.',
-          fotosAnterior: getFotosNCAbertaComFallback(inspAnterior, s.id, ci, crAnterior),
-          fotosResolucao: getFotosValidasCriterio(crAtual),
-          ocorrenciasNC: reinc.ocorrenciasNC,
-          reincidencias: reinc.reincidencias,
-          origemSetor: insp.setor,
-          origemLocal: localLabel(insp),
-          destinoSetor,
-          resolvidaPorCorresponsavel: destinoSetor !== insp.setor
-        });
-      });
-    });
-  });
-
-  // Resolvidas por corresponsável: considerar somente a inspeção mais recente por local de origem no período.
-  const latestOutrosPorLocal = {};
-  APP.inspecoes
-    .filter(i => i.setor !== setor && (i.periodo || '') === periodoAtual)
-    .forEach(i => {
-      const k = localKey(i);
-      if (!latestOutrosPorLocal[k] || new Date(i.data) > new Date(latestOutrosPorLocal[k].data)) {
-        latestOutrosPorLocal[k] = i;
-      }
-    });
-  Object.values(latestOutrosPorLocal).forEach(inspOrigem => {
-    const inspAnteriorOrigem = getInspecaoAnteriorMesmoLocal(inspOrigem);
-    if (!inspAnteriorOrigem) return;
-
-    SENSOS.forEach(s => {
-      (inspOrigem.sensos[s.id] || []).forEach((crAtual, ci) => {
-        const crAnterior = inspAnteriorOrigem.sensos?.[s.id]?.[ci] || {};
-        const notaAnterior = crAnterior.nota ?? null;
-        const notaAtual = crAtual?.nota ?? null;
-        const destinoSetor = crAnterior.encaminharSetor || crAtual?.encaminharSetor || '';
-        const resolveuAgora = notaAnterior !== null && notaAnterior <= 3 && notaAtual !== null && notaAtual >= 4;
-        if (!resolveuAgora) return;
-        if (destinoSetor !== setor) return;
-
-        const reinc = getReincidenciasAteConclusao(inspOrigem, s.id, ci);
-        resolvidasList.push({
-          dataResolucao: inspOrigem.data,
-          dataAnterior: inspAnteriorOrigem.data,
-          local: localLabel(inspOrigem),
-          senso: s.nome,
-          criterio: s.criterios[ci],
-          obsAnterior: crAnterior.obs || 'Sem observação.',
-          obsAtual: crAtual?.obs || 'Sem observação.',
-          sugestaoAtual: crAtual?.sugestao || 'Não informada.',
-          fotosAnterior: getFotosNCAbertaComFallback(inspAnteriorOrigem, s.id, ci, crAnterior),
-          fotosResolucao: getFotosValidasCriterio(crAtual),
-          ocorrenciasNC: reinc.ocorrenciasNC,
-          reincidencias: reinc.reincidencias,
-          origemSetor: inspOrigem.setor,
-          origemLocal: localLabel(inspOrigem),
-          destinoSetor,
-          resolvidaPorCorresponsavel: true
-        });
-      });
-    });
-  });
-
-  // Página 1: Dashboard do setor
-  const totalInspecoes = inspsMesSetor.length;
-  const locaisUnicos = new Set(inspsMesSetor.map(i => localKey(i))).size;
-  const notasValidas = inspsMesSetor.map(i => i.notaGeral).filter(n => typeof n === 'number');
-  const mediaGeral = notasValidas.length
-    ? (notasValidas.reduce((acc, n) => acc + n, 0) / notasValidas.length)
-    : null;
-  const totalNCAbertas = ncList.length;
-  const totalNCRecebidas = ncList.filter(n => n.origemTipo === 'encaminhada').length;
-  const totalResolvidas = resolvidasList.length;
-
-  const rankingLocais = {};
-  inspsMesSetor.forEach(insp => {
-    if (typeof insp.notaGeral !== 'number') return;
-    const lk = localKey(insp);
-    if (!rankingLocais[lk]) rankingLocais[lk] = { label: localLabel(insp), notas: [] };
-    rankingLocais[lk].notas.push(insp.notaGeral);
-  });
-  const rankingMedias = Object.values(rankingLocais)
-    .map(item => ({
-      label: item.label,
-      media: item.notas.reduce((a, b) => a + b, 0) / item.notas.length
-    }))
-    .sort((a, b) => b.media - a.media);
-
-  const melhorLocal = rankingMedias[0] || null;
-  const piorLocal = rankingMedias[rankingMedias.length - 1] || null;
+  const setorialData = getSetorialReportDashboardData(setor);
+  const {
+    ncList,
+    resolvidasList,
+    totalInspecoes,
+    locaisUnicos,
+    mediaGeral,
+    totalNCAbertas,
+    totalNCRecebidas,
+    totalResolvidas,
+    melhorLocal,
+    piorLocal
+  } = setorialData;
 
   const setorCfg = SETORES.find(s => s.nome === setor);
   const areasDoSetor = (setorCfg?.subareas || []).length
