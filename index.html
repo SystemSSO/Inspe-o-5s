@@ -2206,7 +2206,7 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
       </div>
       <button class="btn-primary" onclick="gerarPDFGerencia()">
         <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 2h7l4 4v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M12 2v4h4"/><path d="M7 13l3 3 3-3M10 10v6"/></svg>
-        Gerar PDF da Gerência
+        Gerar PDF 
       </button>
       <button class="btn-secondary" onclick="gerarExcelGeral()" style="margin-top:8px">
         <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 2h9l3 3v13H4z"/><path d="M13 2v3h3"/><path d="M7 8l6 6M13 8l-6 6"/></svg>
@@ -2675,7 +2675,7 @@ const SETORES = [
     nome: 'Laboratório',
     subareas: [
       '1 – Escritório administrativo (Sala de operações / Copa',
-      '2 - bnaheiros)',
+      '2 - Banheiros'
     ]
   },
   {
@@ -5317,6 +5317,7 @@ function inspCardHTML(insp, opts = {}) {
   const score = insp.notaGeral;
   const statusClass = score >= 3.5 ? 'status-green' : score >= 2.5 ? 'status-gold' : score >= 1.5 ? 'status-orange' : 'status-red';
   const badgeScore = notaBadge(score);
+  const statusBadges = getInspectionStatusBadges(insp);
   const ordLocal = APP.inspecoes
     .filter(i => sameLocal(i, insp))
     .sort((a, b) => new Date(a.data) - new Date(b.data))
@@ -5328,6 +5329,7 @@ function inspCardHTML(insp, opts = {}) {
       <div style="flex:1">
         <div class="insp-setor">${insp.setor}</div>
         <div style="margin-top:4px">${ordemBadge}</div>
+        <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">${statusBadges}</div>
       </div>
       <div style="text-align:right">
         ${badgeScore}
@@ -5352,6 +5354,41 @@ function inspCardHTML(insp, opts = {}) {
       </div>
     </div>
   </div>`;
+}
+
+// === Function: statusBadgeHTML ===
+function statusBadgeHTML(text, tone = 'neutral') {
+  const styles = {
+    neutral: 'background:rgba(148,163,184,0.12);color:var(--text2);border-color:rgba(148,163,184,0.28)',
+    ok: 'background:rgba(16,185,129,0.14);color:var(--green);border-color:rgba(16,185,129,0.32)',
+    warn: 'background:rgba(245,158,11,0.14);color:var(--gold);border-color:rgba(245,158,11,0.34)',
+    info: 'background:rgba(14,165,233,0.14);color:var(--orange2);border-color:rgba(14,165,233,0.32)'
+  };
+  return `<span class="badge" style="${styles[tone] || styles.neutral};font-size:9px;padding:3px 8px">${text}</span>`;
+}
+
+// === Function: getInspectionStatusBadges ===
+function getInspectionStatusBadges(insp) {
+  const appState = normalizeAppState(APP);
+  const firebasePending = appState.syncQueue.includes(insp.id);
+  const smartsheetPending = appState.smartsheetQueue.includes(insp.id);
+  const badges = [
+    statusBadgeHTML(firebasePending ? 'Sync pendente' : 'Salva', firebasePending ? 'warn' : 'ok')
+  ];
+
+  if (smartsheetPending) {
+    badges.push(statusBadgeHTML('Smartsheet pendente', 'warn'));
+  } else if (hasSmartsheetConfig()) {
+    badges.push(statusBadgeHTML('Smartsheet enviado', 'info'));
+  }
+
+  badges.push(
+    isInspectionEmailSent(insp)
+      ? statusBadgeHTML('E-mail enviado', 'ok')
+      : statusBadgeHTML('E-mail não enviado', 'neutral')
+  );
+
+  return badges.join('');
 }
 
 // === Function: notaCor ===
@@ -6537,6 +6574,7 @@ function openDetalhe(id) {
       </div>
       ${notaBadge(insp.notaGeral)}
     </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 2px">${getInspectionStatusBadges(insp)}</div>
     <div class="divider" style="margin:14px 0"></div>`;
 
   // comparaÃ§Ã£o por S
@@ -6971,6 +7009,27 @@ async function enviarRelatorioSetorialEmail() {
     return;
   }
   const status = document.getElementById('rel-email-status');
+  const periodo = getSetorialReportPeriod();
+  const periodoTitulo = `${periodo.mesNome.charAt(0).toUpperCase()}${periodo.mesNome.slice(1)} de ${periodo.ano}`;
+  const inspecoesRelatorio = getSetorialReportInspections(setor);
+  const destinatarios = parseEmailRecipients(to);
+  const jaEnviadas = inspecoesRelatorio.filter(isInspectionEmailSent).length;
+  const confirmar = confirm([
+    'Confirmar envio do relatório por e-mail?',
+    '',
+    `Setor: ${setor}`,
+    `Período: ${periodoTitulo}`,
+    `Inspeções incluídas: ${inspecoesRelatorio.length}`,
+    `Já enviadas anteriormente: ${jaEnviadas}`,
+    `Destinatário(s): ${destinatarios.join('; ')}`,
+    '',
+    'Após o envio, as inspeções incluídas ficarão bloqueadas para remoção.'
+  ].join('\n'));
+  if (!confirmar) {
+    if (status) status.textContent = 'Envio cancelado antes da geração do PDF.';
+    toast('Envio cancelado.');
+    return;
+  }
 
   try {
     toast('Gerando relatório para envio...');
