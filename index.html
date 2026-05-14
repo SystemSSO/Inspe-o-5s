@@ -2184,7 +2184,7 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
       </div>
       <div class="form-group">
         <label class="form-label">Destinatário do e-mail</label>
-        <input type="text" class="form-input" id="rel-email-destino" placeholder="destinatario@empresa.com; outro@empresa.com">
+        <input type="text" class="form-input" id="rel-email-destino" placeholder="destinatario@angloamerican.com; outro@angloamerican.com">
       </div>
       <button class="btn-primary" onclick="gerarPDF()">
         <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 2h7l4 4v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M12 2v4h4"/><path d="M7 13l3 3 3-3M10 10v6"/></svg>
@@ -2525,26 +2525,25 @@ const SETORES = [
   {
     nome: 'Preparação de Carga',
     subareas: [
-      '1 – Galpão de recebimento de minério',
-      '2 – Banheiro do galpão de recebimento de minério',
-      '3 – Britador primário',
-      '4 – Planta de amostragem',
-      '5 – Misturador de pó - britagem primária',
-      '6 – Galpões de retomada trippers A, B e C',
-      '7 – Fornalha',
-      '8 – Sistema de picagem de madeira',
-      '9 – Banheiro próximo à sala de supervisão',
-      '10 – Forno secador',
-      '11 – Galpão de aglomerado',
-      '12 – Depósitos de materiais - britagem terciária',
-      '13 – Parte superior do prédio da britagem terciária - silo de minério grosso',
-      '14 – Parte superior do prédio do silo retomada',
-      '15 – Fosso da TC:627-02 - transporte de cavaco',
-      '16 – Galpão de estacionamento de máquinas (em frente à antiga carpintaria)',
-      '17 – Pátio de estacionamento de carretas',
-      '18 – Estocagem de pó',
-      '19 – Antiga casa de recebimento de notas',
-      '20 – Depósito de escória'
+      '1 – Galpão de recebimento de minério (Banheiro / Sala de descanso)',
+      '2 – Britador primário',
+      '3 – Planta de amostragem',
+      '4 – Misturador de pó - britagem primária',
+      '5 – Galpões de retomada trippers A, B e C',
+      '6 – Fornalha',
+      '7 – Sistema de picagem de madeira',
+      '8 – Prédio da supervisão (Banheiros)',
+      '9 – Forno secador',
+      '10 – Galpão de aglomerado',
+      '11 – Depósitos de materiais - britagem terciária',
+      '12 – Parte superior do prédio da britagem terciária - silo de minério grosso',
+      '13 – Parte superior do prédio do silo retomada',
+      '14 – Fosso da TC:627-02 - transporte de cavaco',
+      '15 – Galpão de estacionamento de máquinas (em frente à antiga carpintaria)',
+      '16 – Pátio de estacionamento de carretas',
+      '17 – Estocagem de pó',
+      '18 – Antiga casa de recebimento de notas',
+      '19 – Depósito de escória'
     ]
   },
   {
@@ -2586,32 +2585,26 @@ const SETORES = [
     subareas: [
       '1 – Lavador de veículos',
       '2 – Estacionamento de máquinas (em frente à oficina de veículos)',
-      '3 – Sala de planejamento',
-      '4 – Sala de supervisão mecânica',
-      '5 – Mecânica de usinagem',
-      '6 – Área de fabricação de virolas',
-      '7 – Pátio de estocagem de sucatas (ao lado do galpão de reciclados)',
-      '8 – Área de solda dos rolos britadores',
-      '9 – Área de fabricação de peças (Prep. de Carga)',
-      '10 – Sala de apoio à manutenção mecânica (Prep. de Carga)',
-      '11 – Casa de bombas'
+      '3 – Oficina mecânica (Sala de planejamento e Supervisão mecânica)',
+      '4 – Área de fabricação de virolas',
+      '5 – Pátio de estocagem de sucatas (ao lado do galpão de reciclados)',
+      '6 – Área de solda dos rolos britadores',
+      '7 – Área de fabricação de peças (Prep. de Carga)',
+      '8 – Sala de apoio à manutenção mecânica (Prep. de Carga)',
+      '9 – Casa de bombas'
     ]
   },
   {
     nome: 'Segurança, Medicina e Resposta à Emergência',
     subareas: [
-      '1 – Escritório (Segurança)',
-      '2 – Copa (Segurança)',
-      '3 – Sala de armários (Segurança)',
-      '4 – Banheiros (Segurança)',
-      '5 – Sala de atendimento (Medicina)',
-      '6 – Banheiros (Medicina)',
-      '7 – Sala de arquivo morto (Medicina)',
-      '8 – Ponto de apoio (Sillion)',
-      '9 – Brigada',
-      '10 – Carreta de brigada',
-      '11 – Container de resposta à emergência',
-      '12 – Sala de arquivo (Antiga carpintaria)'
+      '1 – Escritório Segurança (Copa / Sala de armários / Banheiros)',
+      '2 – Escritório Medicina (Banheiros / Recepção))',
+      '3 – Sala de arquivo morto (Próximo ao RH)',
+      '4 – Ponto de apoio (Sillion)',
+      '5 – Brigada (Galpão da brigada / Carreta de brigada)',
+      '6 – Container de resposta à emergência',
+      '7 – Sala de arquivo morto (Antiga carpintaria)',
+      '8 – Medicina reflorestamento'
     ]
   },
   {
@@ -2626,53 +2619,64 @@ const SETORES = [
     ]
   },
   {
-    nome: 'Armazém',
+    nome: 'Supply Chain - Físico',
     subareas: [
-      '1 – Almoxarifado',
-      '2 – Área administrativa',
-      '3 – Prateleiras de estoque',
-      '4 – Banheiros (Armazém)',
-      '5 – Galpão de estocagem de produtos químicos (interior do almoxarifado)',
-      '6 – Estocagem de acetileno',
-      '7 – Tanques de óleo 1A',
-      '8 – Recebimento de óleo 1A',
-      '9 – Nortel',
-      '10 – Tanque de óleo diesel'
+      '1 – Armazém (Área administrativa / Prateleiras de estoque / Banheiros / Estocagem de produtos químicos)',
+      '2 – Galpão de estocagem de produtos químicos (interior do almoxarifado)',
+      '3 – Estocagem de acetileno',
+      '4 – Posto de abastecimento diesel',
+      '5 – Recebimento de óleo (1A / Diesel)',
+      '6 – Nortel',
+      '8 – Armazém Reflorestamento',
+      '7 – Tanques de oxigênio (Air liquide e Ultra gás)'
     ]
   },
   {
     nome: 'Administração, Refeitório e RH',
     subareas: [
-      '1 – Refeitório',
-      '2 – Área de estoque do refeitório',
-      '3 – Tanque GLP refeitório',
-      '4 – Sala da administração',
-      '5 – Banheiros do prédio administrativo',
-      '6 – Arquivo (sala RH)',
-      '7 – Sala de videoconferência',
-      '8 – Sala SGI',
-      '9 – Sala de espera dos taxistas',
-      '10 – Alojamento clube dos supervisores',
-      '11 – Viveiro',
-      '12 – Clube dos supervisores (parte interna)',
-      '13 – Refeitório Horto Florestal'
+      '1 – Refeitório (Cozinha / Banheiros / Área de estoque de alimentos / Escritório / Tanque GLP)',
+      '2 – Escritório de administração',
+      '3 – Sala de arquivo morto (Próximo ao RH)',
+      '4 – Sala de videoconferência',
+      '5 – Sala de espera dos taxistas',
+      '6 – Alojamento clube dos supervisores',
+      '7 – Viveiro (Próximo a vila codemim)',
+      '8 – Clube dos supervisores (parte interna)',
+      '9 – Refeitório Horto Florestal'
     ]
   },
   {
     nome: 'Meio Ambiente',
-    subareas: ['1 – Sala administrativa', '2 – Galpão de resíduos']
+    subareas: [
+      '1 – Escritório Meio Ambiente',
+      '2 – Galpão de resíduos', 
+      '3 – Estação de monitoramento (Próximo a vila)',
+      '4 – Torre  metereológica (Próximo ao CCO)'
+    ]
   },
   {
     nome: 'Tecnologia da Informação',
-    subareas: ['1 – Sala administrativa', '2 – Depósito de peças (em frente ao armazém)']
+    subareas: [
+      '1 – Escritório de TI',
+      '2 – Servidores Codemim',
+      '3 – Depósito de equipamentos de TI (Em frente ao armazém)',
+      '4 – Servidor Reflorestamento'
+    ]
   },
   {
     nome: 'Engenharia de Manutenção',
-    subareas: ['1 – Sala administrativa', '2 – Sala de reuniões', '3 – Container STMIL']
+    subareas: [
+      '1 – Escritório Administrativo (Sala de reuniões / Banheiros / Container STMIL)',
+      '3 – Canteiro STMIL'
+    ]
+    
   },
   {
     nome: 'Laboratório',
-    subareas: ['1 – Sala administrativa', '2 – Sala de operações', '3 – Banheiros']
+    subareas: [
+      '1 – Escritório administrativo (Sala de operações / Copa',
+      '2 - bnaheiros)',
+    ]
   },
   {
     nome: 'Calcinação e Redução',
@@ -2722,12 +2726,10 @@ const SETORES = [
       '9 – Manutenção mecânica',
       '10 – Viveiro florestal (casa de defensivos)',
       '11 – Silvicultura',
-      '12 – Medicina',
       '13 – Colheita florestal',
       '14 – Horto Cristo Redentor',
       '15 – Horto Rosariana',
       '16 – Lavador de veículos',
-      '17 – Refeitório',
       '18 – Tanque de abastecimento de óleo diesel'
     ]
   }
@@ -2788,7 +2790,8 @@ const SMARTSHEET_ADMIN_UNLOCK_KEY = 'aa5s_smartsheet_admin_unlocked';
 const SMARTSHEET_ADMIN_PASSWORD = 'Codemin@123';
 const EMAIL_AUTO_ENABLED_KEY = 'aa5s_email_auto_enabled';
 const EMAIL_AUTO_TO_KEY = 'aa5s_email_auto_to';
-const EMAIL_AUTO_DEFAULT_TO = 'niquel_incidentes';
+const EMAIL_ALLOWED_DOMAIN = 'angloamerican.com';
+const EMAIL_AUTO_DEFAULT_TO = 'niquel_incidentes@angloamerican.com';
 const POWER_AUTOMATE_EMAIL_URL_KEY = 'aa5s_power_automate_email_url';
 const POWER_AUTOMATE_DEFAULT_EMAIL_URL = 'https://default2864f69d77c34fbebbc09750205239.1a.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/87cbc033e57d41b5a7e83bc4909120c0/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=QyQX5C9nbmkYh3wwSMpV5Mizh9EU0ZyMe5_Qvm_uZCI';
 const HOUSEKEEPING_DASHBOARD_URL = 'https://app.powerbi.com/groups/me/apps/f448c5c3-a40f-4a08-9a8a-16fb5e2a2887/reports/9a53374f-51f4-43fb-bd64-e3f8f7da18a7/ReportSection?ctid=2864f69d-77c3-4fbe-bbc0-97502052391a&experience=power-bi';
@@ -3231,7 +3234,7 @@ function getInspectionNcTotals(insp) {
 function getEmailAutoSettings() {
   return {
     enabled: localStorage.getItem(EMAIL_AUTO_ENABLED_KEY) === '1',
-    to: localStorage.getItem(EMAIL_AUTO_TO_KEY) || EMAIL_AUTO_DEFAULT_TO
+    to: normalizeLegacyEmailRecipientValue(localStorage.getItem(EMAIL_AUTO_TO_KEY)) || EMAIL_AUTO_DEFAULT_TO
   };
 }
 
@@ -3250,7 +3253,74 @@ function setPowerAutomateEmailUrl(url) {
 // === Function: setEmailAutoSettings ===
 function setEmailAutoSettings(enabled, to) {
   localStorage.setItem(EMAIL_AUTO_ENABLED_KEY, enabled ? '1' : '0');
-  localStorage.setItem(EMAIL_AUTO_TO_KEY, String(to || EMAIL_AUTO_DEFAULT_TO).trim() || EMAIL_AUTO_DEFAULT_TO);
+  localStorage.setItem(EMAIL_AUTO_TO_KEY, normalizeLegacyEmailRecipientValue(to) || EMAIL_AUTO_DEFAULT_TO);
+}
+
+// === Function: normalizeLegacyEmailRecipientValue ===
+function normalizeLegacyEmailRecipientValue(value) {
+  const text = String(value || '').trim();
+  return text === 'niquel_incidentes' ? EMAIL_AUTO_DEFAULT_TO : text;
+}
+
+// === Function: parseEmailRecipients ===
+function parseEmailRecipients(value) {
+  const rawRecipients = Array.isArray(value)
+    ? value
+    : String(value || '').split(/[;,]+/);
+  return rawRecipients
+    .map(item => String(item || '').trim())
+    .filter(Boolean)
+    .map(item => {
+      const match = item.match(/<([^<>]+)>/);
+      return (match ? match[1] : item).trim();
+    });
+}
+
+// === Function: getExternalEmailRecipients ===
+function getExternalEmailRecipients(value) {
+  return parseEmailRecipients(value).filter(email => {
+    const parts = email.toLowerCase().split('@');
+    return parts.length !== 2 || parts[1] !== EMAIL_ALLOWED_DOMAIN;
+  });
+}
+
+// === Function: assertOnlyAngloAmericanEmails ===
+function assertOnlyAngloAmericanEmails(value) {
+  const recipients = parseEmailRecipients(value);
+  if (!recipients.length) {
+    throw new Error('Destinatário do e-mail não informado.');
+  }
+  const invalidRecipients = getExternalEmailRecipients(recipients);
+  if (invalidRecipients.length) {
+    throw new Error(`Envio bloqueado. Use somente e-mails @${EMAIL_ALLOWED_DOMAIN}: ${invalidRecipients.join(', ')}`);
+  }
+  return recipients;
+}
+
+// === Function: assertPowerAutomateEmailPayloadAllowed ===
+function assertPowerAutomateEmailPayloadAllowed(payload) {
+  assertOnlyAngloAmericanEmails(payload?.to);
+}
+
+// === Function: isInspectionEmailSent ===
+function isInspectionEmailSent(insp) {
+  return insp?.emailEnviado === true || !!insp?.emailEnviadoEm;
+}
+
+// === Function: markInspectionsAsEmailSent ===
+function markInspectionsAsEmailSent(ids, recipients, tipo = 'relatorio') {
+  const sentAt = new Date().toISOString();
+  const uniqueIds = [...new Set((ids || []).filter(Boolean))];
+  uniqueIds.forEach(id => {
+    const insp = APP.inspecoes.find(item => item.id === id);
+    if (!insp) return;
+    insp.emailEnviado = true;
+    insp.emailEnviadoEm = sentAt;
+    insp.emailDestinatarios = parseEmailRecipients(recipients);
+    insp.emailTipo = tipo;
+    enqueueSyncInspection(id);
+  });
+  return uniqueIds.length;
 }
 
 // === Function: applyEmailAutoSettingsToModal ===
@@ -3348,7 +3418,7 @@ function buildInspectionEmailPayload(insp) {
     nota: Number(calcMediaSFinal(insp, s.id, inspAnterior).toFixed(2))
   }));
   return {
-    to: String(insp.emailAuto?.to || EMAIL_AUTO_DEFAULT_TO).trim(),
+    to: normalizeLegacyEmailRecipientValue(insp.emailAuto?.to) || EMAIL_AUTO_DEFAULT_TO,
     subject: getInspectionEmailSubject(insp),
     text: buildInspectionEmailBody(insp),
     html: buildInspectionEmailHtml(insp),
@@ -3450,7 +3520,7 @@ async function buildInspectionEmailPayloadWithPdf(insp) {
 // === Function: getSetorialReportEmailTo ===
 function getSetorialReportEmailTo() {
   const value = document.getElementById('rel-email-destino')?.value || '';
-  return String(value || localStorage.getItem(EMAIL_AUTO_TO_KEY) || EMAIL_AUTO_DEFAULT_TO).trim();
+  return normalizeLegacyEmailRecipientValue(value || localStorage.getItem(EMAIL_AUTO_TO_KEY)) || EMAIL_AUTO_DEFAULT_TO;
 }
 
 // === Function: getSetorialReportPeriod ===
@@ -3464,14 +3534,23 @@ function getSetorialReportPeriod() {
   };
 }
 
+// === Function: getSetorialReportInspections ===
+function getSetorialReportInspections(setor) {
+  const periodo = getSetorialReportPeriod();
+  const inspecoesPeriodo = APP.inspecoes
+    .filter(i => (i.setor || '') === setor && (i.periodo || '') === periodo.periodoCodigo)
+    .sort((a, b) => String(a.subarea || '').localeCompare(String(b.subarea || ''), 'pt-BR'));
+  if (inspecoesPeriodo.length) return inspecoesPeriodo;
+  return APP.inspecoes
+    .filter(i => (i.setor || '') === setor)
+    .sort((a, b) => String(a.subarea || '').localeCompare(String(b.subarea || ''), 'pt-BR'));
+}
+
 // === Function: buildSetorialReportEmailPayload ===
 function buildSetorialReportEmailPayload(setor, attachment) {
   const periodo = getSetorialReportPeriod();
   const periodoTitulo = `${periodo.mesNome.charAt(0).toUpperCase()}${periodo.mesNome.slice(1)} de ${periodo.ano}`;
-  const inspecoes = APP.inspecoes
-    .filter(i => (i.setor || '') === setor && (i.periodo || '') === periodo.periodoCodigo)
-    .sort((a, b) => String(a.subarea || '').localeCompare(String(b.subarea || ''), 'pt-BR'));
-  const resumoBase = inspecoes.length ? inspecoes : APP.inspecoes.filter(i => (i.setor || '') === setor);
+  const resumoBase = getSetorialReportInspections(setor);
   const pontuacaoMedia = averageNumbers(resumoBase.map(item => item.notaGeral));
   const ncTotal = resumoBase.reduce((acc, item) => {
     const total = getInspectionNcTotals(item);
@@ -3583,7 +3662,13 @@ function getInspectionEmailSubject(insp) {
 // === Function: openInspectionEmailDraft ===
 function openInspectionEmailDraft(insp) {
   if (!insp?.emailAuto?.enabled) return;
-  const to = String(insp.emailAuto.to || EMAIL_AUTO_DEFAULT_TO).trim();
+  const to = normalizeLegacyEmailRecipientValue(insp.emailAuto.to) || EMAIL_AUTO_DEFAULT_TO;
+  try {
+    assertOnlyAngloAmericanEmails(to);
+  } catch (e) {
+    toast(e.message);
+    return;
+  }
   const subject = getInspectionEmailSubject(insp);
   const body = buildInspectionEmailBody(insp);
   const mailto = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -3616,16 +3701,20 @@ async function sendInspectionEmailAutomatic(insp) {
   if (!powerAutomateUrl) {
     throw new Error('URL do Power Automate não configurada.');
   }
+  const payload = await buildInspectionEmailPayloadWithPdf(insp);
+  assertPowerAutomateEmailPayloadAllowed(payload);
 
   const res = await fetch(powerAutomateUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(await buildInspectionEmailPayloadWithPdf(insp))
+    body: JSON.stringify(payload)
   });
   if (!res.ok) {
     const detail = await res.text().catch(() => '');
     throw new Error(getPowerAutomateErrorMessage(detail, res.status));
   }
+  markInspectionsAsEmailSent([insp.id], payload.to, 'inspecao');
+  await saveData(APP);
   toast('E-mail enviado pelo Power Automate.');
   return true;
 }
@@ -3634,16 +3723,20 @@ async function sendInspectionEmailAutomatic(insp) {
 async function sendInspectionEmailAfterSmartsheet(insp) {
   const powerAutomateUrl = getPowerAutomateEmailUrl();
   if (!powerAutomateUrl) return false;
+  const payload = await buildInspectionEmailPayloadWithPdf(insp);
+  assertPowerAutomateEmailPayloadAllowed(payload);
 
   const res = await fetch(powerAutomateUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(await buildInspectionEmailPayloadWithPdf(insp))
+    body: JSON.stringify(payload)
   });
   if (!res.ok) {
     const detail = await res.text().catch(() => '');
     throw new Error(getPowerAutomateErrorMessage(detail, res.status));
   }
+  markInspectionsAsEmailSent([insp.id], payload.to, 'inspecao');
+  await saveData(APP);
   return true;
 }
 
@@ -3653,6 +3746,7 @@ async function sendPowerAutomateEmailPayload(payload) {
   if (!powerAutomateUrl) {
     throw new Error('URL do Power Automate não configurada.');
   }
+  assertPowerAutomateEmailPayloadAllowed(payload);
   const res = await fetch(powerAutomateUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -6515,12 +6609,19 @@ function openDetalhe(id) {
       Nova inspeção aqui
     </button>
   </div>`;
-  html += `<div style="margin-top:8px">
-    <button class="btn-secondary" onclick="removerInspecao('${insp.id}')" style="width:100%;border-color:rgba(239,68,68,.35);color:#ef4444">
+  html += `<div style="margin-top:8px">`;
+  if (isInspectionEmailSent(insp)) {
+    html += `<button class="btn-secondary" disabled style="width:100%;opacity:.65;cursor:not-allowed">
+      <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 10V7a4 4 0 0 1 8 0v3"/><rect x="4" y="10" width="12" height="7" rx="2"/></svg>
+      Inspeção enviada por e-mail
+    </button>`;
+  } else {
+    html += `<button class="btn-secondary" onclick="removerInspecao('${insp.id}')" style="width:100%;border-color:rgba(239,68,68,.35);color:#ef4444">
       <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h14"/><path d="M8 5V3h4v2"/><path d="M6 5l1 12h6l1-12"/></svg>
       Remover inspeção
-    </button>
-  </div>`;
+    </button>`;
+  }
+  html += `</div>`;
 
   document.getElementById('modal-detalhe-body').innerHTML = html;
   document.getElementById('modal-detalhe').classList.add('open');
@@ -6730,7 +6831,7 @@ function renderRelatorios() {
   const gerSel = document.getElementById('rel-gerencia-select');
   if (gerSel) gerSel.innerHTML = gerOpts;
   const relEmail = document.getElementById('rel-email-destino');
-  if (relEmail && !relEmail.value) relEmail.value = localStorage.getItem(EMAIL_AUTO_TO_KEY) || EMAIL_AUTO_DEFAULT_TO;
+  if (relEmail && !relEmail.value) relEmail.value = normalizeLegacyEmailRecipientValue(localStorage.getItem(EMAIL_AUTO_TO_KEY)) || EMAIL_AUTO_DEFAULT_TO;
   renderSmartsheetAdminVisibility();
   renderSmartsheetSettings();
 }
@@ -6861,6 +6962,14 @@ async function enviarRelatorioSetorialEmail() {
   if (!setor) { toast('Selecione um setor'); return; }
   const to = getSetorialReportEmailTo();
   if (!to) { toast('Informe o destinatário do e-mail.'); return; }
+  try {
+    assertOnlyAngloAmericanEmails(to);
+  } catch (e) {
+    const status = document.getElementById('rel-email-status');
+    if (status) status.textContent = e.message;
+    toast(e.message);
+    return;
+  }
   const status = document.getElementById('rel-email-status');
 
   try {
@@ -6878,8 +6987,10 @@ async function enviarRelatorioSetorialEmail() {
     if (status) status.textContent = `PDF gerado: ${report.fileName} (${pdfKb} KB). Enviando ao Power Automate...`;
     toast('Enviando relatório por e-mail...');
     await sendPowerAutomateEmailPayload(payload);
+    const sentCount = markInspectionsAsEmailSent(getSetorialReportInspections(setor).map(item => item.id), to, 'relatorio_setorial');
+    await saveData(APP);
     if (status) status.textContent = `E-mail enviado. PDF enviado ao fluxo: ${report.fileName} (${pdfKb} KB).`;
-    toast('Relatório enviado por e-mail.');
+    toast(`Relatório enviado por e-mail. ${sentCount} inspeção(ões) bloqueada(s) para remoção.`);
   } catch (e) {
     console.error('Erro ao enviar relatório por e-mail:', e);
     if (status) status.textContent = `Falha ao enviar relatório: ${e.message}`;
@@ -6915,6 +7026,10 @@ function editarInspecao(id) {
 async function removerInspecao(id) {
   const insp = APP.inspecoes.find(i => i.id === id);
   if (!insp) { toast('Inspeção não encontrada.'); return; }
+  if (isInspectionEmailSent(insp)) {
+    toast('Esta inspeção já foi enviada por e-mail e não pode ser removida.');
+    return;
+  }
   const resumo = `${insp.setor}${insp.subarea ? ' - ' + insp.subarea : ''} (${formatDate(insp.data)})`;
   const ok = confirm(`Deseja remover esta inspeção?\n\n${resumo}\n\nEssa ação não pode ser desfeita.`);
   if (!ok) return;
