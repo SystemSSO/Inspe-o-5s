@@ -2174,7 +2174,7 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
       </div>
       <div class="form-group">
         <label class="form-label">Destinatário do e-mail</label>
-        <input type="text" class="form-input" id="rel-email-destino" placeholder="destinatario@angloamerican.com; outro@angloamerican.com">
+        <input type="text" class="form-input" id="rel-email-destino" list="email-history-list" placeholder="destinatario@angloamerican.com; outro@angloamerican.com">
       </div>
       <button class="btn-primary" onclick="gerarPDF()">
         <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 2h7l4 4v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M12 2v4h4"/><path d="M7 13l3 3 3-3M10 10v6"/></svg>
@@ -2196,7 +2196,7 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
       </div>
       <div class="form-group">
         <label class="form-label">Destinatário do e-mail</label>
-        <input type="text" class="form-input" id="rel-gerencia-email-destino" placeholder="destinatario@angloamerican.com; outro@angloamerican.com">
+        <input type="text" class="form-input" id="rel-gerencia-email-destino" list="email-history-list" placeholder="destinatario@angloamerican.com; outro@angloamerican.com">
       </div>
       <button class="btn-primary" onclick="gerarPDFGerencia()">
         <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 2h7l4 4v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M12 2v4h4"/><path d="M7 13l3 3 3-3M10 10v6"/></svg>
@@ -2208,6 +2208,7 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
       </button>
       <div id="rel-gerencia-email-status" style="margin-top:8px;color:var(--text2);font-size:12px;line-height:1.35"></div>
     </div>
+    <datalist id="email-history-list"></datalist>
     <div class="section-title smartsheet-admin-only" style="display:none">Integração Smartsheet</div>
     <div class="card smartsheet-admin-only" style="display:none">
       <div class="form-group">
@@ -2735,6 +2736,8 @@ const SMARTSHEET_ADMIN_UNLOCK_KEY = 'aa5s_smartsheet_admin_unlocked';
 const SMARTSHEET_ADMIN_PASSWORD = 'Codemin@123';
 const EMAIL_AUTO_ENABLED_KEY = 'aa5s_email_auto_enabled';
 const EMAIL_AUTO_TO_KEY = 'aa5s_email_auto_to';
+const EMAIL_HISTORY_KEY = 'aa5s_email_history';
+const EMAIL_HISTORY_LIMIT = 20;
 const EMAIL_ALLOWED_DOMAIN = 'angloamerican.com';
 const EMAIL_AUTO_DEFAULT_TO = 'niquel_incidentes@angloamerican.com';
 const POWER_AUTOMATE_EMAIL_URL_KEY = 'aa5s_power_automate_email_url';
@@ -3225,6 +3228,37 @@ function parseEmailRecipients(value) {
     });
 }
 
+// === Function: getEmailHistory ===
+function getEmailHistory() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(EMAIL_HISTORY_KEY) || '[]');
+    return Array.isArray(parsed)
+      ? parsed.map(item => String(item || '').trim().toLowerCase()).filter(Boolean)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+// === Function: saveSuccessfulEmailRecipients ===
+function saveSuccessfulEmailRecipients(value) {
+  const current = getEmailHistory();
+  const next = [...parseEmailRecipients(value).map(email => email.toLowerCase()), ...current]
+    .filter(email => email.endsWith(`@${EMAIL_ALLOWED_DOMAIN}`));
+  const unique = [...new Set(next)].slice(0, EMAIL_HISTORY_LIMIT);
+  localStorage.setItem(EMAIL_HISTORY_KEY, JSON.stringify(unique));
+  renderEmailHistoryDatalist();
+}
+
+// === Function: renderEmailHistoryDatalist ===
+function renderEmailHistoryDatalist() {
+  const list = document.getElementById('email-history-list');
+  if (!list) return;
+  list.innerHTML = getEmailHistory()
+    .map(email => `<option value="${escapeHtml(email)}"></option>`)
+    .join('');
+}
+
 // === Function: getExternalEmailRecipients ===
 function getExternalEmailRecipients(value) {
   return parseEmailRecipients(value).filter(email => {
@@ -3260,6 +3294,7 @@ function isInspectionEmailSent(insp) {
 function markInspectionsAsEmailSent(ids, recipients, tipo = 'relatorio') {
   const sentAt = new Date().toISOString();
   const uniqueIds = [...new Set((ids || []).filter(Boolean))];
+  saveSuccessfulEmailRecipients(recipients);
   uniqueIds.forEach(id => {
     const insp = APP.inspecoes.find(item => item.id === id);
     if (!insp) return;
@@ -3420,11 +3455,29 @@ function buildPowerAutomateAttachment(fileName, contentBytes, contentType = 'app
   };
 }
 
+// === Function: pdfDocToBase64 ===
+function pdfDocToBase64(doc) {
+  if (!doc?.output) return '';
+  const buffer = doc.output('arraybuffer');
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
 // === Function: addAttachmentToEmailPayload ===
 function addAttachmentToEmailPayload(payload, attachment) {
   const attachmentFile = {
     Name: attachment.name,
-    ContentBytes: attachment.contentBytes
+    ContentBytes: attachment.contentBytes,
+    ContentType: attachment.contentType,
+    name: attachment.name,
+    fileName: attachment.name,
+    contentBytes: attachment.contentBytes,
+    contentType: attachment.contentType
   };
   const attachmentsJson = JSON.stringify([attachmentFile]);
   return {
@@ -3457,8 +3510,7 @@ async function buildInspectionEmailPayloadWithPdf(insp) {
   const report = await gerarPDFInsp(insp.id, { save: false, showToast: false });
   if (!report?.doc) return payload;
 
-  const dataUri = report.doc.output('datauristring');
-  const contentBytes = String(dataUri || '').split(',')[1] || '';
+  const contentBytes = pdfDocToBase64(report.doc);
   if (!contentBytes) throw new Error('Não foi possível gerar o anexo PDF da inspeção.');
 
   const attachment = buildPowerAutomateAttachment(report.fileName, contentBytes);
@@ -7154,6 +7206,7 @@ function renderRelatorios() {
   if (relEmail && !relEmail.value) relEmail.value = normalizeLegacyEmailRecipientValue(localStorage.getItem(EMAIL_AUTO_TO_KEY)) || EMAIL_AUTO_DEFAULT_TO;
   const relGerenciaEmail = document.getElementById('rel-gerencia-email-destino');
   if (relGerenciaEmail && !relGerenciaEmail.value) relGerenciaEmail.value = normalizeLegacyEmailRecipientValue(localStorage.getItem(EMAIL_AUTO_TO_KEY)) || EMAIL_AUTO_DEFAULT_TO;
+  renderEmailHistoryDatalist();
   renderSmartsheetAdminVisibility();
   renderSmartsheetSettings();
 }
@@ -7319,8 +7372,7 @@ async function enviarRelatorioSetorialEmail() {
     toast('Gerando relatório para envio...');
     if (status) status.textContent = 'Gerando PDF para anexo...';
     const report = await gerarPDFSetorial(setor, { save: false, showToast: false });
-    const dataUri = report.doc.output('datauristring');
-    const contentBytes = String(dataUri || '').split(',')[1] || '';
+    const contentBytes = pdfDocToBase64(report.doc);
     if (!contentBytes) throw new Error('Não foi possível gerar o anexo PDF.');
     const attachment = buildPowerAutomateAttachment(report.fileName, contentBytes);
     const payload = buildSetorialReportEmailPayload(setor, attachment);
@@ -7387,8 +7439,7 @@ async function enviarRelatorioGerenciaEmail() {
     if (status) status.textContent = 'Gerando PDF da gerência para anexo...';
     const report = await gerarPDFGerencia({ save: false, showToast: false });
     if (!report?.doc) throw new Error('Não foi possível gerar o PDF da gerência.');
-    const dataUri = report.doc.output('datauristring');
-    const contentBytes = String(dataUri || '').split(',')[1] || '';
+    const contentBytes = pdfDocToBase64(report.doc);
     if (!contentBytes) throw new Error('Não foi possível gerar o anexo PDF da gerência.');
     const attachment = buildPowerAutomateAttachment(report.fileName, contentBytes);
     const payload = buildGerenciaReportEmailPayload(gerencia, attachment, to);
