@@ -4254,6 +4254,7 @@ async function syncPendingSmartsheetQueue() {
     }
     setSmartsheetStatus(`Enviando ao Smartsheet ${enviadas + 1}/${pendentes.length}: ${insp.subarea || insp.setor || insp.id}`);
     await syncSmartsheetInspection(insp);
+    insp.smartsheetSent = true;
     enviadas += 1;
     APP.smartsheetQueue = APP.smartsheetQueue.filter(id => id !== inspId);
     persistLocalApp(APP);
@@ -5643,7 +5644,11 @@ function getInspectionStatusBadges(insp) {
   if (smartsheetPending) {
     badges.push(statusBadgeHTML('Smartsheet pendente', 'warn'));
   } else if (hasSmartsheetConfig()) {
-    badges.push(statusBadgeHTML('Smartsheet enviado', 'info'));
+    if (insp.smartsheetSent) {
+      badges.push(statusBadgeHTML('Smartsheet enviado', 'ok'));
+    } else {
+      badges.push(statusBadgeHTML('Smartsheet não enviado', 'neutral'));
+    }
   }
 
   badges.push(
