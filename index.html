@@ -3933,16 +3933,11 @@ function sanitizePdfText(value) {
   if (Array.isArray(value)) return value.map(sanitizePdfText);
   if (value === null || value === undefined) return value;
   return String(value)
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[–—]/g, '-')
-    .replace(/[•·]/g, '-')
-    .replace(/ª/g, 'a')
-    .replace(/º/g, 'o')
-    .replace(/©/g, '(c)')
+    .normalize('NFC')
     .replace(/✓/g, 'OK')
     .replace(/�/g, '')
-    .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, '');
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
 }
 
 // === Function: sanitizePdfFileName ===
