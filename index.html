@@ -6616,9 +6616,13 @@ function calcMediaS(criterios) {
   return notas.reduce((a,b)=>a+b,0) / notas.length;
 }
 
+function criterioTemNotaNumerica(criterio) {
+  return typeof criterio?.nota === 'number';
+}
+
 // === Function: isNotaNC ===
 function isNotaNC(nota) {
-  return nota !== null && nota <= 3;
+  return typeof nota === 'number' && nota <= 3;
 }
 
 // === Function: getInspecaoAnteriorMesmoLocal ===
@@ -6657,7 +6661,7 @@ function calcNotaGeralFinal(insp, inspAnterior = null) {
   let total = 0;
   let count = 0;
   SENSOS.forEach(s => {
-    const notas = (insp.sensos[s.id] || []).filter(c => c.nota !== null);
+    const notas = (insp.sensos[s.id] || []).filter(criterioTemNotaNumerica);
     if (!notas.length) return;
     total += calcMediaSFinal(insp, s.id, inspAnterior);
     count += 1;
@@ -6670,7 +6674,7 @@ function calcNotaGeralFinal(insp, inspAnterior = null) {
 function updateScoreMini(sId) {
   const el = document.getElementById(`score-mini-${sId}`);
   if (!el) return;
-  const notas = currentInsp.sensos[sId].filter(c => c.nota !== null);
+  const notas = currentInsp.sensos[sId].filter(criterioTemNotaNumerica);
   if (notas.length === 0) { el.textContent = '—'; el.style.color = 'var(--text2)'; return; }
   const media = calcMediaSFinal(currentInsp, sId);
   el.textContent = media.toFixed(2);
@@ -6684,6 +6688,10 @@ function updateNotaGeral() {
     currentInsp.notaGeral = ng;
     document.getElementById('insp-nota-geral').textContent = ng.toFixed(2);
     document.getElementById('insp-nota-geral').style.color = notaCor(ng);
+  } else {
+    currentInsp.notaGeral = null;
+    document.getElementById('insp-nota-geral').textContent = '—';
+    document.getElementById('insp-nota-geral').style.color = 'var(--text2)';
   }
 }
 
@@ -6863,7 +6871,7 @@ function renderHistorico() {
   groupedList.innerHTML = groups.map((group, idx) => {
     const titulo = `${group.setor}${group.subarea ? ` - ${group.subarea}` : ''}`;
     const ultima = group.items[0];
-    return `<details class="hist-group" ${idx < 2 ? 'open' : ''}>
+    return `<details class="hist-group">
       <summary class="hist-group-summary">
         <div>
           <div class="hist-group-title">${titulo}</div>
@@ -7169,7 +7177,7 @@ function renderPendList() {
   list.innerHTML = setores.map((setor, idx) => {
     const g = grupos[setor];
     const groupId = `pend-setor-${idx}`;
-    return `<div class="pend-sector-group ${idx === 0 ? 'open' : ''}" id="${groupId}">
+    return `<div class="pend-sector-group" id="${groupId}">
       <button class="pend-sector-toggle" onclick="togglePendSetor('${groupId}')">
         <div style="text-align:left;flex:1">
           <div class="pend-sector-title">${setor}</div>
@@ -7209,8 +7217,7 @@ function renderRelatorios() {
 // === Function: getGerenciasMap ===
 function getGerenciasMap() {
   const map = {
-    'Produção CD': ['Preparação de Carga', 'Expedição', 'Refino', 'Calcinação e Redução'],
-    'Produção Florestal': ['Reflorestamento'],
+    'Produção CD': ['Preparação de Carga', 'Expedição', 'Refino', 'Calcinação e Redução', 'Reflorestamento'],
     'Manutenção': ['Manutenção Mecânica', 'Manutenção Elétrica'],
     'Desempenho de Contratadas Infraestrutura e Engenharia': [
       'Engenharia de Manutenção',
@@ -7224,18 +7231,13 @@ function getGerenciasMap() {
       // Administração/Refeitório/RH estão agrupados em um único setor no cadastro atual
       'Administração, Refeitório e RH'
     ],
-    'Suprimentos': ['Armazém'],
+    'Supply Chain': ['Supply Chain - Físico'],
     'Plan Int e Modelo Operacional': ['Laboratório'],
     'Saúde Segurança Riscos e Resposta Emergência': [
       // Segurança/Medicina/Resposta Emergência estão agrupados em um único setor no cadastro atual
       'Segurança, Medicina e Resposta à Emergência'
     ]
   };
-  // Garante que todo setor existente esteja mapeado (fallback automático)
-  const all = new Set(SETORES.map(s => s.nome));
-  const usados = new Set(Object.values(map).flat());
-  const faltantes = [...all].filter(s => !usados.has(s));
-  if (faltantes.length) map['Outros'] = faltantes.sort((a, b) => a.localeCompare(b, 'pt-BR'));
   return map;
 }
 
@@ -7962,6 +7964,7 @@ async function gerarPDFGerencia(options = {}) {
   const totais = gerenciaData.totais;
   const mediaGerencia = gerenciaData.mediaGerencia;
   const ncDetalhes = gerenciaData.ncDetalhes;
+  const inspsPeriodo = gerenciaData.inspsPeriodo || [];
 
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' });
@@ -8003,16 +8006,43 @@ async function gerarPDFGerencia(options = {}) {
     return 32;
   }
 
+  function novaPaginaNCSemFaixa(titulo) {
+    doc.addPage();
+    doc.setFillColor(255, 255, 255);
+    doc.rect(0, 0, W, H, 'F');
+    doc.setTextColor(22, 53, 159);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.text(titulo, margin, 18);
+    return 26;
+  }
+
+  function renderObrigadoSlide() {
+    doc.addPage();
+    doc.setFillColor(22, 53, 159);
+    doc.rect(0, 0, W, H, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(34);
+    doc.text('Obrigado(a)', W / 2, H / 2, { align: 'center' });
+  }
+
   function splitArrayIntoChunks(list, size) {
     const out = [];
     for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size));
     return out;
   }
 
+  const inspRefCapaGerencial = [...inspsPeriodo]
+    .filter(i => i.tecnico)
+    .sort((a, b) => new Date(b.data) - new Date(a.data))[0] || null;
+  const tecnicoGerencialTxt = String(inspRefCapaGerencial?.tecnico || currentTec || 'Não informado');
+
   // === Function: renderGerenciaCover ===
   async function renderGerenciaCover() {
     const gerenciaTxt = String(gerencia || '').toUpperCase();
     const periodoTxt = mesAnoAtual.toUpperCase();
+    const tecnicoTxt = tecnicoGerencialTxt;
     try {
       async function loadCoverDataUrl(src) {
         return await new Promise((resolve, reject) => {
@@ -8153,30 +8183,31 @@ async function gerarPDFGerencia(options = {}) {
     doc.text(gerLines, cardX + 15, 87);
 
     doc.setFillColor(248, 250, 252);
-    doc.roundedRect(cardX + 10, 108, 62, 28, 4, 4, 'F');
+    doc.roundedRect(cardX + 10, 108, cardW - 20, 28, 4, 4, 'F');
     doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(cardX + 10, 108, 62, 28, 4, 4);
+    doc.roundedRect(cardX + 10, 108, cardW - 20, 28, 4, 4);
     doc.setTextColor(100, 116, 139);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
-    doc.text('SETORES', cardX + 15, 116);
+    doc.text('TÉCNICO(A)', cardX + 15, 116);
     doc.setTextColor(22, 53, 159);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(18);
-    doc.text(String(setores.length), cardX + 15, 128);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    const tecnicoLines = doc.splitTextToSize(tecnicoTxt, cardW - 30);
+    doc.text(tecnicoLines, cardX + 15, 124);
 
     doc.setFillColor(248, 250, 252);
-    doc.roundedRect(cardX + 78, 108, 62, 28, 4, 4, 'F');
+    doc.roundedRect(cardX + 10, 142, cardW - 20, 18, 4, 4, 'F');
     doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(cardX + 78, 108, 62, 28, 4, 4);
+    doc.roundedRect(cardX + 10, 142, cardW - 20, 18, 4, 4);
     doc.setTextColor(100, 116, 139);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
-    doc.text('PERÍODO', cardX + 83, 116);
+    doc.text('PERÍODO', cardX + 15, 149);
     doc.setTextColor(22, 53, 159);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9.5);
-    doc.text(periodoTxt, cardX + 83, 128, { maxWidth: 52 });
+    doc.setFontSize(10.5);
+    doc.text(periodoTxt, cardX + 55, 149);
     doc.setDrawColor(22, 53, 159);
     doc.setLineWidth(0.7);
     doc.line(cardX + 10, 166, cardX + cardW - 10, 166);
@@ -8216,17 +8247,24 @@ async function gerarPDFGerencia(options = {}) {
   y += 12;
   const objetivoTxt = `Este relatório apresenta a consolidação de Housekeeping da gerência ${gerencia} no período selecionado, com análise integrada dos setores mapeados para apoiar a priorização de ações, melhoria contínua e tomada de decisão operacional.`;
   const objetivoLines = doc.splitTextToSize(objetivoTxt, W - margin * 2 - 10);
+  const setoresLista = setores.length ? setores : ['Setores não informados'];
+  const setoresBulletLines = setoresLista.flatMap(setorNome => doc.splitTextToSize(`• ${setorNome}`, W - margin * 2 - 14));
+  const cardHObjetivo = 54 + (setoresBulletLines.length * 4.2) + (objetivoLines.length * 4.2);
   doc.setDrawColor(226, 232, 240);
   doc.setFillColor(248, 250, 252);
-  doc.roundedRect(margin, y, W - margin * 2, 44 + objetivoLines.length * 4.2, 3, 3, 'FD');
+  doc.roundedRect(margin, y, W - margin * 2, cardHObjetivo, 3, 3, 'FD');
   doc.setTextColor(22, 53, 159);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
   doc.text(`Gerência: ${gerencia}`, margin + 6, y + 10);
   doc.text(`Período: ${mesAnoAtual}`, margin + 6, y + 17);
-  doc.text(`Setores considerados: ${setores.length}`, margin + 6, y + 24);
+  doc.text(`Técnico(a): ${tecnicoGerencialTxt}`, margin + 6, y + 24);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Setores considerados:', margin + 6, y + 31);
+  doc.setFont('helvetica', 'normal');
+  doc.text(setoresBulletLines, margin + 8, y + 37);
   doc.setFontSize(9.5);
-  doc.text(objetivoLines, margin + 6, y + 32);
+  doc.text(objetivoLines, margin + 6, y + 41 + (setoresBulletLines.length * 4.2));
 
   // Dashboard (padrão setorial)
   doc.addPage();
@@ -8249,7 +8287,7 @@ async function gerarPDFGerencia(options = {}) {
   const row2Y = row1Y + cardH + 8;
   drawDashCard(margin, row1Y, cardW, cardH, 'Inspeções', totais.inspecoes, 'No mês atual', [22, 53, 159]);
   drawDashCard(margin + cardW + gap, row1Y, cardW, cardH, 'Média Geral', mediaGerencia !== null ? mediaGerencia.toFixed(2) : '—', 'Nota média da gerência', [14, 165, 233]);
-  drawDashCard(margin + (cardW + gap) * 2, row1Y, cardW, cardH, 'Setores Ativos', resumo.filter(r => r.inspecoes > 0).length, 'Com inspeção no mês', [100, 116, 139]);
+  drawDashCard(margin + (cardW + gap) * 2, row1Y, cardW, cardH, 'Áreas Inspecionadas', resumo.filter(r => r.inspecoes > 0).length, 'Com inspeção no mês', [100, 116, 139]);
   drawDashCard(margin, row2Y, cardW, cardH, 'NC Abertas', totais.ncAbertas, 'Pendências identificadas', [244, 63, 94]);
   drawDashCard(margin + cardW + gap, row2Y, cardW, cardH, 'NC Resolvidas', totais.ncResolvidas, 'Concluídas no período', [16, 185, 129]);
   drawDashCard(margin + (cardW + gap) * 2, row2Y, cardW, cardH, 'Setores Totais', setores.length, 'Mapeados na gerência', [245, 158, 11]);
@@ -8326,40 +8364,50 @@ async function gerarPDFGerencia(options = {}) {
     });
   }
 
-  // Página(s) com NC detalhadas por setor
-  y = novaPaginaComCabecalho('Não Conformidades por Setor', `${gerencia} · ${mesAnoAtual}`);
   const ncsOrdenadas = [...ncDetalhes].sort((a, b) => {
     const setorCmp = a.setor.localeCompare(b.setor, 'pt-BR');
     if (setorCmp !== 0) return setorCmp;
     return new Date(b.data) - new Date(a.data);
   });
-  if (!ncsOrdenadas.length) {
-    doc.setTextColor(22, 53, 159);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(11);
-    doc.text('Nenhuma NC registrada no período selecionado.', margin, y);
-  } else {
-    for (let idx = 0; idx < ncsOrdenadas.length; idx++) {
-      const item = ncsOrdenadas[idx];
+  const ncsAbertasOrdenadas = ncsOrdenadas.filter(item => item.tipo !== 'resolvida');
+  const ncsResolvidasOrdenadas = ncsOrdenadas.filter(item => item.tipo === 'resolvida');
+
+  async function renderGerencialNCSection(lista, tituloSecao, emptyMessage) {
+    y = novaPaginaNCSemFaixa(tituloSecao);
+    if (!lista.length) {
+      doc.setTextColor(22, 53, 159);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(11);
+      doc.text(emptyMessage, margin, y);
+      return;
+    }
+
+    for (let idx = 0; idx < lista.length; idx++) {
+      const item = lista[idx];
       const blocoTitulo = `${idx + 1}. [${item.setor}] ${item.senso} · ${item.local} · ${formatDate(item.data)}`;
       const tipoTxt = item.tipo === 'resolvida' ? 'RESOLVIDA' : 'ABERTA';
       const tipoCol = item.tipo === 'resolvida' ? [22, 163, 74] : [220, 38, 38];
+      const cardFill = item.tipo === 'resolvida' ? [240, 253, 244] : [254, 242, 242];
+      const cardStroke = item.tipo === 'resolvida' ? [187, 247, 208] : [254, 202, 202];
       const criterioLines = doc.splitTextToSize(`Critério: ${item.criterio}`, W - margin * 2 - 8);
       const obsLines = doc.splitTextToSize(`Obs: ${item.obs}`, W - margin * 2 - 8);
       const sugLines = doc.splitTextToSize(`Sugestão: ${item.sugestao}`, W - margin * 2 - 8);
       const fotos = Array.isArray(item.fotos) ? item.fotos : [];
       const fotosDataUrl = (await Promise.all(fotos.map(imageToDataUrl))).filter(Boolean);
       const fotosPorLinha = 2;
-      const linhasFotos = fotosDataUrl.length ? Math.ceil(fotosDataUrl.length / fotosPorLinha) : 0;
-      const fotoW = 82;
-      const fotoH = 58;
-      const gapFoto = 6;
+      const fotoW = 118;
+      const fotoH = 78;
+      const gapFoto = 8;
+      const fotosPorPagina = fotosPorLinha;
+      const chunks = splitArrayIntoChunks(fotosDataUrl, fotosPorPagina);
+      const primeiroChunk = chunks.length ? chunks[0] : [];
+      const linhasFotos = primeiroChunk.length ? Math.ceil(primeiroChunk.length / fotosPorLinha) : 0;
       const hFotos = linhasFotos ? (linhasFotos * fotoH) + ((linhasFotos - 1) * gapFoto) : 0;
       const h = 12 + criterioLines.length * 4 + obsLines.length * 4 + sugLines.length * 4 + hFotos + 8;
-      if (y + h > 196) y = novaPaginaComCabecalho('Não Conformidades por Setor', `${gerencia} · ${mesAnoAtual}`);
+      if (y + h > 196) y = novaPaginaNCSemFaixa(tituloSecao);
 
-      doc.setFillColor(248, 250, 252);
-      doc.setDrawColor(226, 232, 240);
+      doc.setFillColor(...cardFill);
+      doc.setDrawColor(...cardStroke);
       doc.roundedRect(margin, y, W - margin * 2, h, 2, 2, 'FD');
       doc.setTextColor(22, 53, 159);
       doc.setFont('helvetica', 'bold');
@@ -8382,16 +8430,14 @@ async function gerarPDFGerencia(options = {}) {
 
       let yConsumidoManual = false;
       if (fotosDataUrl.length) {
-        const fotosPorPagina = fotosPorLinha * 2;
-        const chunks = splitArrayIntoChunks(fotosDataUrl, fotosPorPagina);
         if (chunks.length > 1) yConsumidoManual = true;
         for (let chunkIdx = 0; chunkIdx < chunks.length; chunkIdx++) {
           const chunk = chunks[chunkIdx];
           if (chunkIdx > 0) {
-            y = novaPaginaComCabecalho('Não Conformidades por Setor', `${gerencia} · ${mesAnoAtual}`);
+            y = novaPaginaNCSemFaixa(tituloSecao);
             const hChunk = 12 + criterioLines.length * 4 + obsLines.length * 4 + sugLines.length * 4 + (Math.ceil(chunk.length / fotosPorLinha) * fotoH) + ((Math.ceil(chunk.length / fotosPorLinha) - 1) * gapFoto) + 8;
-            doc.setFillColor(248, 250, 252);
-            doc.setDrawColor(226, 232, 240);
+            doc.setFillColor(...cardFill);
+            doc.setDrawColor(...cardStroke);
             doc.roundedRect(margin, y, W - margin * 2, hChunk, 2, 2, 'FD');
             doc.setTextColor(22, 53, 159);
             doc.setFont('helvetica', 'bold');
@@ -8456,6 +8502,19 @@ async function gerarPDFGerencia(options = {}) {
       if (!yConsumidoManual) y += h + 4;
     }
   }
+
+  await renderGerencialNCSection(
+    ncsAbertasOrdenadas,
+    'Relatório de não conformidades',
+    'Nenhuma não conformidade aberta registrada no período selecionado.'
+  );
+  await renderGerencialNCSection(
+    ncsResolvidasOrdenadas,
+    'Relatório de não conformidades resolvidas',
+    'Nenhuma não conformidade foi concluída no período selecionado para esta gerência.'
+  );
+
+  renderObrigadoSlide();
 
   const fileName = `Housekeeping_Gerencia_${sanitizePdfFileName(gerencia)}_${periodoAtual}.pdf`;
   if (shouldSave) doc.save(fileName);
@@ -8698,6 +8757,16 @@ async function gerarPDFSetorial(setor, options = {}) {
     doc.rect(0, 0, W, H, 'F');
   }
 
+  function renderObrigadoSlide() {
+    doc.addPage();
+    doc.setFillColor(22, 53, 159);
+    doc.rect(0, 0, W, H, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(34);
+    doc.text('Obrigado(a)', W / 2, H / 2, { align: 'center' });
+  }
+
   // === Function: ensureY ===
   function ensureY(need) {
     if (y + need > H - 14) {
@@ -8850,7 +8919,7 @@ async function gerarPDFSetorial(setor, options = {}) {
 
   drawDashCard(margin, row1Y, cardW, cardH, 'Inspeções', totalInspecoes, 'No mês atual', [22, 53, 159]);
   drawDashCard(margin + cardW + gap, row1Y, cardW, cardH, 'Média Geral', mediaGeral !== null ? mediaGeral.toFixed(2) : '—', 'Nota média do setor', [14, 165, 233]);
-  drawDashCard(margin + (cardW + gap) * 2, row1Y, cardW, cardH, 'Locais Avaliados', locaisUnicos, 'Subáreas/locais distintos', [100, 116, 139]);
+  drawDashCard(margin + (cardW + gap) * 2, row1Y, cardW, cardH, 'Áreas Inspecionadas', locaisUnicos, 'Subáreas/locais distintos', [100, 116, 139]);
 
   drawDashCard(margin, row2Y, cardW, cardH, 'NC Abertas', totalNCAbertas, 'Inclui encaminhadas', [244, 63, 94]);
   drawDashCard(margin + cardW + gap, row2Y, cardW, cardH, 'NC Resolvidas', totalResolvidas, 'Resolvidas no período', [16, 185, 129]);
@@ -8901,10 +8970,10 @@ async function gerarPDFSetorial(setor, options = {}) {
         : '';
       const correspLines = correspTxt ? doc.splitTextToSize(correspTxt, W - margin * 2 - 8) : [];
       const fotosPorLinha = 2;
-      const fotoW = 82;
-      const fotoH = 58;
-      const gapFoto = 6;
-      const fotosPorPagina = fotosPorLinha * 2;
+      const fotoW = 118;
+      const fotoH = 78;
+      const gapFoto = 8;
+      const fotosPorPagina = fotosPorLinha;
       const chunks = splitArrayIntoChunks(fotosDataUrl, fotosPorPagina);
       const linhasBase = criterioLines.length + obsLines.length + sugLines.length + reincLines.length + correspLines.length;
       const lineH = 4.4;
@@ -8915,10 +8984,15 @@ async function gerarPDFSetorial(setor, options = {}) {
         const linhasFotos = fotosParte.length ? Math.ceil(fotosParte.length / fotosPorLinha) : 0;
         const hFotos = linhasFotos ? (linhasFotos * fotoH) + ((linhasFotos - 1) * gapFoto) : 0;
         const h = 14 + (linhasBase * lineH) + hFotos + 14;
-        ensureY(h + 10);
+        if (part > 0) {
+          addNewPage();
+          y = 18;
+        } else {
+          ensureY(h + 10);
+        }
 
-        doc.setFillColor(248, 250, 252);
-        doc.setDrawColor(226, 232, 240);
+        doc.setFillColor(254, 242, 242);
+        doc.setDrawColor(254, 202, 202);
         doc.roundedRect(margin, y, W - margin * 2, h, 2, 2, 'FD');
         doc.setTextColor(22, 53, 159);
         doc.setFont('helvetica', 'bold');
@@ -9011,7 +9085,7 @@ async function gerarPDFSetorial(setor, options = {}) {
         ? `Resolvida pelo corresponsável - Origem: ${item.origemSetor} · ${item.origemLocal} | Destino: ${item.destinoSetor}`
         : '';
       const correspLines = correspTxt ? doc.splitTextToSize(correspTxt, W - margin * 2 - 8) : [];
-      const comparativoH = 100;
+      const comparativoH = 120;
       const linhasBase = criterioLines.length + antesLines.length + agoraLines.length + sugLines.length + reincLines.length + correspLines.length;
       const lineH = 4.4;
       const blocos = [0];
@@ -9026,7 +9100,7 @@ async function gerarPDFSetorial(setor, options = {}) {
         doc.setTextColor(22, 53, 159);
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(9);
-        doc.text(part === 0 ? titulo : `${titulo} (continuação)`, margin + 3, y + 6);
+        doc.text(titulo, margin + 3, y + 6);
 
         doc.setFillColor(22, 163, 74);
         doc.roundedRect(W - margin - 30, y + 2, 26, 6, 2, 2, 'F');
@@ -9061,7 +9135,7 @@ async function gerarPDFSetorial(setor, options = {}) {
         const compW = W - margin * 2 - 6;
         const gapComp = 4;
         const colW = (compW - gapComp) / 2;
-        const imgH = 78;
+        const imgH = 94;
         doc.setFillColor(236, 253, 245);
         doc.setDrawColor(167, 243, 208);
         doc.roundedRect(compX, by, compW, comparativoH - 4, 2, 2, 'FD');
@@ -9074,7 +9148,7 @@ async function gerarPDFSetorial(setor, options = {}) {
           const fy = by + 8;
           doc.setFillColor(255, 255, 255);
           doc.setDrawColor(220, 230, 242);
-          doc.roundedRect(fx, fy, colW - 3, 85, 1.5, 1.5, 'FD');
+          doc.roundedRect(fx, fy, colW - 3, 101, 1.5, 1.5, 'FD');
           doc.setTextColor(71, 85, 105);
           doc.setFontSize(7);
           doc.text(label, fx + 2, fy + 5);
@@ -9095,6 +9169,7 @@ async function gerarPDFSetorial(setor, options = {}) {
   doc.setTextColor(22, 53, 159);
   doc.setFontSize(9);
   doc.text(`Gerado em ${now.toLocaleString('pt-BR')}`, W / 2, H - 8, { align: 'center' });
+  renderObrigadoSlide();
 
   const fileName = `Housekeeping_${sanitizePdfFileName(setor)}_${anoAtual}_${String(now.getMonth()+1).padStart(2,'0')}.pdf`;
   if (shouldSave) doc.save(fileName);
