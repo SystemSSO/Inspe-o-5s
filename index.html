@@ -8036,7 +8036,7 @@ async function gerarPDFGerencia(options = {}) {
   const inspRefCapaGerencial = [...inspsPeriodo]
     .filter(i => i.tecnico)
     .sort((a, b) => new Date(b.data) - new Date(a.data))[0] || null;
-  const tecnicoGerencialTxt = String(inspRefCapaGerencial?.tecnico || currentTec || 'Não informado');
+  const tecnicoGerencialTxt = String(inspRefCapaGerencial?.tecnico || 'Não informado');
 
   // === Function: renderGerenciaCover ===
   async function renderGerenciaCover() {
@@ -8294,6 +8294,14 @@ async function gerarPDFGerencia(options = {}) {
 
   // Tabela resumida por setor
   y = row2Y + cardH + 14;
+  const resumoTableW = W - margin * 2;
+  const resumoColX = {
+    setor: margin + 4,
+    inspecoes: margin + resumoTableW * 0.54,
+    media: margin + resumoTableW * 0.67,
+    ncAbertas: margin + resumoTableW * 0.82,
+    ncResolvidas: margin + resumoTableW - 4
+  };
   doc.setTextColor(22, 53, 159);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
@@ -8301,15 +8309,15 @@ async function gerarPDFGerencia(options = {}) {
   y += 6;
   doc.setDrawColor(226, 232, 240);
   doc.setFillColor(248, 250, 252);
-  doc.roundedRect(margin, y, W - margin * 2, 10, 2, 2, 'FD');
+  doc.roundedRect(margin, y, resumoTableW, 10, 2, 2, 'FD');
   doc.setTextColor(22, 53, 159);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9.5);
-  doc.text('Setor', margin + 4, y + 6.5);
-  doc.text('Inspeções', margin + 138, y + 6.5, { align: 'right' });
-  doc.text('Média', margin + 172, y + 6.5, { align: 'right' });
-  doc.text('NC abertas', margin + 212, y + 6.5, { align: 'right' });
-  doc.text('NC resolvidas', margin + 262, y + 6.5, { align: 'right' });
+  doc.text('Setor', resumoColX.setor, y + 6.5);
+  doc.text('Inspeções', resumoColX.inspecoes, y + 6.5, { align: 'right' });
+  doc.text('Média', resumoColX.media, y + 6.5, { align: 'right' });
+  doc.text('NC abertas', resumoColX.ncAbertas, y + 6.5, { align: 'right' });
+  doc.text('NC resolvidas', resumoColX.ncResolvidas, y + 6.5, { align: 'right' });
   y += 14;
 
   doc.setFont('helvetica', 'normal');
@@ -8320,14 +8328,14 @@ async function gerarPDFGerencia(options = {}) {
     }
     if (idx % 2 === 0) {
       doc.setFillColor(250, 252, 255);
-      doc.rect(margin, y - 5.5, W - margin * 2, 8, 'F');
+      doc.rect(margin, y - 5.5, resumoTableW, 8, 'F');
     }
     doc.setTextColor(22, 53, 159);
-    doc.text(r.setor, margin + 4, y);
-    doc.text(String(r.inspecoes), margin + 138, y, { align: 'right' });
-    doc.text(r.media !== null ? r.media.toFixed(2) : '—', margin + 172, y, { align: 'right' });
-    doc.text(String(r.ncAbertas), margin + 212, y, { align: 'right' });
-    doc.text(String(r.ncResolvidas), margin + 262, y, { align: 'right' });
+    doc.text(r.setor, resumoColX.setor, y);
+    doc.text(String(r.inspecoes), resumoColX.inspecoes, y, { align: 'right' });
+    doc.text(r.media !== null ? r.media.toFixed(2) : '—', resumoColX.media, y, { align: 'right' });
+    doc.text(String(r.ncAbertas), resumoColX.ncAbertas, y, { align: 'right' });
+    doc.text(String(r.ncResolvidas), resumoColX.ncResolvidas, y, { align: 'right' });
     y += 8;
   });
 
@@ -8561,7 +8569,7 @@ async function gerarPDFSetorial(setor, options = {}) {
     const inspRefCapa = [...APP.inspecoes]
       .filter(i => i.setor === setor && (i.periodo || '') === periodoAtual)
       .sort((a, b) => new Date(b.data) - new Date(a.data))[0] || null;
-    const tecnicoTxt = String(inspRefCapa?.tecnico || currentTec || 'Não informado');
+    const tecnicoTxt = String(inspRefCapa?.tecnico || 'Não informado');
     try {
       // Tenta carregar a capa por múltiplos caminhos (web/PWA/file)
       async function loadCoverDataUrl(src) {
