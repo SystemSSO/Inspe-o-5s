@@ -7196,7 +7196,7 @@ function renderPendList() {
 
 // === Function: renderRelatorios ===
 function renderRelatorios() {
-  const setorOpts = '<option value="">— Escolha —</option>' +
+  const setorOpts = '<option value="">— Escolha um setor —</option>' +
     getAllSetorNames().map(setor => `<option value="${setor}">${setor}</option>`).join('');
   document.getElementById('rel-insp-select').innerHTML = setorOpts;
 
