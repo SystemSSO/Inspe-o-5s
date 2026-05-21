@@ -14,6 +14,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <!-- Firebase App e Firestore SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <!-- Firebase Storage não necessário: fotos salvas como base64 no Firestore -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -72,11 +73,11 @@ html, body {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* â”€â”€ SCREENS â”€â”€ */
+/* SCREENS */
 .screen { position: fixed; inset: 0; display: none; flex-direction: column; overflow: hidden; }
 .screen.active { display: flex; animation: screenFadeIn 0.3s ease-out; }
 
-/* â”€â”€ HEADER â”€â”€ */
+/* HEADER */
 .app-header {
   background: var(--navy2);
   backdrop-filter: blur(12px);
@@ -102,6 +103,10 @@ html, body {
 .app-header .spacer { flex: 1; }
 .btn-icon { background: none; border: 1px solid var(--border); border-radius: 8px; color: var(--text2); width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
 .btn-icon:active { background: var(--card); }
+.logout-btn {
+  color: var(--red);
+  border-color: rgba(244, 63, 94, 0.28);
+}
 .theme-toggle-btn {
   background: linear-gradient(145deg, rgba(99, 102, 241, 0.2), rgba(14, 165, 233, 0.16));
   border-color: rgba(165, 180, 252, 0.45);
@@ -119,12 +124,12 @@ html, body {
   background: linear-gradient(145deg, rgba(99, 102, 241, 0.16), rgba(14, 165, 233, 0.12));
 }
 
-/* â”€â”€ SCROLL BODY â”€â”€ */
+/* SCROLL BODY */
 .scroll-body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .scroll-body::-webkit-scrollbar { width: 3px; }
 .scroll-body::-webkit-scrollbar-thumb { background: var(--navy3); border-radius: 3px; }
 
-/* â”€â”€ BOTTOM NAV â”€â”€ */
+/* BOTTOM NAV */
 .bottom-nav {
   background: var(--glass);
   backdrop-filter: blur(12px);
@@ -144,7 +149,7 @@ html, body {
 .nav-btn.active { color: var(--orange); transform: translateY(-2px); }
 .nav-btn.active svg { stroke: var(--orange); }
 
-/* â”€â”€ CARDS â”€â”€ */
+/* CARDS */
 .card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -160,7 +165,7 @@ html, body {
 .card-title { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
 .card-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
 
-/* â”€â”€ BUTTONS â”€â”€ */
+/* BUTTONS */
 .btn-primary {
   background: var(--orange); color: white;
   border: none; border-radius: 14px;
@@ -207,7 +212,7 @@ html, body {
 }
 .btn-secondary:active { background: rgba(255,255,255,0.08); }
 
-/* â”€â”€ BADGE â”€â”€ */
+/* BADGE */
 .badge {
   display: inline-flex; align-items: center; justify-content: center;
   padding: 5px 11px; border-radius: 999px; font-size: 11px; font-weight: 700;
@@ -219,7 +224,7 @@ html, body {
 .badge-red { background: rgba(231,76,60,0.15); color: var(--red); border: 1px solid rgba(231,76,60,0.3); }
 .badge-gold { background: rgba(240,165,0,0.15); color: var(--gold); border: 1px solid rgba(240,165,0,0.3); }
 
-/* â”€â”€ SCORE RING â”€â”€ */
+/* SCORE RING */
 .score-ring-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .score-ring { position: relative; width: 72px; height: 72px; }
 .score-ring svg { transform: rotate(-90deg); }
@@ -230,7 +235,7 @@ html, body {
 }
 .score-ring .score-lbl { font-size: 9px; color: var(--text2); margin-top: -2px; text-transform: uppercase; letter-spacing: 0.5px; }
 
-/* â”€â”€ FORM CONTROLS â”€â”€ */
+/* FORM CONTROLS */
 .form-group { margin-bottom: 16px; }
 .form-label { font-size: 12px; color: var(--text2); margin-bottom: 6px; display: block; text-transform: uppercase; letter-spacing: 0.5px; }
 .form-select, .form-input {
@@ -247,7 +252,7 @@ html, body {
 }
 .form-textarea:focus { outline: none; border-color: var(--orange); }
 
-/* â”€â”€ NOTA SLIDER â”€â”€ */
+/* NOTA SLIDER */
 .nota-row { display: flex; gap: 6px; margin-top: 6px; }
 .nota-btn {
   flex: 1; height: 48px; border: 1px solid var(--border); border-radius: 12px;
@@ -267,7 +272,7 @@ html, body {
 .light-mode .nota-btn.sel-4 { background: var(--green); color: white; }
 .light-mode .nota-btn.sel-na { background: var(--text2); color: white; }
 
-/* â”€â”€ FOTO AREA â”€â”€ */
+/* FOTO AREA */
 .foto-area {
   border: 1px dashed var(--border); border-radius: 10px;
   min-height: 42px;
@@ -286,14 +291,14 @@ html, body {
   font-size: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer;
 }
 
-/* â”€â”€ PROGRESSO â”€â”€ */
+/* PROGRESSO */
 .progress-bar { height: 6px; background: var(--navy3); border-radius: 100px; overflow: hidden; }
 .progress-fill { height: 100%; background: linear-gradient(90deg, var(--orange), var(--orange2)); border-radius: 100px; transition: width 0.3s; box-shadow: 0 0 10px rgba(79, 70, 229, 0.4); }
 
-/* â”€â”€ DIVIDER â”€â”€ */
+/* DIVIDER */
 .divider { height: 1px; background: var(--border); margin: 8px 0; }
 
-/* â”€â”€ S-SECTION â”€â”€ */
+/* S-SECTION */
 .s-section-card {
   margin: 0 16px 14px;
   border: 1px solid var(--border);
@@ -332,7 +337,7 @@ html, body {
 .s-body { padding: 0 12px 12px; display: none; }
 .s-body.open { display: block; }
 
-/* â”€â”€ ITEM CRITERIO â”€â”€ */
+/* ITEM CRITERIO */
 .criterio-item {
   margin-top: 10px;
   padding: 12px;
@@ -813,7 +818,7 @@ body.light-mode .nc-compare-col {
   background: rgba(255, 255, 255, 0.9);
 }
 
-/* â”€â”€ TOAST â”€â”€ */
+/* TOAST */
 #toast {
   position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(20px);
   background: var(--navy3); border: 1px solid var(--orange); border-radius: 10px;
@@ -823,23 +828,227 @@ body.light-mode .nc-compare-col {
 }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-/* â”€â”€ HOME â”€â”€ */
-.home-hero {
-  background: var(--navy2);
-  margin: 12px 16px 8px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 12px 12px;
-  box-shadow: none;
+.login-screen {
+  min-height: 100%;
+  padding: 24px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  perspective: 1200px;
+  background:
+    linear-gradient(155deg, rgba(79, 70, 229, 0.17), rgba(14, 165, 233, 0.08) 48%, rgba(15, 23, 42, 0.98)),
+    var(--navy);
 }
-.home-hero-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
+.login-screen::before {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  background:
+    linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-size: 58px 58px;
+  transform: rotateX(64deg) translateY(14%);
+  transform-origin: center bottom;
+  opacity: 0.42;
+  pointer-events: none;
+}
+.login-screen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(2, 6, 23, 0.66), transparent 32%, transparent 68%, rgba(2, 6, 23, 0.66)),
+    linear-gradient(180deg, rgba(2, 6, 23, 0.14), transparent 50%, rgba(2, 6, 23, 0.74));
+  pointer-events: none;
+}
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 85% -10%, rgba(125, 211, 252, 0.2), transparent 45%),
+    linear-gradient(155deg, rgba(79, 70, 229, 0.17), rgba(14, 165, 233, 0.08) 48%, rgba(15, 23, 42, 0.9));
+  border: 1px solid rgba(165, 180, 252, 0.28);
+  border-radius: 20px;
+  padding: 28px 22px 22px;
+  box-shadow:
+    0 34px 80px rgba(2, 6, 23, 0.54),
+    0 14px 28px rgba(2, 6, 23, 0.36),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  transform: rotateX(5deg) rotateY(-4deg) translateY(-8px);
+  transform-style: preserve-3d;
+  backdrop-filter: blur(18px) saturate(125%);
+  -webkit-backdrop-filter: blur(18px) saturate(125%);
+  animation: loginFloat 5.5s ease-in-out infinite;
+}
+.login-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  border-radius: 20px 0 0 20px;
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.95), rgba(14, 165, 233, 0.72));
+  opacity: 0.95;
+  pointer-events: none;
+  z-index: 1;
+}
+.login-card::after {
+  content: "";
+  position: absolute;
+  left: 9%;
+  right: 9%;
+  bottom: -30px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(2, 6, 23, 0.46);
+  filter: blur(16px);
+  transform: translateZ(-42px);
+  z-index: -2;
+  pointer-events: none;
+}
+@keyframes loginFloat {
+  0%, 100% { transform: rotateX(5deg) rotateY(-4deg) translateY(-8px); }
+  50% { transform: rotateX(4deg) rotateY(-2deg) translateY(-16px); }
+}
+.login-logo {
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(99, 102, 241, 0.98), rgba(14, 165, 233, 0.88));
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  margin-bottom: 20px;
+  box-shadow:
+    0 16px 30px rgba(79, 70, 229, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.34);
+  transform: translateZ(34px);
+}
+.login-title {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.1;
+  margin-bottom: 6px;
+  transform: translateZ(26px);
+}
+.login-subtitle {
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.4;
+  margin-bottom: 24px;
+  transform: translateZ(22px);
+}
+.login-password-wrap { position: relative; }
+.login-password-wrap .form-input { padding-right: 48px; }
+.login-card .form-group,
+.login-card .login-error,
+.login-card .btn-primary,
+.login-card .login-footer {
+  transform: translateZ(18px);
+}
+.login-card .form-input {
+  background: rgba(2, 6, 23, 0.3);
+  border-color: rgba(125, 211, 252, 0.26);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 10px 24px rgba(2, 6, 23, 0.14);
+}
+.login-card .form-input:focus {
+  border-color: rgba(125, 211, 252, 0.74);
+  box-shadow:
+    0 0 0 3px rgba(14, 165, 233, 0.18),
+    0 12px 26px rgba(2, 6, 23, 0.18);
+}
+.login-password-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+}
+.login-error {
+  min-height: 18px;
+  color: var(--red);
+  font-size: 12px;
+  margin: -4px 0 12px;
+}
+.login-footer {
+  margin-top: 14px;
+  font-size: 11px;
+  color: var(--text2);
+  text-align: center;
+}
+body.light-mode .login-card {
+  background:
+    radial-gradient(circle at 85% -10%, rgba(125, 211, 252, 0.18), transparent 45%),
+    linear-gradient(155deg, rgba(79, 70, 229, 0.12), rgba(14, 165, 233, 0.07) 48%, rgba(255, 255, 255, 0.94));
+  border-color: rgba(165, 180, 252, 0.38);
+  box-shadow:
+    0 34px 80px rgba(15, 23, 42, 0.18),
+    0 14px 28px rgba(15, 23, 42, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.88);
+}
+body.light-mode .login-card::after {
+  background: rgba(15, 23, 42, 0.18);
+}
+body.light-mode .login-screen {
+  background:
+    linear-gradient(155deg, rgba(79, 70, 229, 0.12), rgba(14, 165, 233, 0.07) 48%, #f8fafc),
+    var(--navy);
+}
+body.light-mode .login-screen::after {
+  background: transparent;
+}
+body.light-mode .login-card .form-input {
+  background: rgba(255, 255, 255, 0.86);
+  border-color: rgba(59, 130, 246, 0.25);
+}
+@media (max-width: 520px) {
+  .login-screen { padding: 18px 14px; }
+  .login-card {
+    padding: 24px 18px 20px;
+    transform: translateY(-4px);
+    animation: none;
+  }
+  .login-card::after { bottom: -22px; }
+}
+
+/* HOME */
+.home-hero {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 88% -18%, rgba(125, 211, 252, 0.18), transparent 42%),
+    linear-gradient(155deg, rgba(79, 70, 229, 0.17), rgba(14, 165, 233, 0.08) 48%, rgba(15, 23, 42, 0.08));
+  margin: 12px 16px 10px;
+  border: 1px solid rgba(165, 180, 252, 0.28);
+  border-radius: 18px;
+  padding: 16px 14px;
+  box-shadow: 0 8px 22px rgba(2, 6, 23, 0.2);
+}
+.home-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.95), rgba(14, 165, 233, 0.72));
+  opacity: 0.95;
+}
+.home-hero-top { position: relative; z-index: 1; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
 .greeting { font-size: 11px; color: var(--text2); text-transform: none; letter-spacing: 0; }
-.greeting strong { color: var(--text); font-size: 18px; font-weight: 700; display: block; margin-top: 2px; letter-spacing: 0; line-height: 1.15; text-transform: none; }
+.greeting strong { color: var(--text); font-size: 22px; font-weight: 800; display: block; margin-top: 3px; letter-spacing: 0; line-height: 1.12; text-transform: none; }
 .tech-badge {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 6px 9px;
+  background: rgba(2, 6, 23, 0.3);
+  border: 1px solid rgba(125, 211, 252, 0.26);
+  border-radius: 999px;
+  padding: 7px 10px;
   font-size: 11px;
   color: var(--text2);
   display: flex; align-items: center; gap: 6px; cursor: pointer;
@@ -873,23 +1082,24 @@ body.light-mode .nc-compare-col {
   box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.1);
 }
 .tech-badge:hover {
-  transform: none;
-  border-color: var(--border);
-  background: var(--navy3);
+  transform: translateY(-1px);
+  border-color: rgba(125, 211, 252, 0.58);
+  background: rgba(2, 6, 23, 0.38);
 }
 .tech-badge:active {
   transform: none;
 }
-.home-stats-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px;
+body.light-mode .home-hero {
+  background:
+    radial-gradient(circle at 88% -18%, rgba(125, 211, 252, 0.18), transparent 42%),
+    linear-gradient(155deg, rgba(79, 70, 229, 0.12), rgba(14, 165, 233, 0.07) 48%, rgba(255, 255, 255, 0.94));
+  border-color: rgba(165, 180, 252, 0.38);
 }
-.stat-item {
-  background: var(--navy3); border: 1px solid var(--border); border-radius: 16px;
-  padding: 12px;
+body.light-mode .tech-badge {
+  background: rgba(255, 255, 255, 0.86);
+  border-color: rgba(59, 130, 246, 0.25);
 }
-.stat-val { font-size: 24px; font-weight: 800; color: var(--orange2); }
-.stat-lbl { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
-.home-actions { padding: 8px 16px 4px; display: grid; grid-template-columns: 1fr; gap: 10px; }
+.home-actions { padding: 8px 16px 6px; display: grid; grid-template-columns: 1fr; gap: 10px; }
 .home-actions .btn-primary, .home-actions .btn-secondary { width: 100%; }
 .home-actions .btn-primary,
 .home-actions .btn-secondary {
@@ -916,24 +1126,41 @@ body.light-mode .nc-compare-col {
 
 .sector-card {
   position: relative;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 20px;
+  background:
+    radial-gradient(circle at 88% -18%, rgba(125, 211, 252, 0.12), transparent 40%),
+    linear-gradient(155deg, rgba(79, 70, 229, 0.11), rgba(14, 165, 233, 0.06) 48%, rgba(15, 23, 42, 0.04));
+  border: 1px solid rgba(165, 180, 252, 0.22);
+  border-radius: 16px;
   margin: 0 16px 16px;
   padding: 0;
   overflow: hidden;
-  box-shadow: var(--shadow);
+  box-shadow: 0 8px 22px rgba(2, 6, 23, 0.16);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.2s ease;
+}
+.sector-card::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.72), rgba(14, 165, 233, 0.54));
+  opacity: 0.8;
 }
 .sector-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
-  border-color: var(--orange);
+  box-shadow: 0 16px 30px rgba(30, 64, 175, 0.24);
+  border-color: rgba(125, 211, 252, 0.58);
 }
 .sector-card.expanded { border-color: var(--orange); background: rgba(99, 102, 241, 0.05); }
-.light-mode .sector-card { background: #ffffff; border-color: rgba(15, 23, 42, 0.08); }
+.light-mode .sector-card {
+  background:
+    radial-gradient(circle at 88% -18%, rgba(125, 211, 252, 0.16), transparent 40%),
+    linear-gradient(155deg, rgba(79, 70, 229, 0.08), rgba(14, 165, 233, 0.05) 48%, rgba(255, 255, 255, 0.96));
+  border-color: rgba(165, 180, 252, 0.34);
+}
 
 .sector-card-head {
+  position: relative;
+  z-index: 1;
   padding: 18px 20px 16px;
   display: flex;
   align-items: center;
@@ -973,6 +1200,8 @@ body.light-mode .nc-compare-col {
 .sector-card-head:hover .sector-chevron { background: var(--orange2); color: var(--orange); }
 
 .sector-area-list {
+  position: relative;
+  z-index: 1;
   padding: 0 16px 16px;
   display: flex;
   flex-direction: column;
@@ -1141,7 +1370,7 @@ body.light-mode .hist-group-count {
   margin-right: 10px;
 }
 
-/* â”€â”€ INSP CARD â”€â”€ */
+/* INSP CARD */
 .insp-card {
   position: relative;
   background: linear-gradient(155deg, rgba(79, 70, 229, 0.17), rgba(14, 165, 233, 0.08) 48%, rgba(15, 23, 42, 0.08));
@@ -1256,7 +1485,7 @@ body.light-mode .insp-card-open {
   50% { opacity: 1; }
 }
 
-/* â”€â”€ MODAL â”€â”€ */
+/* MODAL */
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.7);
   display: none; align-items: flex-end; justify-content: center;
@@ -1272,7 +1501,7 @@ body.light-mode .insp-card-open {
 .modal-title { font-size: 20px; font-weight: 800; margin-bottom: 16px; letter-spacing: -0.02em; }
 .modal-title { font-family: var(--font-display); }
 
-/* â”€â”€ COMPARACAO â”€â”€ */
+/* COMPARACAO */
 .comp-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); }
 .comp-row:last-child { border-bottom: none; }
 .comp-s-name { flex: 1; font-size: 13px; }
@@ -1295,7 +1524,7 @@ body.light-mode .insp-card-open {
 .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text2); pointer-events: none; }
 .search-input { padding-left: 38px !important; }
 
-/* â”€â”€ PENDENCIAS â”€â”€ */
+/* PENDENCIAS*/
 .pend-item {
   background: linear-gradient(165deg, rgba(244,63,94,0.1), rgba(244,63,94,0.04));
   border: 1px solid rgba(231,76,60,0.22);
@@ -1750,6 +1979,43 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
   background: var(--red);
   animation: pulseOffline 1.3s ease-in-out infinite;
 }
+@media (max-width: 420px) {
+  .app-header {
+    gap: 8px;
+    padding: 9px 10px;
+  }
+  .app-header .logo {
+    width: 30px;
+    height: 30px;
+  }
+  .app-header > div:not(.spacer):first-child {
+    min-width: 0;
+  }
+  .app-header > div:not(.spacer):first-child > div:first-child {
+    max-width: 112px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  #sync-status {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    justify-content: center;
+    margin-right: 0;
+    flex-shrink: 0;
+  }
+  #sync-status-text {
+    display: none;
+  }
+  .theme-toggle-btn {
+    margin-right: 0 !important;
+  }
+  .app-header .btn-icon {
+    width: 34px;
+    height: 34px;
+  }
+}
 @keyframes pulseSync {
   0%, 100% { transform: scale(1); opacity: 1; }
   50% { transform: scale(1.2); opacity: 0.7; }
@@ -1953,12 +2219,45 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
   <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l2.5 2.5"/></svg>
   Modo offline - dados salvos localmente
 </div>
-<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-     SCREEN: HOME
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
-<div class="screen active" id="screen-home">
+<!-- LOGIN -->
+<div class="screen active" id="screen-login">
+  <div class="login-screen">
+    <form class="login-card" onsubmit="loginUsuario(event)">
+      <div class="login-logo">5S</div>
+      <div class="login-title">Sistema de inspeção digital</div>
+      <div class="login-subtitle">Informe seu e-mail e senha para acessar as inspeções.</div>
+
+      <div class="form-group">
+        <label class="form-label" for="login-email">E-mail</label>
+        <input type="email" class="form-input" id="login-email" autocomplete="email" placeholder="seu.email@empresa.com" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="login-senha">Senha</label>
+        <div class="login-password-wrap">
+          <input type="password" class="form-input" id="login-senha" autocomplete="current-password" placeholder="Digite sua senha" required>
+          <button type="button" class="btn-icon login-password-toggle" onclick="toggleLoginPassword()" aria-label="Mostrar ou ocultar senha">
+            <svg id="login-password-icon" width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M2 10s3-5 8-5 8 5 8 5-3 5-8 5-8-5-8-5z"></path>
+              <circle cx="10" cy="10" r="2.5"></circle>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="login-error" id="login-error"></div>
+      <button class="btn-primary" id="login-submit-btn" type="submit">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 4l6 6-6 6"/><path d="M3 10h10"/></svg>
+        Entrar
+      </button>
+      <div class="login-footer"></div>
+    </form>
+  </div>
+</div>
+<!-- 
+     SCREEN: HOME -->
+<div class="screen" id="screen-home">
   <div class="app-header">
-    <div class="logo">5S</div>
     <div>
       <div class="app-header h1" style="font-family:var(--font-display);font-size:17px;font-weight:700">Housekeeping</div>
       <div class="app-header sub" style="font-size:10px;color:var(--text2)"></div>
@@ -1975,6 +2274,9 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
       <path d="M10 2v2m0 12v2M2 10h2m12 0h2M4.3 4.3l1.5 1.5m8.4 8.4l1.5 1.5M4.3 15.7l1.5-1.5m8.4-8.4l1.5-1.5"/>
     </svg>
   </button>
+  <button class="btn-icon logout-btn" onclick="logoutUsuario()" title="Sair" aria-label="Sair">
+    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3H4v14h4"/><path d="M12 7l3 3-3 3"/><path d="M15 10H7"/></svg>
+  </button>
   </div>
 
   <div class="scroll-body">
@@ -1988,10 +2290,6 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
           <div class="tech-badge unit-highlight" onclick="openUnitModal()">
             <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2l7 4v8l-7 4-7-4V6l7-4z"/><path d="M3 6l7 4 7-4"/></svg>
             <span id="home-unit-name">CD</span>
-          </div>
-          <div class="tech-badge tec-highlight" onclick="openTecModal()">
-            <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="7" r="3.5"/><path d="M3 17c0-3.3 3.1-6 7-6s7 2.7 7 6"/></svg>
-            Trocar
           </div>
         </div>
       </div>
@@ -2037,9 +2335,8 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
   </div>
 </div>
 
-<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-     SCREEN: INSPEÃ‡ÃƒO (formulÃ¡rio)
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+<!-- 
+     SCREEN: INSPEÇÃO (formulário) -->
 <div class="screen" id="screen-inspecao">
   <div class="app-header">
     <button class="btn-icon" onclick="navTo('home')" style="margin-right:4px">
@@ -2064,7 +2361,7 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
   </div>
 
   <div class="scroll-body" id="insp-form-body" style="padding:12px 0 20px">
-    <!-- dinÃ¢mico -->
+    <!-- DINAMICO -->
   </div>
 
   <div style="padding:12px 16px; flex-shrink:0; border-top:1px solid var(--border)">
@@ -2075,9 +2372,7 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
   </div>
 </div>
 
-<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-     SCREEN: HISTÃ“RICO
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+ 
 <div class="screen" id="screen-historico">
   <div class="app-header">
     <div class="logo">5S</div>
@@ -2118,9 +2413,9 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
   </div>
 </div>
 
-<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-     SCREEN: PENDÃŠNCIAS
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+
+     
+
 <div class="screen" id="screen-pendencias">
   <div class="app-header">
     <div class="logo">5S</div>
@@ -2152,9 +2447,9 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
   </div>
 </div>
 
-<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-     SCREEN: RELATÃ“RIOS
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+
+     
+ 
 <div class="screen" id="screen-relatorios">
   <div class="app-header">
     <div class="logo">5S</div>
@@ -2268,7 +2563,7 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
   </div>
 </div>
 
-<!-- â•â•â•â• MODALS â•â•â•â• -->
+
 <!-- Selecionar técnico -->
 <div class="modal-overlay" id="modal-tec">
   <div class="modal-sheet">
@@ -2401,9 +2696,9 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
 <div id="toast"></div>
 
 <script>
-// ========================================
+
 //  DADOS
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
 const SENSOS = [
   {
     id: 's1', nome: '1S - Utilização', cor: '#e8601c',
@@ -2734,6 +3029,8 @@ const AREA_OVERRIDES_KEY = 'aa5s_area_overrides_v1';
 const SMARTSHEET_CONFIG_KEY = 'aa5s_smartsheet_config_v1';
 const SMARTSHEET_ADMIN_UNLOCK_KEY = 'aa5s_smartsheet_admin_unlocked';
 const SMARTSHEET_ADMIN_PASSWORD = 'Codemin@123';
+const AUTH_CACHE_KEY = 'aa5s_offline_auth_v1';
+const AUTH_SESSION_KEY = 'aa5s_auth_session_v1';
 const EMAIL_AUTO_ENABLED_KEY = 'aa5s_email_auto_enabled';
 const EMAIL_AUTO_TO_KEY = 'aa5s_email_auto_to';
 const EMAIL_HISTORY_KEY = 'aa5s_email_history';
@@ -2915,6 +3212,7 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
 const db = firebase.firestore();
 // Storage não utilizado: fotos em base64 no Firestore
 
@@ -4654,6 +4952,10 @@ async function syncPendingQueue() {
     setSyncStatus('offline', 'Modo offline');
     return;
   }
+  if (!auth.currentUser) {
+    setSyncStatus('offline', 'Login online necessário para sincronizar');
+    return;
+  }
   APP = normalizeAppState(APP);
   syncInProgress = true;
   setSyncStatus('syncing', 'Sincronizando...');
@@ -4728,6 +5030,10 @@ async function syncFromCloud() {
   if (!hasFirebaseConfig()) return;
   if (!navigator.onLine) {
     setSyncStatus('offline', 'Modo offline');
+    return;
+  }
+  if (!auth.currentUser) {
+    setSyncStatus('offline', 'Login online necessário para sincronizar');
     return;
   }
   setSyncStatus('syncing', 'Sincronizando...');
@@ -4824,8 +5130,11 @@ function refreshAfterDataSync() {
 }
 
 let APP = loadData();
-let currentTec = localStorage.getItem('aa5s_tec') || '';
+let currentTec = '';
 let currentUnidade = localStorage.getItem('aa5s_unit') || 'CD';
+let currentUserEmail = sessionStorage.getItem('aa5s_auth_email') || '';
+let appStarted = false;
+let pendingOfflineAuth = null;
 let pendingUnidade = currentUnidade;
 let currentInsp = null; // inspeÃ§Ã£o em andamento
 let isSavingInspecao = false;
@@ -4851,6 +5160,91 @@ function ensureCurrentTecInList() {
     APP.tecnicos.push(currentTec);
     persistLocalApp(APP);
   }
+}
+
+// === Function: formatTecnicoNameFromEmail ===
+function formatTecnicoNameFromEmail(email) {
+  const localPart = String(email || '').split('@')[0] || '';
+  const cleanLocalPart = localPart
+    .replace(/[-_.](externo|terceiro|contractor|consultor|sesi)$/i, '')
+    .replace(/[._-]+/g, ' ')
+    .trim();
+
+  return cleanLocalPart
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(' ');
+}
+
+// === Function: getTecnicoFromFirebaseUser ===
+function getTecnicoFromFirebaseUser(user) {
+  const displayName = (user?.displayName || '').trim();
+  const email = (user?.email || '').trim().toLowerCase();
+  return displayName || formatTecnicoNameFromEmail(email) || email;
+}
+
+// === Function: getAuthSession ===
+function getAuthSession() {
+  try {
+    const parsed = JSON.parse(sessionStorage.getItem(AUTH_SESSION_KEY) || 'null');
+    return parsed && parsed.email ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+// === Function: setAuthSession ===
+function setAuthSession(profile, mode = 'online') {
+  const email = (profile?.email || '').trim().toLowerCase();
+  const tecnico = (profile?.tecnico || profile?.displayName || formatTecnicoNameFromEmail(email) || email).trim();
+  if (!email) return null;
+  const session = {
+    email,
+    tecnico,
+    mode,
+    loggedAt: new Date().toISOString()
+  };
+  sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
+  sessionStorage.setItem('aa5s_auth_email', email);
+  return session;
+}
+
+// === Function: clearAuthSession ===
+function clearAuthSession() {
+  sessionStorage.removeItem(AUTH_SESSION_KEY);
+  sessionStorage.removeItem('aa5s_auth_email');
+  pendingOfflineAuth = null;
+}
+
+// === Function: hasActiveLocalAuthSession ===
+function hasActiveLocalAuthSession() {
+  return Boolean(getAuthSession()?.email);
+}
+
+// === Function: isOfflineAuthSession ===
+function isOfflineAuthSession() {
+  return getAuthSession()?.mode === 'offline';
+}
+
+// === Function: applyAuthProfileAsTecnico ===
+function applyAuthProfileAsTecnico(profile) {
+  currentUserEmail = (profile?.email || '').trim().toLowerCase();
+  currentTec = (profile?.tecnico || profile?.displayName || formatTecnicoNameFromEmail(currentUserEmail) || currentUserEmail).trim();
+  if (currentTec) {
+    localStorage.setItem('aa5s_tec', currentTec);
+    ensureCurrentTecInList();
+  }
+  const homeTecName = document.getElementById('home-tec-name');
+  if (homeTecName) homeTecName.textContent = currentTec || 'Usuário autenticado';
+}
+
+// === Function: applyFirebaseUserAsTecnico ===
+function applyFirebaseUserAsTecnico(user) {
+  applyAuthProfileAsTecnico({
+    email: user?.email || '',
+    tecnico: getTecnicoFromFirebaseUser(user)
+  });
 }
 
 if (currentUnidade === 'HAR' || currentUnidade === 'REF') currentUnidade = 'CD';
@@ -4910,12 +5304,270 @@ function confirmarUnidade() {
   if (document.getElementById('screen-dashboard')?.classList.contains('active')) renderDashboard();
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-//  NAVEGAÃ‡ÃƒO
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  NAVEGAÇÃO
+
+
+// === Function: isUsuarioLogado ===
+function isUsuarioLogado() {
+  return Boolean(auth.currentUser || hasActiveLocalAuthSession());
+}
+
+// === Function: showLoginScreen ===
+function showLoginScreen() {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const loginScreen = document.getElementById('screen-login');
+  if (loginScreen) loginScreen.classList.add('active');
+  setTimeout(() => document.getElementById('login-email')?.focus(), 100);
+}
+
+// === Function: startAppAfterLogin ===
+function startAppAfterLogin(profile = null) {
+  if (appStarted) {
+    navTo('home');
+    return;
+  }
+  appStarted = true;
+  if (auth.currentUser) {
+    applyFirebaseUserAsTecnico(auth.currentUser);
+  } else if (profile || getAuthSession()) {
+    applyAuthProfileAsTecnico(profile || getAuthSession());
+  }
+  ensureCurrentTecInList();
+  if (currentTec) document.getElementById('home-tec-name').textContent = currentTec;
+  renderHome();
+  navTo('home');
+  syncFromCloud().finally(() => scheduleSyncQueue(0));
+  startCloudAutoRefresh();
+}
+
+// === Function: getFirebaseAuthMessage ===
+function getFirebaseAuthMessage(error) {
+  const code = error?.code || '';
+  const messages = {
+    'auth/invalid-email': 'Digite um e-mail válido.',
+    'auth/user-disabled': 'Este usuário está desativado no Firebase.',
+    'auth/user-not-found': 'Usuário não cadastrado no Firebase.',
+    'auth/wrong-password': 'Senha incorreta.',
+    'auth/invalid-credential': 'E-mail ou senha inválidos.',
+    'auth/too-many-requests': 'Muitas tentativas. Aguarde alguns minutos e tente novamente.',
+    'auth/network-request-failed': 'Falha de conexão com o Firebase.',
+    'auth/operation-not-allowed': 'Ative o provedor E-mail/senha no Firebase Authentication.'
+  };
+  return messages[code] || 'Não foi possível entrar. Verifique e-mail e senha.';
+}
+
+// === Function: bytesToHex ===
+function bytesToHex(bytes) {
+  return Array.from(bytes)
+    .map(byte => byte.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+// === Function: makeAuthSalt ===
+function makeAuthSalt() {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return bytesToHex(bytes);
+}
+
+// === Function: hashOfflinePassword ===
+async function hashOfflinePassword(email, senha, salt) {
+  if (!crypto?.subtle) throw new Error('Criptografia local indisponível.');
+  const payload = `${salt}|${email}|${senha}`;
+  const encoded = new TextEncoder().encode(payload);
+  const digest = await crypto.subtle.digest('SHA-256', encoded);
+  return bytesToHex(new Uint8Array(digest));
+}
+
+// === Function: saveOfflineAuthCache ===
+async function saveOfflineAuthCache(email, senha, user) {
+  try {
+    const cleanEmail = String(email || '').trim().toLowerCase();
+    if (!cleanEmail || !senha) return;
+    const tecnico = getTecnicoFromFirebaseUser(user);
+    const salt = makeAuthSalt();
+    const passwordHash = await hashOfflinePassword(cleanEmail, senha, salt);
+    localStorage.setItem(AUTH_CACHE_KEY, JSON.stringify({
+      email: cleanEmail,
+      tecnico,
+      salt,
+      passwordHash,
+      updatedAt: new Date().toISOString()
+    }));
+  } catch (error) {
+    console.warn('Não foi possível salvar o acesso offline:', error);
+  }
+}
+
+// === Function: getOfflineAuthCache ===
+function getOfflineAuthCache() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(AUTH_CACHE_KEY) || 'null');
+    if (!parsed?.email || !parsed?.salt || !parsed?.passwordHash) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+// === Function: tryOfflineLogin ===
+async function tryOfflineLogin(email, senha) {
+  const cache = getOfflineAuthCache();
+  const cleanEmail = String(email || '').trim().toLowerCase();
+  if (!cache || cache.email !== cleanEmail) return null;
+  const passwordHash = await hashOfflinePassword(cleanEmail, senha, cache.salt);
+  if (passwordHash !== cache.passwordHash) return null;
+  return setAuthSession({
+    email: cache.email,
+    tecnico: cache.tecnico || formatTecnicoNameFromEmail(cache.email) || cache.email
+  }, 'offline');
+}
+
+// === Function: loginUsuario ===
+async function loginUsuario(event) {
+  if (event) event.preventDefault();
+  const emailInput = document.getElementById('login-email');
+  const senhaInput = document.getElementById('login-senha');
+  const errorEl = document.getElementById('login-error');
+  const submitBtn = document.getElementById('login-submit-btn');
+  const email = (emailInput?.value || '').trim().toLowerCase();
+  const senha = senhaInput?.value || '';
+
+  if (!email || !senha) {
+    if (errorEl) errorEl.textContent = 'Informe e-mail e senha.';
+    return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (errorEl) errorEl.textContent = 'Digite um e-mail válido.';
+    emailInput?.focus();
+    return;
+  }
+
+  if (errorEl) errorEl.textContent = '';
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.dataset.originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = 'Entrando...';
+  }
+
+  try {
+    await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+    const result = await auth.signInWithEmailAndPassword(email, senha);
+    applyFirebaseUserAsTecnico(result.user);
+    setAuthSession({
+      email: currentUserEmail,
+      tecnico: currentTec
+    }, 'online');
+    await saveOfflineAuthCache(email, senha, result.user);
+    if (senhaInput) senhaInput.value = '';
+    toast('Login realizado com sucesso.');
+    startAppAfterLogin();
+  } catch (error) {
+    const canTryOffline = !navigator.onLine || error?.code === 'auth/network-request-failed';
+    if (canTryOffline) {
+      try {
+        const offlineSession = await tryOfflineLogin(email, senha);
+        if (offlineSession) {
+          pendingOfflineAuth = { email, senha };
+          applyAuthProfileAsTecnico(offlineSession);
+          if (senhaInput) senhaInput.value = '';
+          toast('Acesso offline liberado. A sincronização será feita quando a internet voltar.');
+          startAppAfterLogin(offlineSession);
+          return;
+        }
+      } catch (offlineError) {
+        console.warn('Falha no login offline:', offlineError);
+      }
+      if (errorEl) errorEl.textContent = 'Sem conexão. Para acessar offline, faça login online uma vez neste dispositivo.';
+    } else if (errorEl) {
+      errorEl.textContent = getFirebaseAuthMessage(error);
+    }
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = submitBtn.dataset.originalText || 'Entrar';
+    }
+  }
+}
+
+// === Function: logoutUsuario ===
+async function logoutUsuario() {
+  saveDraftNow();
+  document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+  clearAuthSession();
+  localStorage.removeItem('aa5s_auth_email');
+  localStorage.removeItem('aa5s_auth_at');
+  currentUserEmail = '';
+  appStarted = false;
+  clearInterval(cloudRefreshTimer);
+  try {
+    await auth.signOut();
+  } catch {
+    // Se o Firebase falhar ao sair, ainda assim bloqueia a tela localmente.
+  }
+  showLoginScreen();
+}
+
+// === Function: handleOnlineAuthRecheck ===
+async function handleOnlineAuthRecheck() {
+  if (!navigator.onLine || auth.currentUser || !isOfflineAuthSession()) return;
+
+  if (!pendingOfflineAuth?.email || !pendingOfflineAuth?.senha) {
+    toast('Conexão restaurada. Faça login online para validar o acesso e sincronizar.');
+    clearAuthSession();
+    currentUserEmail = '';
+    appStarted = false;
+    clearInterval(cloudRefreshTimer);
+    showLoginScreen();
+    return;
+  }
+
+  setSyncStatus('syncing', 'Validando login online...');
+  try {
+    await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+    const result = await auth.signInWithEmailAndPassword(pendingOfflineAuth.email, pendingOfflineAuth.senha);
+    applyFirebaseUserAsTecnico(result.user);
+    setAuthSession({
+      email: currentUserEmail,
+      tecnico: currentTec
+    }, 'online');
+    await saveOfflineAuthCache(pendingOfflineAuth.email, pendingOfflineAuth.senha, result.user);
+    pendingOfflineAuth = null;
+    toast('Login online validado. Sincronizando dados pendentes...');
+    syncFromCloud().finally(() => scheduleSyncQueue(0));
+  } catch (error) {
+    console.warn('A validação online do acesso offline falhou:', error);
+    clearAuthSession();
+    localStorage.removeItem(AUTH_CACHE_KEY);
+    currentUserEmail = '';
+    appStarted = false;
+    clearInterval(cloudRefreshTimer);
+    setSyncStatus('offline', 'Login online necessário');
+    toast('Acesso bloqueado. Faça login online novamente.');
+    showLoginScreen();
+  }
+}
+
+// === Function: toggleLoginPassword ===
+function toggleLoginPassword() {
+  const input = document.getElementById('login-senha');
+  const icon = document.getElementById('login-password-icon');
+  if (!input) return;
+  const isHidden = input.type === 'password';
+  input.type = isHidden ? 'text' : 'password';
+  if (icon) {
+    icon.innerHTML = isHidden
+      ? '<path d="M3 3l14 14"/><path d="M8.6 8.6A2.5 2.5 0 0 0 10 12.5c.5 0 1-.15 1.4-.4"/><path d="M6.4 6.8C3.6 8.2 2 10 2 10s3 5 8 5c1.5 0 2.8-.4 3.9-1"/><path d="M10.7 5C15.2 5.4 18 10 18 10s-.8 1.4-2.3 2.7"/>'
+      : '<path d="M2 10s3-5 8-5 8 5 8 5-3 5-8 5-8-5-8-5z"></path><circle cx="10" cy="10" r="2.5"></circle>';
+  }
+}
 
 // === Function: navTo ===
 function navTo(id) {
+  if (id !== 'login' && !isUsuarioLogado()) {
+    showLoginScreen();
+    return;
+  }
   if (id === 'dashboard') {
     stopDashboardLive();
     document.body.classList.remove('dashboard-tv');
@@ -4953,9 +5605,9 @@ function toggleDashboardTvMode() {
   renderDashboard();
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-//  TÃ‰CNICOS
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+//  TÉCNICOS
+
 
 // === Function: openTecModal ===
 function openTecModal() {
@@ -5001,9 +5653,6 @@ function confirmarTecnico() {
   renderHome();
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-//  HOME
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 // === Function: renderHome ===
 function renderHome() {
@@ -5831,9 +6480,9 @@ function getPendenciasResolvidas(insp, baseComparativa = null) {
   return resolvidas;
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-//  NOVA INSPEÃ‡ÃƒO
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+//  NOVA INSPEÇÃO
+
 
 // === Function: showNewInspModal ===
 function showNewInspModal() {
@@ -6062,9 +6711,9 @@ function iniciarInspecao() {
   navTo('inspecao');
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-//  FORMULÃRIO DE INSPEÃ‡ÃƒO
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+//  FORMULÁRIO DE INSPEÇÃO
+
 
 // === Function: renderInspecaoForm ===
 function renderInspecaoForm() {
@@ -6832,9 +7481,9 @@ async function salvarInspecao() {
   }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-//  HISTÃ“RICO
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+//  HISTORICO
+
 
 // === Function: renderHistorico ===
 function renderHistorico() {
@@ -6886,9 +7535,8 @@ function renderHistorico() {
   }).join('');
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-//  DETALHE / COMPARAÃ‡ÃƒO
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+//  DETALHE / COMPARAÇÃO
 
 // === Function: openDetalhe ===
 function openDetalhe(id) {
@@ -6909,7 +7557,7 @@ function openDetalhe(id) {
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 2px">${getInspectionStatusBadges(insp)}</div>
     <div class="divider" style="margin:14px 0"></div>`;
 
-  // comparaÃ§Ã£o por S
+  // comparação por senso
   if (base) {
     html += `<div style="font-size:12px;color:var(--gold);margin-bottom:10px;display:flex;gap:6px;align-items:center">
       <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10h12M14 6l4 4-4 4"/></svg>
@@ -6932,7 +7580,7 @@ function openDetalhe(id) {
     html += `</div>`;
   }
 
-  // pendÃªncias desta inspeÃ§Ã£o
+  
   let pendHTML = '';
   SENSOS.forEach(s => {
     insp.sensos[s.id].forEach((cr, ci) => {
@@ -7062,9 +7710,9 @@ function iniciarNovaComBase(baseId) {
   navTo('inspecao');
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-//  PENDÃŠNCIAS
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+//  Pendencias
+
 
 // === Function: renderPendencias ===
 function renderPendencias() {
@@ -7190,9 +7838,7 @@ function renderPendList() {
   }).join('');
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-//  RELATÃ“RIOS
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
 
 // === Function: renderRelatorios ===
 function renderRelatorios() {
@@ -9412,7 +10058,7 @@ async function gerarPDFInsp(id, options = {}) {
     y += 6;
   });
 
-  // PENDÃŠNCIAS
+  // Pendencias e não conformidades
   let hasPend = false;
   SENSOS.forEach(s => insp.sensos[s.id].forEach(cr => { if ((cr.nota||0)<2) hasPend=true; }));
 
@@ -9865,9 +10511,7 @@ async function gerarPDFInsp(id, options = {}) {
   return { doc, fileName, insp };
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-//  UTILS
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
 
 // === Function: toggleTheme ===
 function toggleTheme() {
@@ -9918,10 +10562,13 @@ function checkOnline() {
     setSyncStatus(syncInProgress ? 'syncing' : 'synced', syncInProgress ? 'Sincronizando...' : 'Online');
   }
 }
-window.addEventListener('online', () => {
+window.addEventListener('online', async () => {
   checkOnline();
-  syncFromCloud();
-  scheduleSyncQueue(0);
+  await handleOnlineAuthRecheck();
+  if (isUsuarioLogado()) {
+    syncFromCloud();
+    scheduleSyncQueue(0);
+  }
 });
 window.addEventListener('offline', checkOnline);
 document.addEventListener('visibilitychange', () => {
@@ -9929,7 +10576,9 @@ document.addEventListener('visibilitychange', () => {
     saveDraftNow();
     return;
   }
-  if (navigator.onLine) syncFromCloud();
+  if (navigator.onLine && isUsuarioLogado()) {
+    handleOnlineAuthRecheck().finally(() => syncFromCloud());
+  }
 });
 window.addEventListener('pagehide', saveDraftNow);
 window.addEventListener('beforeunload', saveDraftNow);
@@ -9939,26 +10588,45 @@ checkOnline();
 function startCloudAutoRefresh() {
   clearInterval(cloudRefreshTimer);
   cloudRefreshTimer = setInterval(() => {
-    if (document.visibilityState === 'visible' && navigator.onLine) syncFromCloud();
+    if (document.visibilityState === 'visible' && navigator.onLine && isUsuarioLogado()) syncFromCloud();
   }, 30000);
 }
 
 // INIT
 window.addEventListener('load', () => {
-  ensureCurrentTecInList();
-  if (currentTec) document.getElementById('home-tec-name').textContent = currentTec;
-  
   document.body.classList.add('light-mode');
   localStorage.setItem('aa5s_theme', 'light');
   updateThemeIcon();
   applyDashboardTvMode();
 
-  renderHome();
-  if (!currentTec) {
-    setTimeout(() => openTecModal(), 500);
+  localStorage.removeItem('aa5s_auth_email');
+  localStorage.removeItem('aa5s_auth_at');
+  const existingSession = getAuthSession();
+  if (existingSession) {
+    applyAuthProfileAsTecnico(existingSession);
+    startAppAfterLogin(existingSession);
+    if (navigator.onLine) setTimeout(() => handleOnlineAuthRecheck(), 0);
+  } else {
+    showLoginScreen();
   }
-  syncFromCloud().finally(() => scheduleSyncQueue(0)); // Sincroniza nuvem antes da fila local
-  startCloudAutoRefresh();
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      applyFirebaseUserAsTecnico(user);
+      setAuthSession({
+        email: currentUserEmail,
+        tecnico: currentTec
+      }, 'online');
+      pendingOfflineAuth = null;
+      startAppAfterLogin();
+      return;
+    }
+    if (hasActiveLocalAuthSession()) return;
+    clearAuthSession();
+    currentUserEmail = '';
+    appStarted = false;
+    clearInterval(cloudRefreshTimer);
+    showLoginScreen();
+  });
 
   // Registrar Service Worker apenas em produção para não atrapalhar debug local
   if ('serviceWorker' in navigator) {
@@ -9971,6 +10639,7 @@ window.addEventListener('load', () => {
       navigator.serviceWorker.register('sw.js').catch(() => {});
     }
   }
+
 });
 
 </script>
