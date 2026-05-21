@@ -14,7 +14,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <!-- Firebase App e Firestore SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <!-- Firebase Storage não necessário: fotos salvas como base64 no Firestore -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -73,11 +72,11 @@ html, body {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* SCREENS */
+/* â”€â”€ SCREENS â”€â”€ */
 .screen { position: fixed; inset: 0; display: none; flex-direction: column; overflow: hidden; }
 .screen.active { display: flex; animation: screenFadeIn 0.3s ease-out; }
 
-/* HEADER */
+/* â”€â”€ HEADER â”€â”€ */
 .app-header {
   background: var(--navy2);
   backdrop-filter: blur(12px);
@@ -120,12 +119,12 @@ html, body {
   background: linear-gradient(145deg, rgba(99, 102, 241, 0.16), rgba(14, 165, 233, 0.12));
 }
 
-/* SCROLL BODY */
+/* â”€â”€ SCROLL BODY â”€â”€ */
 .scroll-body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .scroll-body::-webkit-scrollbar { width: 3px; }
 .scroll-body::-webkit-scrollbar-thumb { background: var(--navy3); border-radius: 3px; }
 
-/* BOTTOM NAV */
+/* â”€â”€ BOTTOM NAV â”€â”€ */
 .bottom-nav {
   background: var(--glass);
   backdrop-filter: blur(12px);
@@ -145,7 +144,7 @@ html, body {
 .nav-btn.active { color: var(--orange); transform: translateY(-2px); }
 .nav-btn.active svg { stroke: var(--orange); }
 
-/* CARDS */
+/* â”€â”€ CARDS â”€â”€ */
 .card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -161,7 +160,7 @@ html, body {
 .card-title { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
 .card-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
 
-/* BUTTONS */
+/* â”€â”€ BUTTONS â”€â”€ */
 .btn-primary {
   background: var(--orange); color: white;
   border: none; border-radius: 14px;
@@ -208,7 +207,7 @@ html, body {
 }
 .btn-secondary:active { background: rgba(255,255,255,0.08); }
 
-/* BADGE */
+/* â”€â”€ BADGE â”€â”€ */
 .badge {
   display: inline-flex; align-items: center; justify-content: center;
   padding: 5px 11px; border-radius: 999px; font-size: 11px; font-weight: 700;
@@ -220,7 +219,7 @@ html, body {
 .badge-red { background: rgba(231,76,60,0.15); color: var(--red); border: 1px solid rgba(231,76,60,0.3); }
 .badge-gold { background: rgba(240,165,0,0.15); color: var(--gold); border: 1px solid rgba(240,165,0,0.3); }
 
-/* SCORE RING */
+/* â”€â”€ SCORE RING â”€â”€ */
 .score-ring-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .score-ring { position: relative; width: 72px; height: 72px; }
 .score-ring svg { transform: rotate(-90deg); }
@@ -231,7 +230,7 @@ html, body {
 }
 .score-ring .score-lbl { font-size: 9px; color: var(--text2); margin-top: -2px; text-transform: uppercase; letter-spacing: 0.5px; }
 
-/* FORM CONTROLS */
+/* â”€â”€ FORM CONTROLS â”€â”€ */
 .form-group { margin-bottom: 16px; }
 .form-label { font-size: 12px; color: var(--text2); margin-bottom: 6px; display: block; text-transform: uppercase; letter-spacing: 0.5px; }
 .form-select, .form-input {
@@ -248,7 +247,7 @@ html, body {
 }
 .form-textarea:focus { outline: none; border-color: var(--orange); }
 
-/* NOTA SLIDER */
+/* â”€â”€ NOTA SLIDER â”€â”€ */
 .nota-row { display: flex; gap: 6px; margin-top: 6px; }
 .nota-btn {
   flex: 1; height: 48px; border: 1px solid var(--border); border-radius: 12px;
@@ -268,7 +267,7 @@ html, body {
 .light-mode .nota-btn.sel-4 { background: var(--green); color: white; }
 .light-mode .nota-btn.sel-na { background: var(--text2); color: white; }
 
-/* FOTO AREA */
+/* â”€â”€ FOTO AREA â”€â”€ */
 .foto-area {
   border: 1px dashed var(--border); border-radius: 10px;
   min-height: 42px;
@@ -287,14 +286,14 @@ html, body {
   font-size: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer;
 }
 
-/* PROGRESSO */
+/* â”€â”€ PROGRESSO â”€â”€ */
 .progress-bar { height: 6px; background: var(--navy3); border-radius: 100px; overflow: hidden; }
 .progress-fill { height: 100%; background: linear-gradient(90deg, var(--orange), var(--orange2)); border-radius: 100px; transition: width 0.3s; box-shadow: 0 0 10px rgba(79, 70, 229, 0.4); }
 
-/* DIVIDER */
+/* â”€â”€ DIVIDER â”€â”€ */
 .divider { height: 1px; background: var(--border); margin: 8px 0; }
 
-/* S-SECTION */
+/* â”€â”€ S-SECTION â”€â”€ */
 .s-section-card {
   margin: 0 16px 14px;
   border: 1px solid var(--border);
@@ -333,7 +332,7 @@ html, body {
 .s-body { padding: 0 12px 12px; display: none; }
 .s-body.open { display: block; }
 
-/* ITEM CRITERIO */
+/* â”€â”€ ITEM CRITERIO â”€â”€ */
 .criterio-item {
   margin-top: 10px;
   padding: 12px;
@@ -814,7 +813,7 @@ body.light-mode .nc-compare-col {
   background: rgba(255, 255, 255, 0.9);
 }
 
-/* TOAST */
+/* â”€â”€ TOAST â”€â”€ */
 #toast {
   position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(20px);
   background: var(--navy3); border: 1px solid var(--orange); border-radius: 10px;
@@ -824,78 +823,7 @@ body.light-mode .nc-compare-col {
 }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-.login-screen {
-  min-height: 100%;
-  padding: 24px 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background:
-    radial-gradient(circle at 20% 10%, rgba(99, 102, 241, 0.22), transparent 28%),
-    radial-gradient(circle at 85% 25%, rgba(14, 165, 233, 0.18), transparent 24%),
-    var(--navy);
-}
-.login-card {
-  width: 100%;
-  max-width: 420px;
-  background: var(--navy2);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 24px 18px 20px;
-  box-shadow: var(--shadow);
-}
-.login-logo {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  background: var(--orange);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  margin-bottom: 18px;
-}
-.login-title {
-  font-size: 26px;
-  font-weight: 800;
-  line-height: 1.1;
-  margin-bottom: 6px;
-}
-.login-subtitle {
-  font-size: 13px;
-  color: var(--text2);
-  line-height: 1.4;
-  margin-bottom: 22px;
-}
-.login-password-wrap { position: relative; }
-.login-password-wrap .form-input { padding-right: 48px; }
-.login-password-toggle {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 34px;
-  height: 34px;
-}
-.login-error {
-  min-height: 18px;
-  color: var(--red);
-  font-size: 12px;
-  margin: -4px 0 12px;
-}
-.login-footer {
-  margin-top: 14px;
-  font-size: 11px;
-  color: var(--text2);
-  text-align: center;
-}
-body.light-mode .login-card {
-  background: #ffffff;
-  border-color: rgba(15, 23, 42, 0.1);
-}
-
-/* HOME */
+/* â”€â”€ HOME â”€â”€ */
 .home-hero {
   background: var(--navy2);
   margin: 12px 16px 8px;
@@ -1213,7 +1141,7 @@ body.light-mode .hist-group-count {
   margin-right: 10px;
 }
 
-/* INSP CARD */
+/* â”€â”€ INSP CARD â”€â”€ */
 .insp-card {
   position: relative;
   background: linear-gradient(155deg, rgba(79, 70, 229, 0.17), rgba(14, 165, 233, 0.08) 48%, rgba(15, 23, 42, 0.08));
@@ -1328,7 +1256,7 @@ body.light-mode .insp-card-open {
   50% { opacity: 1; }
 }
 
-/* MODAL */
+/* â”€â”€ MODAL â”€â”€ */
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.7);
   display: none; align-items: flex-end; justify-content: center;
@@ -1344,7 +1272,7 @@ body.light-mode .insp-card-open {
 .modal-title { font-size: 20px; font-weight: 800; margin-bottom: 16px; letter-spacing: -0.02em; }
 .modal-title { font-family: var(--font-display); }
 
-/* COMPARACAO */
+/* â”€â”€ COMPARACAO â”€â”€ */
 .comp-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); }
 .comp-row:last-child { border-bottom: none; }
 .comp-s-name { flex: 1; font-size: 13px; }
@@ -1367,7 +1295,7 @@ body.light-mode .insp-card-open {
 .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text2); pointer-events: none; }
 .search-input { padding-left: 38px !important; }
 
-/* PENDENCIAS*/
+/* â”€â”€ PENDENCIAS â”€â”€ */
 .pend-item {
   background: linear-gradient(165deg, rgba(244,63,94,0.1), rgba(244,63,94,0.04));
   border: 1px solid rgba(231,76,60,0.22);
@@ -2025,44 +1953,10 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
   <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l2.5 2.5"/></svg>
   Modo offline - dados salvos localmente
 </div>
-<!-- LOGIN -->
-<div class="screen active" id="screen-login">
-  <div class="login-screen">
-    <form class="login-card" onsubmit="loginUsuario(event)">
-      <div class="login-logo">5S</div>
-      <div class="login-title">Sistema de inspeção digital</div>
-      <div class="login-subtitle">Informe seu e-mail e senha para acessar as inspeções.</div>
-
-      <div class="form-group">
-        <label class="form-label" for="login-email">E-mail</label>
-        <input type="email" class="form-input" id="login-email" autocomplete="email" placeholder="seu.email@empresa.com" required>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label" for="login-senha">Senha</label>
-        <div class="login-password-wrap">
-          <input type="password" class="form-input" id="login-senha" autocomplete="current-password" placeholder="Digite sua senha" required>
-          <button type="button" class="btn-icon login-password-toggle" onclick="toggleLoginPassword()" aria-label="Mostrar ou ocultar senha">
-            <svg id="login-password-icon" width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
-              <path d="M2 10s3-5 8-5 8 5 8 5-3 5-8 5-8-5-8-5z"></path>
-              <circle cx="10" cy="10" r="2.5"></circle>
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      <div class="login-error" id="login-error"></div>
-      <button class="btn-primary" id="login-submit-btn" type="submit">
-        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 4l6 6-6 6"/><path d="M3 10h10"/></svg>
-        Entrar
-      </button>
-      <div class="login-footer">O acesso fica liberado apenas nesta aba.</div>
-    </form>
-  </div>
-</div>
-<!-- 
-     SCREEN: HOME -->
-<div class="screen" id="screen-home">
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+     SCREEN: HOME
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+<div class="screen active" id="screen-home">
   <div class="app-header">
     <div class="logo">5S</div>
     <div>
@@ -2081,9 +1975,6 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
       <path d="M10 2v2m0 12v2M2 10h2m12 0h2M4.3 4.3l1.5 1.5m8.4 8.4l1.5 1.5M4.3 15.7l1.5-1.5m8.4-8.4l1.5-1.5"/>
     </svg>
   </button>
-  <button class="btn-icon" onclick="logoutUsuario()" title="Sair" aria-label="Sair">
-    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3H4v14h4"/><path d="M12 7l3 3-3 3"/><path d="M15 10H7"/></svg>
-  </button>
   </div>
 
   <div class="scroll-body">
@@ -2097,6 +1988,10 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
           <div class="tech-badge unit-highlight" onclick="openUnitModal()">
             <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2l7 4v8l-7 4-7-4V6l7-4z"/><path d="M3 6l7 4 7-4"/></svg>
             <span id="home-unit-name">CD</span>
+          </div>
+          <div class="tech-badge tec-highlight" onclick="openTecModal()">
+            <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="7" r="3.5"/><path d="M3 17c0-3.3 3.1-6 7-6s7 2.7 7 6"/></svg>
+            Trocar
           </div>
         </div>
       </div>
@@ -2142,8 +2037,9 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
   </div>
 </div>
 
-<!-- 
-     SCREEN: INSPEÇÃO (formulário) -->
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+     SCREEN: INSPEÃ‡ÃƒO (formulÃ¡rio)
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 <div class="screen" id="screen-inspecao">
   <div class="app-header">
     <button class="btn-icon" onclick="navTo('home')" style="margin-right:4px">
@@ -2168,7 +2064,7 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
   </div>
 
   <div class="scroll-body" id="insp-form-body" style="padding:12px 0 20px">
-    <!-- DINAMICO -->
+    <!-- dinÃ¢mico -->
   </div>
 
   <div style="padding:12px 16px; flex-shrink:0; border-top:1px solid var(--border)">
@@ -2179,7 +2075,9 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
   </div>
 </div>
 
- 
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+     SCREEN: HISTÃ“RICO
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 <div class="screen" id="screen-historico">
   <div class="app-header">
     <div class="logo">5S</div>
@@ -2220,9 +2118,9 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
   </div>
 </div>
 
-
-     
-
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+     SCREEN: PENDÃŠNCIAS
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 <div class="screen" id="screen-pendencias">
   <div class="app-header">
     <div class="logo">5S</div>
@@ -2254,9 +2152,9 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
   </div>
 </div>
 
-
-     
- 
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+     SCREEN: RELATÃ“RIOS
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 <div class="screen" id="screen-relatorios">
   <div class="app-header">
     <div class="logo">5S</div>
@@ -2370,7 +2268,7 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
   </div>
 </div>
 
-
+<!-- â•â•â•â• MODALS â•â•â•â• -->
 <!-- Selecionar técnico -->
 <div class="modal-overlay" id="modal-tec">
   <div class="modal-sheet">
@@ -2503,9 +2401,9 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
 <div id="toast"></div>
 
 <script>
-
+// ========================================
 //  DADOS
-
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 const SENSOS = [
   {
     id: 's1', nome: '1S - Utilização', cor: '#e8601c',
@@ -3017,7 +2915,6 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
 const db = firebase.firestore();
 // Storage não utilizado: fotos em base64 no Firestore
 
@@ -4927,10 +4824,8 @@ function refreshAfterDataSync() {
 }
 
 let APP = loadData();
-let currentTec = '';
+let currentTec = localStorage.getItem('aa5s_tec') || '';
 let currentUnidade = localStorage.getItem('aa5s_unit') || 'CD';
-let currentUserEmail = sessionStorage.getItem('aa5s_auth_email') || '';
-let appStarted = false;
 let pendingUnidade = currentUnidade;
 let currentInsp = null; // inspeÃ§Ã£o em andamento
 let isSavingInspecao = false;
@@ -4956,40 +4851,6 @@ function ensureCurrentTecInList() {
     APP.tecnicos.push(currentTec);
     persistLocalApp(APP);
   }
-}
-
-// === Function: formatTecnicoNameFromEmail ===
-function formatTecnicoNameFromEmail(email) {
-  const localPart = String(email || '').split('@')[0] || '';
-  const cleanLocalPart = localPart
-    .replace(/[-_.](externo|terceiro|contractor|consultor)$/i, '')
-    .replace(/[._-]+/g, ' ')
-    .trim();
-
-  return cleanLocalPart
-    .split(/\s+/)
-    .filter(Boolean)
-    .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-    .join(' ');
-}
-
-// === Function: getTecnicoFromFirebaseUser ===
-function getTecnicoFromFirebaseUser(user) {
-  const displayName = (user?.displayName || '').trim();
-  const email = (user?.email || '').trim().toLowerCase();
-  return displayName || formatTecnicoNameFromEmail(email) || email;
-}
-
-// === Function: applyFirebaseUserAsTecnico ===
-function applyFirebaseUserAsTecnico(user) {
-  currentUserEmail = (user?.email || '').trim().toLowerCase();
-  currentTec = getTecnicoFromFirebaseUser(user);
-  if (currentTec) {
-    localStorage.setItem('aa5s_tec', currentTec);
-    ensureCurrentTecInList();
-  }
-  const homeTecName = document.getElementById('home-tec-name');
-  if (homeTecName) homeTecName.textContent = currentTec || 'Usuário autenticado';
 }
 
 if (currentUnidade === 'HAR' || currentUnidade === 'REF') currentUnidade = 'CD';
@@ -5049,137 +4910,12 @@ function confirmarUnidade() {
   if (document.getElementById('screen-dashboard')?.classList.contains('active')) renderDashboard();
 }
 
-//  NAVEGAÇÃO
-
-
-// === Function: isUsuarioLogado ===
-function isUsuarioLogado() {
-  return Boolean(auth.currentUser);
-}
-
-// === Function: showLoginScreen ===
-function showLoginScreen() {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  const loginScreen = document.getElementById('screen-login');
-  if (loginScreen) loginScreen.classList.add('active');
-  setTimeout(() => document.getElementById('login-email')?.focus(), 100);
-}
-
-// === Function: startAppAfterLogin ===
-function startAppAfterLogin() {
-  if (appStarted) {
-    navTo('home');
-    return;
-  }
-  appStarted = true;
-  applyFirebaseUserAsTecnico(auth.currentUser);
-  ensureCurrentTecInList();
-  if (currentTec) document.getElementById('home-tec-name').textContent = currentTec;
-  renderHome();
-  navTo('home');
-  syncFromCloud().finally(() => scheduleSyncQueue(0));
-  startCloudAutoRefresh();
-}
-
-// === Function: getFirebaseAuthMessage ===
-function getFirebaseAuthMessage(error) {
-  const code = error?.code || '';
-  const messages = {
-    'auth/invalid-email': 'Digite um e-mail válido.',
-    'auth/user-disabled': 'Este usuário está desativado no Firebase.',
-    'auth/user-not-found': 'Usuário não cadastrado no Firebase.',
-    'auth/wrong-password': 'Senha incorreta.',
-    'auth/invalid-credential': 'E-mail ou senha inválidos.',
-    'auth/too-many-requests': 'Muitas tentativas. Aguarde alguns minutos e tente novamente.',
-    'auth/network-request-failed': 'Falha de conexão com o Firebase.',
-    'auth/operation-not-allowed': 'Ative o provedor E-mail/senha no Firebase Authentication.'
-  };
-  return messages[code] || 'Não foi possível entrar. Verifique e-mail e senha.';
-}
-
-// === Function: loginUsuario ===
-async function loginUsuario(event) {
-  if (event) event.preventDefault();
-  const emailInput = document.getElementById('login-email');
-  const senhaInput = document.getElementById('login-senha');
-  const errorEl = document.getElementById('login-error');
-  const submitBtn = document.getElementById('login-submit-btn');
-  const email = (emailInput?.value || '').trim().toLowerCase();
-  const senha = senhaInput?.value || '';
-
-  if (!email || !senha) {
-    if (errorEl) errorEl.textContent = 'Informe e-mail e senha.';
-    return;
-  }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    if (errorEl) errorEl.textContent = 'Digite um e-mail válido.';
-    emailInput?.focus();
-    return;
-  }
-
-  if (errorEl) errorEl.textContent = '';
-  if (submitBtn) {
-    submitBtn.disabled = true;
-    submitBtn.dataset.originalText = submitBtn.innerHTML;
-    submitBtn.innerHTML = 'Entrando...';
-  }
-
-  try {
-    await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
-    const result = await auth.signInWithEmailAndPassword(email, senha);
-    applyFirebaseUserAsTecnico(result.user);
-    sessionStorage.setItem('aa5s_auth_email', currentUserEmail);
-    if (senhaInput) senhaInput.value = '';
-    toast('Login realizado com sucesso.');
-    startAppAfterLogin();
-  } catch (error) {
-    if (errorEl) errorEl.textContent = getFirebaseAuthMessage(error);
-  } finally {
-    if (submitBtn) {
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = submitBtn.dataset.originalText || 'Entrar';
-    }
-  }
-}
-
-// === Function: logoutUsuario ===
-async function logoutUsuario() {
-  saveDraftNow();
-  document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
-  sessionStorage.removeItem('aa5s_auth_email');
-  localStorage.removeItem('aa5s_auth_email');
-  localStorage.removeItem('aa5s_auth_at');
-  currentUserEmail = '';
-  appStarted = false;
-  clearInterval(cloudRefreshTimer);
-  try {
-    await auth.signOut();
-  } catch {
-    // Se o Firebase falhar ao sair, ainda assim bloqueia a tela localmente.
-  }
-  showLoginScreen();
-}
-
-// === Function: toggleLoginPassword ===
-function toggleLoginPassword() {
-  const input = document.getElementById('login-senha');
-  const icon = document.getElementById('login-password-icon');
-  if (!input) return;
-  const isHidden = input.type === 'password';
-  input.type = isHidden ? 'text' : 'password';
-  if (icon) {
-    icon.innerHTML = isHidden
-      ? '<path d="M3 3l14 14"/><path d="M8.6 8.6A2.5 2.5 0 0 0 10 12.5c.5 0 1-.15 1.4-.4"/><path d="M6.4 6.8C3.6 8.2 2 10 2 10s3 5 8 5c1.5 0 2.8-.4 3.9-1"/><path d="M10.7 5C15.2 5.4 18 10 18 10s-.8 1.4-2.3 2.7"/>'
-      : '<path d="M2 10s3-5 8-5 8 5 8 5-3 5-8 5-8-5-8-5z"></path><circle cx="10" cy="10" r="2.5"></circle>';
-  }
-}
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  NAVEGAÃ‡ÃƒO
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 // === Function: navTo ===
 function navTo(id) {
-  if (id !== 'login' && !isUsuarioLogado()) {
-    showLoginScreen();
-    return;
-  }
   if (id === 'dashboard') {
     stopDashboardLive();
     document.body.classList.remove('dashboard-tv');
@@ -5217,9 +4953,9 @@ function toggleDashboardTvMode() {
   renderDashboard();
 }
 
-
-//  TÉCNICOS
-
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  TÃ‰CNICOS
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 // === Function: openTecModal ===
 function openTecModal() {
@@ -5265,6 +5001,9 @@ function confirmarTecnico() {
   renderHome();
 }
 
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  HOME
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 // === Function: renderHome ===
 function renderHome() {
@@ -6092,9 +5831,9 @@ function getPendenciasResolvidas(insp, baseComparativa = null) {
   return resolvidas;
 }
 
-
-//  NOVA INSPEÇÃO
-
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  NOVA INSPEÃ‡ÃƒO
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 // === Function: showNewInspModal ===
 function showNewInspModal() {
@@ -6323,9 +6062,9 @@ function iniciarInspecao() {
   navTo('inspecao');
 }
 
-
-//  FORMULÁRIO DE INSPEÇÃO
-
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  FORMULÃRIO DE INSPEÃ‡ÃƒO
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 // === Function: renderInspecaoForm ===
 function renderInspecaoForm() {
@@ -7093,9 +6832,9 @@ async function salvarInspecao() {
   }
 }
 
-
-//  HISTORICO
-
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  HISTÃ“RICO
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 // === Function: renderHistorico ===
 function renderHistorico() {
@@ -7147,8 +6886,9 @@ function renderHistorico() {
   }).join('');
 }
 
-
-//  DETALHE / COMPARAÇÃO
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  DETALHE / COMPARAÃ‡ÃƒO
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 // === Function: openDetalhe ===
 function openDetalhe(id) {
@@ -7169,7 +6909,7 @@ function openDetalhe(id) {
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 2px">${getInspectionStatusBadges(insp)}</div>
     <div class="divider" style="margin:14px 0"></div>`;
 
-  // comparação por senso
+  // comparaÃ§Ã£o por S
   if (base) {
     html += `<div style="font-size:12px;color:var(--gold);margin-bottom:10px;display:flex;gap:6px;align-items:center">
       <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10h12M14 6l4 4-4 4"/></svg>
@@ -7192,7 +6932,7 @@ function openDetalhe(id) {
     html += `</div>`;
   }
 
-  
+  // pendÃªncias desta inspeÃ§Ã£o
   let pendHTML = '';
   SENSOS.forEach(s => {
     insp.sensos[s.id].forEach((cr, ci) => {
@@ -7322,9 +7062,9 @@ function iniciarNovaComBase(baseId) {
   navTo('inspecao');
 }
 
-
-//  Pendencias
-
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  PENDÃŠNCIAS
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 // === Function: renderPendencias ===
 function renderPendencias() {
@@ -7450,7 +7190,9 @@ function renderPendList() {
   }).join('');
 }
 
-
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  RELATÃ“RIOS
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 // === Function: renderRelatorios ===
 function renderRelatorios() {
@@ -9670,7 +9412,7 @@ async function gerarPDFInsp(id, options = {}) {
     y += 6;
   });
 
-  // Pendencias e não conformidades
+  // PENDÃŠNCIAS
   let hasPend = false;
   SENSOS.forEach(s => insp.sensos[s.id].forEach(cr => { if ((cr.nota||0)<2) hasPend=true; }));
 
@@ -10123,7 +9865,9 @@ async function gerarPDFInsp(id, options = {}) {
   return { doc, fileName, insp };
 }
 
-
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  UTILS
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 // === Function: toggleTheme ===
 function toggleTheme() {
@@ -10176,10 +9920,8 @@ function checkOnline() {
 }
 window.addEventListener('online', () => {
   checkOnline();
-  if (isUsuarioLogado()) {
-    syncFromCloud();
-    scheduleSyncQueue(0);
-  }
+  syncFromCloud();
+  scheduleSyncQueue(0);
 });
 window.addEventListener('offline', checkOnline);
 document.addEventListener('visibilitychange', () => {
@@ -10187,7 +9929,7 @@ document.addEventListener('visibilitychange', () => {
     saveDraftNow();
     return;
   }
-  if (navigator.onLine && isUsuarioLogado()) syncFromCloud();
+  if (navigator.onLine) syncFromCloud();
 });
 window.addEventListener('pagehide', saveDraftNow);
 window.addEventListener('beforeunload', saveDraftNow);
@@ -10197,33 +9939,26 @@ checkOnline();
 function startCloudAutoRefresh() {
   clearInterval(cloudRefreshTimer);
   cloudRefreshTimer = setInterval(() => {
-    if (document.visibilityState === 'visible' && navigator.onLine && isUsuarioLogado()) syncFromCloud();
+    if (document.visibilityState === 'visible' && navigator.onLine) syncFromCloud();
   }, 30000);
 }
 
 // INIT
 window.addEventListener('load', () => {
+  ensureCurrentTecInList();
+  if (currentTec) document.getElementById('home-tec-name').textContent = currentTec;
+  
   document.body.classList.add('light-mode');
   localStorage.setItem('aa5s_theme', 'light');
   updateThemeIcon();
   applyDashboardTvMode();
 
-  localStorage.removeItem('aa5s_auth_email');
-  localStorage.removeItem('aa5s_auth_at');
-  showLoginScreen();
-  auth.onAuthStateChanged(user => {
-    if (user) {
-      applyFirebaseUserAsTecnico(user);
-      sessionStorage.setItem('aa5s_auth_email', currentUserEmail);
-      startAppAfterLogin();
-      return;
-    }
-    sessionStorage.removeItem('aa5s_auth_email');
-    currentUserEmail = '';
-    appStarted = false;
-    clearInterval(cloudRefreshTimer);
-    showLoginScreen();
-  });
+  renderHome();
+  if (!currentTec) {
+    setTimeout(() => openTecModal(), 500);
+  }
+  syncFromCloud().finally(() => scheduleSyncQueue(0)); // Sincroniza nuvem antes da fila local
+  startCloudAutoRefresh();
 
   // Registrar Service Worker apenas em produção para não atrapalhar debug local
   if ('serviceWorker' in navigator) {
