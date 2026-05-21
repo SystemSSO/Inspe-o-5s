@@ -99,6 +99,10 @@ html, body {
   box-shadow: none;
 }
 .app-header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; }
+.app-header > div:not(.spacer):first-child > div:first-child {
+  line-height: 1.25;
+  padding-bottom: 1px;
+}
 .app-header .sub { font-size: 11px; color: var(--text2); margin-top: 1px; }
 .app-header .spacer { flex: 1; }
 .btn-icon { background: none; border: 1px solid var(--border); border-radius: 8px; color: var(--text2); width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
@@ -1998,7 +2002,7 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
     min-width: 0;
   }
   .app-header > div:not(.spacer):first-child > div:first-child {
-    max-width: 112px;
+    max-width: 150px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
