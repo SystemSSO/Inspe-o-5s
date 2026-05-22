@@ -30,8 +30,8 @@
   --red: #f43f5e;
   --yellow: #eab308;
   --text: #f8fafc;
-  --text2: #64748b;
-  --border: rgba(255, 255, 255, 0.06);
+  --text2: #e2e8f0;
+  --border: rgba(255, 255, 255, 0.12);
   --card: #1e293b;
   --radius: 16px;
   --font-display: 'Barlow', sans-serif;
@@ -39,8 +39,8 @@
   --font-label: 'Barlow Condensed', sans-serif;
   --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
   --glass: rgba(15, 23, 42, 0.9);
-  --pill-bg: rgba(148, 163, 184, 0.14);
-  --pill-border: rgba(148, 163, 184, 0.3);
+  --pill-bg: rgba(226, 232, 240, 0.16);
+  --pill-border: rgba(226, 232, 240, 0.36);
 }
 body.light-mode {
   --navy: #f8fafc;
@@ -269,7 +269,7 @@ html, body {
 .nota-btn.sel-2 { background: #ca8a04; border-color: #ca8a04; color: white; }
 .nota-btn.sel-3 { background: #16a34a; border-color: #16a34a; color: white; }
 .nota-btn.sel-4 { background: var(--green); border-color: var(--green); color: white; box-shadow: 0 0 15px rgba(16, 185, 129, 0.3); }
-.nota-btn.sel-na { background: var(--text2); border-color: var(--text2); color: white; }
+.nota-btn.sel-na { background: var(--text2); border-color: var(--text2); color: var(--navy); }
 
 .light-mode .nota-btn { background: #f1f5f9; color: var(--text2); }
 .light-mode .nota-btn.sel-0 { background: var(--red); color: white; }
@@ -288,6 +288,11 @@ html, body {
   cursor: pointer; transition: border-color 0.15s;
 }
 .foto-area:active { border-color: var(--orange); }
+.foto-area.locked {
+  cursor: not-allowed;
+  opacity: 0.72;
+  background: rgba(148, 163, 184, 0.08);
+}
 .foto-area svg { width: 16px; height: 16px; }
 .foto-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
 .foto-thumb { aspect-ratio: 1; border-radius: 6px; overflow: hidden; position: relative; }
@@ -3919,7 +3924,11 @@ function getSetorialReportDashboardData(setor) {
       reincidencia: getReincidenciaCount(insp, s.id, ci),
       obs: cr.obs || 'Sem observação.',
       sugestao: cr.sugestao || 'Não informada.',
-      fotos: getFotosNCAbertaComFallback(insp, s.id, ci, cr),
+      fotos: Array.isArray(cr.debitamentoNCCorrespondente?.fotosOrigem) && cr.debitamentoNCCorrespondente.fotosOrigem.length
+        ? cr.debitamentoNCCorrespondente.fotosOrigem
+        : getFotosNCAbertaComFallback(insp, s.id, ci, cr),
+      nota: cr.nota ?? null,
+      debitamentoNCCorrespondente: cr.debitamentoNCCorrespondente || null,
       origemTipo: 'propria',
       origemSetor: insp.setor,
       origemLocal: localLabel(insp),
@@ -3954,6 +3963,8 @@ function getSetorialReportDashboardData(setor) {
       obs: cr.obs || 'Sem observação.',
       sugestao: cr.sugestao || 'Não informada.',
       fotos: getFotosNCAbertaComFallback(insp, s.id, ci, cr),
+      nota: cr.nota ?? null,
+      debitamentoNCCorrespondente: null,
       origemTipo: 'encaminhada',
       origemSetor: insp.setor,
       origemLocal: localLabel(insp),
@@ -6742,6 +6753,7 @@ function iniciarInspecao() {
   if (ultimaMesmoLocal && sameLocal(currentInsp, ultimaMesmoLocal)) {
     aplicarRegraReincidencia(ultimaMesmoLocal);
   }
+  aplicarDebitamentoNCCorrespondente();
 
   saveDraftNow();
   renderInspecaoForm();
@@ -6919,12 +6931,110 @@ function aplicarRegraReincidencia(baseInsp) {
       if (!criterioTemNCAberta(criterioAnterior)) return;
       const notaAnterior = criterioAnterior?.nota;
       if (typeof notaAnterior !== 'number') return;
-      const notaAjustada = Math.max(0, notaAnterior - 1);
-      item.nota = notaAjustada;
-      item.autoReincidenciaFrom = notaAnterior;
-      item.autoReincidenciaTo = notaAjustada;
+      
+      // Registrar setores que devem ser debitados (Opção A)
+      if (!item.setoresDebitados) item.setoresDebitados = [];
+      
+      // Determinar se o setor atual é o corresponsável
+      const setorAtualEhCorresponsavel = criterioAnterior?.encaminharSetor === currentInsp.setor && criterioAnterior.encaminharSetor !== baseInsp.setor;
+      
+      // CASO 1: Reincidência no SETOR DE ORIGEM (TI inspeciona novamente)
+      if (currentInsp.setor === baseInsp.setor) {
+        const notaAjustada = Math.max(0, notaAnterior - 1);
+        item.nota = notaAjustada;
+        item.autoReincidenciaFrom = notaAnterior;
+        item.autoReincidenciaTo = notaAjustada;
+        
+        // Debitar setor de origem
+        if (baseInsp.setor && !item.setoresDebitados.includes(baseInsp.setor)) {
+          item.setoresDebitados.push(baseInsp.setor);
+        }
+        
+        // Marcar o setor corresponsável para dedução
+        if (criterioAnterior?.encaminharSetor && criterioAnterior.encaminharSetor !== baseInsp.setor) {
+          if (!item.setoresDebitados.includes(criterioAnterior.encaminharSetor)) {
+            item.setoresDebitados.push(criterioAnterior.encaminharSetor);
+          }
+        }
+      }
+      // CASO 2: Reincidência do SETOR CORRESPONSÁVEL (Elétrica inspeciona, mas NC de TI ainda não resolvida)
+      else if (setorAtualEhCorresponsavel) {
+        const notaAjustada = Math.max(0, notaAnterior - 1);
+        item.nota = notaAjustada;
+        item.autoReincidenciaFrom = notaAnterior;
+        item.autoReincidenciaTo = notaAjustada;
+        
+        // Debitar setor de origem
+        if (baseInsp.setor && !item.setoresDebitados.includes(baseInsp.setor)) {
+          item.setoresDebitados.push(baseInsp.setor);
+        }
+        
+        // Debitar setor corresponsável (próprio setor atual)
+        if (currentInsp.setor && !item.setoresDebitados.includes(currentInsp.setor)) {
+          item.setoresDebitados.push(currentInsp.setor);
+        }
+      }
     });
   });
+}
+
+// === Function: aplicarDebitamentoNCCorrespondente ===
+function aplicarDebitamentoNCCorrespondente() {
+  if (!currentInsp?.setor || !currentInsp.sensos) return;
+
+  const recebidas = getPendenciasRecebidas(currentInsp.setor, currentInsp.data);
+  const recebidaMaisCriticaPorCriterio = {};
+
+  recebidas.forEach(item => {
+    if (!item?.sensoId || !Number.isInteger(item.criterioArrayIndex)) return;
+    if (typeof item.nota !== 'number') return;
+
+    const key = `${item.sensoId}||${item.criterioArrayIndex}`;
+    const notaAplicada = Math.max(0, item.nota - 1);
+    const atual = recebidaMaisCriticaPorCriterio[key];
+    if (!atual || notaAplicada < atual.notaAplicada) {
+      recebidaMaisCriticaPorCriterio[key] = { ...item, notaAplicada };
+    }
+  });
+
+  Object.values(recebidaMaisCriticaPorCriterio).forEach(item => {
+    const criterio = currentInsp.sensos?.[item.sensoId]?.[item.criterioArrayIndex];
+    if (!criterio) return;
+    if (criterio.nota !== null && criterio.nota <= item.notaAplicada) return;
+
+    criterio.nota = item.notaAplicada;
+    criterio.ncResolvida = false;
+    criterio.ncAberta = item.notaAplicada <= 3;
+    criterio.autoReincidenciaFrom = item.nota;
+    criterio.autoReincidenciaTo = item.notaAplicada;
+    criterio.debitamentoNCCorrespondente = {
+      origemSetor: item.origemSetor,
+      origemLocal: item.origemLocal,
+      origemData: item.origemData,
+      notaOrigem: item.nota,
+      notaAplicada: item.notaAplicada,
+      fotosOrigem: Array.isArray(item.fotos) ? item.fotos : []
+    };
+
+    const obsAuto = `NC recebida de ${item.origemSetor} - ${item.origemLocal}: pendencia nao resolvida. Debitamento automatico no criterio correspondente.`;
+    if (!String(criterio.obs || '').trim()) criterio.obs = obsAuto;
+
+    if (!Array.isArray(criterio.setoresDebitados)) criterio.setoresDebitados = [];
+    [item.origemSetor, currentInsp.setor].filter(Boolean).forEach(setor => {
+      if (!criterio.setoresDebitados.includes(setor)) criterio.setoresDebitados.push(setor);
+    });
+  });
+}
+
+// === Function: criterioTravadoPorNCRecebida ===
+function criterioTravadoPorNCRecebida(criterio) {
+  return !!criterio?.debitamentoNCCorrespondente;
+}
+
+// === Function: avisarNCRecebidaTravada ===
+function avisarNCRecebidaTravada(criterio) {
+  const origem = criterio?.debitamentoNCCorrespondente?.origemSetor || 'setor de origem';
+  toast(`Esta NC deve ser resolvida somente na inspeção do setor de origem (${origem}).`);
 }
 
 // === Function: criterioHTML ===
@@ -6951,9 +7061,14 @@ function criterioHTML(s, si, cr, ci, base) {
         Anterior: nota <strong style="color:${notaCor(baseNota)}">${baseNota}</strong>${baseObs ? ` - "${baseObs.slice(0,60)}${baseObs.length>60?'...':''}"` : ''}
        </div>`
     : '';
-  const autoHint = (typeof item.autoReincidenciaFrom === 'number' && typeof item.autoReincidenciaTo === 'number')
+  const debitamentoCorrespondente = item.debitamentoNCCorrespondente;
+  const travadoPorNCRecebida = criterioTravadoPorNCRecebida(item);
+  const autoHint = (!travadoPorNCRecebida && typeof item.autoReincidenciaFrom === 'number' && typeof item.autoReincidenciaTo === 'number')
     ? `<div class="criterio-auto-ajuste">Reincidência automática: nota ajustada de <strong>${item.autoReincidenciaFrom}</strong> para <strong>${item.autoReincidenciaTo}</strong>.</div>`
     : '';
+  const debitamentoHint = '';
+  const disabledAttr = travadoPorNCRecebida ? 'disabled' : '';
+  const readonlyAttr = travadoPorNCRecebida ? 'readonly' : '';
   
   // Seção de não conformidade anterior com imagens
   const hasNCAnterior = criterioTemNCAberta(baseCr);
@@ -7002,7 +7117,7 @@ function criterioHTML(s, si, cr, ci, base) {
       ` : `<div style="font-size:11px;color:var(--text2);padding:6px;text-align:center">${baseTemRefPendente ? 'Evidência da NC anterior em sincronização...' : 'Sem fotos registradas da não conformidade anterior'}</div>`}
       ${antesDepoisSection}
       <div class="nc-anterior-actions">
-        <button class="btn-nc-resolved ${isResolved ? 'active' : ''}" onclick="toggleResolved('${s.id}',${ci})" id="btn-resolved-${s.id}-${ci}">
+        <button class="btn-nc-resolved ${isResolved ? 'active' : ''}" onclick="toggleResolved('${s.id}',${ci})" id="btn-resolved-${s.id}-${ci}" ${disabledAttr}>
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10l4 4L16 6"/></svg>
           <span>${isResolved ? 'Resolvido ✓' : 'Marcar como resolvido'}</span>
         </button>
@@ -7018,13 +7133,14 @@ function criterioHTML(s, si, cr, ci, base) {
     </div>
     <div class="criterio-nome">${cr}</div>
     ${baseHint}
-    ${autoHint}
+      ${autoHint}
+      ${debitamentoHint}
     ${ncAnteriorSection}
     <div class="criterio-section">
       <div class="criterio-section-title">Nota da Avaliação</div>
       <div class="nota-row">
-        ${[0,1,2,3,4].map(n => `<button class="nota-btn${item.nota === n ? ` sel-${n}` : ''}" id="nb-${s.id}-${ci}-${n}" onclick="setNota('${s.id}',${ci},${n})">${n}</button>`).join('')}
-        <button class="nota-btn${item.nota === 'NA' ? ` sel-na` : ''}" id="nb-${s.id}-${ci}-NA" onclick="setNota('${s.id}',${ci},'NA')">N/A</button>
+        ${[0,1,2,3,4].map(n => `<button class="nota-btn${item.nota === n ? ` sel-${n}` : ''}" id="nb-${s.id}-${ci}-${n}" onclick="setNota('${s.id}',${ci},${n})" ${disabledAttr}>${n}</button>`).join('')}
+        <button class="nota-btn${item.nota === 'NA' ? ` sel-na` : ''}" id="nb-${s.id}-${ci}-NA" onclick="setNota('${s.id}',${ci},'NA')" ${disabledAttr}>N/A</button>
       </div>
     </div>
     <div class="criterio-section">
@@ -7032,7 +7148,7 @@ function criterioHTML(s, si, cr, ci, base) {
       <div class="criterio-obs">
         <textarea class="form-textarea" placeholder="Observação / não conformidade (obrigatório para notas de 0 a 3)..." rows="2"
           id="obs-${s.id}-${ci}" oninput="setObs('${s.id}',${ci},this.value)"
-          style="font-size:13px;min-height:52px">${item.obs || ''}</textarea>
+          style="font-size:13px;min-height:52px" ${readonlyAttr}>${item.obs || ''}</textarea>
       </div>
     </div>
     <div class="criterio-section">
@@ -7040,21 +7156,21 @@ function criterioHTML(s, si, cr, ci, base) {
       <div class="criterio-obs">
         <textarea class="form-textarea" placeholder="Sugestão de melhoria..." rows="2"
           id="sug-${s.id}-${ci}" oninput="setSugestao('${s.id}',${ci},this.value)"
-          style="font-size:13px;min-height:52px">${item.sugestao || ''}</textarea>
+          style="font-size:13px;min-height:52px" ${readonlyAttr}>${item.sugestao || ''}</textarea>
       </div>
     </div>
     <div class="criterio-section">
       <div class="criterio-section-title">Encaminhamento</div>
       <div class="criterio-obs">
         <label class="form-label" style="margin-bottom:6px">Encaminhar para outro setor</label>
-        <select class="form-select" id="resp-${s.id}-${ci}" onchange="setResponsavelSetor('${s.id}',${ci},this.value)" style="font-size:13px">
+        <select class="form-select" id="resp-${s.id}-${ci}" onchange="setResponsavelSetor('${s.id}',${ci},this.value)" style="font-size:13px" ${disabledAttr}>
           <option value="">— Nenhuma (Responsabilidade local) —</option>
           ${setorOptions}
         </select>
         ${correspAtual ? `<div style="font-size:11px;color:var(--gold);margin-top:6px">NC com corresponsável: ${correspAtual}</div>` : ''}
       </div>
     </div>
-    <div class="criterio-section">
+    ${travadoPorNCRecebida ? '' : `<div class="criterio-section">
       <div class="criterio-section-title">Evidências</div>
       <div>
         <div class="foto-area" onclick="triggerFoto('${s.id}',${ci})" style="margin-top:2px">
@@ -7065,7 +7181,7 @@ function criterioHTML(s, si, cr, ci, base) {
         </div>
         <div class="foto-grid" id="foto-grid-${s.id}-${ci}"></div>
       </div>
-    </div>
+    </div>`}
   </div>`;
 }
 
@@ -7079,10 +7195,17 @@ function toggleS(id) {
 
 // === Function: setNota ===
 function setNota(sId, ci, nota) {
+  const criterio = currentInsp.sensos[sId][ci];
+  if (criterioTravadoPorNCRecebida(criterio)) {
+    avisarNCRecebidaTravada(criterio);
+    return;
+  }
   touchDraftContext({ lastSensoId: sId, lastCriterioIndex: ci, lastAction: 'nota', lastFieldId: `nb-${sId}-${ci}-${nota}` });
-  currentInsp.sensos[sId][ci].nota = nota;
-  currentInsp.sensos[sId][ci].autoReincidenciaFrom = null;
-  currentInsp.sensos[sId][ci].autoReincidenciaTo = null;
+  criterio.nota = nota;
+  criterio.autoReincidenciaFrom = null;
+  criterio.autoReincidenciaTo = null;
+  criterio.debitamentoNCCorrespondente = null;
+  criterio.setoresDebitados = [];
   const tinhaNCAnterior = hasPendenciaAnterior(sId, ci);
   if (typeof nota === 'number' && nota <= 3) currentInsp.sensos[sId][ci].ncResolvida = false;
   currentInsp.sensos[sId][ci].ncAberta = typeof nota === 'number' && nota <= 3 && currentInsp.sensos[sId][ci].ncResolvida !== true;
@@ -7137,31 +7260,56 @@ function updateResolvedButton(sId, ci, isResolved) {
 
 // === Function: setObs ===
 function setObs(sId, ci, val) {
+  const criterio = currentInsp.sensos[sId][ci];
+  if (criterioTravadoPorNCRecebida(criterio)) {
+    avisarNCRecebidaTravada(criterio);
+    const obs = document.getElementById(`obs-${sId}-${ci}`);
+    if (obs) obs.value = criterio.obs || '';
+    return;
+  }
   touchDraftContext({ lastSensoId: sId, lastCriterioIndex: ci, lastAction: 'obs', lastFieldId: `obs-${sId}-${ci}` });
-  currentInsp.sensos[sId][ci].obs = val;
+  criterio.obs = val;
   scheduleDraftSave();
 }
 
 // === Function: setSugestao ===
 function setSugestao(sId, ci, val) {
+  const criterio = currentInsp.sensos[sId][ci];
+  if (criterioTravadoPorNCRecebida(criterio)) {
+    avisarNCRecebidaTravada(criterio);
+    const sug = document.getElementById(`sug-${sId}-${ci}`);
+    if (sug) sug.value = criterio.sugestao || '';
+    return;
+  }
   touchDraftContext({ lastSensoId: sId, lastCriterioIndex: ci, lastAction: 'sugestao', lastFieldId: `sug-${sId}-${ci}` });
-  currentInsp.sensos[sId][ci].sugestao = val;
+  criterio.sugestao = val;
   scheduleDraftSave();
 }
 
 // === Function: setResponsavelSetor ===
 function setResponsavelSetor(sId, ci, val) {
+  const criterio = currentInsp.sensos[sId][ci];
+  if (criterioTravadoPorNCRecebida(criterio)) {
+    avisarNCRecebidaTravada(criterio);
+    const resp = document.getElementById(`resp-${sId}-${ci}`);
+    if (resp) resp.value = criterio.encaminharSetor || '';
+    return;
+  }
   touchDraftContext({ lastSensoId: sId, lastCriterioIndex: ci, lastAction: 'encaminhamento', lastFieldId: `resp-${sId}-${ci}` });
-  currentInsp.sensos[sId][ci].encaminharSetor = val;
+  criterio.encaminharSetor = val;
   scheduleDraftSave();
 }
 
 // === Function: toggleResolved ===
 function toggleResolved(sId, ci) {
+  const criterio = currentInsp.sensos[sId][ci];
+  if (criterioTravadoPorNCRecebida(criterio)) {
+    avisarNCRecebidaTravada(criterio);
+    return;
+  }
   touchDraftContext({ lastSensoId: sId, lastCriterioIndex: ci, lastAction: 'resolved', lastFieldId: `btn-resolved-${sId}-${ci}` });
   const btn = document.getElementById(`btn-resolved-${sId}-${ci}`);
   if (!btn) return;
-  const criterio = currentInsp.sensos[sId][ci];
   
   if (btn.classList.contains('active')) {
     updateResolvedButton(sId, ci, false);
@@ -7204,6 +7352,11 @@ let pendingFotoTarget = null;
 
 // === Function: triggerFoto ===
 function triggerFoto(sId, ci) {
+  const criterio = currentInsp.sensos[sId][ci];
+  if (criterioTravadoPorNCRecebida(criterio)) {
+    avisarNCRecebidaTravada(criterio);
+    return;
+  }
   pendingFotoTarget = { sId, ci };
   touchDraftContext({ lastSensoId: sId, lastCriterioIndex: ci, lastAction: 'foto_modal', fotoModalOpen: true, fotoTarget: { sId, ci } });
   scheduleDraftSave();
@@ -7257,6 +7410,12 @@ function comprimirImagem(file, maxPx = 800, quality = 0.65) {
 
 // === Function: addFotos ===
 async function addFotos(sId, ci, inp) {
+  const criterio = currentInsp.sensos[sId][ci];
+  if (criterioTravadoPorNCRecebida(criterio)) {
+    avisarNCRecebidaTravada(criterio);
+    if (inp) inp.value = '';
+    return;
+  }
   touchDraftContext({ lastSensoId: sId, lastCriterioIndex: ci, lastAction: 'foto_add', lastFieldId: `foto-grid-${sId}-${ci}` });
   const files = Array.from(inp.files);
   for (const file of files) {
@@ -7277,19 +7436,33 @@ async function addFotos(sId, ci, inp) {
 
 // === Function: renderFotoGrid ===
 function renderFotoGrid(sId, ci) {
-  const fotos = currentInsp.sensos[sId][ci].fotos;
+  const criterio = currentInsp.sensos[sId][ci];
+  const travado = criterioTravadoPorNCRecebida(criterio);
+  const fotosOrigem = Array.isArray(criterio.debitamentoNCCorrespondente?.fotosOrigem)
+    ? criterio.debitamentoNCCorrespondente.fotosOrigem
+    : [];
+  const fotos = travado ? fotosOrigem : criterio.fotos;
   const grid = document.getElementById(`foto-grid-${sId}-${ci}`);
+  if (travado && !fotos.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;font-size:11px;color:var(--text2);padding:6px;text-align:center">Sem foto registrada na NC de origem.</div>';
+    return;
+  }
   grid.innerHTML = fotos.map((f, fi) => `
     <div class="foto-thumb">
-      <img src="${f}" alt="foto">
-      <button class="rm-foto" onclick="removeFoto('${sId}',${ci},${fi})">×</button>
+      <img src="${f}" alt="${travado ? 'foto da NC de origem' : 'foto'}" onclick="openImageModal('${String(f).replace(/'/g, "\\'")}')" style="cursor:pointer">
+      ${travado ? '' : `<button class="rm-foto" onclick="removeFoto('${sId}',${ci},${fi})">×</button>`}
     </div>`).join('');
 }
 
 // === Function: removeFoto ===
 function removeFoto(sId, ci, fi) {
+  const criterio = currentInsp.sensos[sId][ci];
+  if (criterioTravadoPorNCRecebida(criterio)) {
+    avisarNCRecebidaTravada(criterio);
+    return;
+  }
   touchDraftContext({ lastSensoId: sId, lastCriterioIndex: ci, lastAction: 'foto_remove', lastFieldId: `foto-grid-${sId}-${ci}` });
-  currentInsp.sensos[sId][ci].fotos.splice(fi, 1);
+  criterio.fotos.splice(fi, 1);
   renderFotoGrid(sId, ci);
   scheduleDraftSave();
 }
@@ -7354,6 +7527,148 @@ function calcNotaGeralFinal(insp, inspAnterior = null) {
   });
   if (!count) return null;
   return total / count;
+}
+
+// === Function: calcularNotaTecnico ===
+function calcularNotaTecnico(nomeTecnico, periodo = null) {
+  const inspecoesTecnico = APP.inspecoes.filter(insp => insp.tecnico === nomeTecnico);
+  if (inspecoesTecnico.length === 0) return null;
+  
+  let total = 0;
+  let count = 0;
+  inspecoesTecnico.forEach(insp => {
+    if (periodo) {
+      const data = new Date(insp.data);
+      if (data < new Date(periodo.inicio) || data > new Date(periodo.fim)) return;
+    }
+    const ng = insp.notaGeral;
+    if (typeof ng === 'number') {
+      total += ng;
+      count += 1;
+    }
+  });
+  
+  if (count === 0) return null;
+  return total / count;
+}
+
+// === Function: obterDebitamentosTecnicoNaInspeção ===
+function obterDebitamentosTecnicoNaInspeção(insp) {
+  const debitamentos = {}; // { nomeTecnico: { setor, quantidade, criterios } }
+  
+  SENSOS.forEach(s => {
+    (insp.sensos[s.id] || []).forEach((criterio, ci) => {
+      if (!criterio.tecnicosDebitados || criterio.tecnicosDebitados.length === 0) return;
+      
+      criterio.tecnicosDebitados.forEach(tecnico => {
+        if (!debitamentos[tecnico]) {
+          debitamentos[tecnico] = { setor: insp.setor, quantidade: 0, criterios: [] };
+        }
+        debitamentos[tecnico].quantidade += 1;
+        debitamentos[tecnico].criterios.push({
+          senso: s.nome,
+          criterio: s.criterios[ci]?.descricao || 'Sem descrição',
+          motivo: 'Reincidência de NC - abatimento por debitamento'
+        });
+      });
+    });
+  });
+  
+  return debitamentos;
+}
+
+// === Function: obterDebitamentosSetorNaInspeção ===
+function obterDebitamentosSetorNaInspeção(insp) {
+  const debitamentos = {}; // { nomeSetor: { quantidade, criterios } }
+  
+  SENSOS.forEach(s => {
+    (insp.sensos[s.id] || []).forEach((criterio, ci) => {
+      if (!criterio.setoresDebitados || criterio.setoresDebitados.length === 0) return;
+      
+      criterio.setoresDebitados.forEach(setor => {
+        if (!debitamentos[setor]) {
+          debitamentos[setor] = { quantidade: 0, criterios: [] };
+        }
+        debitamentos[setor].quantidade += 1;
+        debitamentos[setor].criterios.push({
+          senso: s.nome,
+          criterio: s.criterios[ci]?.descricao || 'Sem descrição',
+          motivo: setor === insp.setor 
+            ? 'Reincidência de NC em seu setor (origem)' 
+            : 'Reincidência de NC encaminhada (não foi resolvido)'
+        });
+      });
+    });
+  });
+  
+  return debitamentos;
+}
+
+// === Function: aplicarDebitamentosTecnicos ===
+function aplicarDebitamentosTecnicos(insp) {
+  // Esta função registra os debitamentos para fins de rastreamento
+  // Os debitamentos são exibidos nos relatórios e no histórico do técnico
+  if (!insp.debitamentosTecnicos) {
+    insp.debitamentosTecnicos = obterDebitamentosTecnicoNaInspeção(insp);
+  }
+  if (!insp.debitamentosSetor) {
+    insp.debitamentosSetor = obterDebitamentosSetorNaInspeção(insp);
+  }
+}
+
+// === Function: formatarDebitamentosTecnicos ===
+function formatarDebitamentosTecnicos(debitamentos) {
+  if (!debitamentos || Object.keys(debitamentos).length === 0) return '';
+  
+  let html = '<div style="margin-top:20px;padding:12px;background:rgba(217,119,6,0.1);border:1px solid rgba(217,119,6,0.3);border-radius:6px">';
+  html += '<div style="font-weight:700;color:var(--orange2);margin-bottom:8px">⚠️ Debitamentos por Reincidência de NC</div>';
+  
+  Object.keys(debitamentos).forEach(tecnico => {
+    const dados = debitamentos[tecnico];
+    html += `<div style="margin-bottom:12px;padding:8px;background:rgba(255,255,255,0.03);border-radius:4px">`;
+    html += `<div style="font-weight:600;color:var(--text)">Técnico: ${tecnico}</div>`;
+    html += `<div style="font-size:12px;color:var(--text2);margin-top:3px">Debitamentos: <strong>${dados.quantidade}</strong> ponto(s) | Setor de Origem: <strong>${dados.setor}</strong></div>`;
+    
+    if (dados.criterios && dados.criterios.length > 0) {
+      html += '<div style="font-size:11px;color:var(--text2);margin-top:6px">';
+      dados.criterios.forEach((crit, idx) => {
+        html += `<div>${idx + 1}. ${crit.senso} - ${crit.criterio}</div>`;
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+  });
+  
+  html += '</div>';
+  return html;
+}
+
+// === Function: formatarDebitamentosSetor ===
+function formatarDebitamentosSetor(debitamentos) {
+  if (!debitamentos || Object.keys(debitamentos).length === 0) return '';
+  
+  let html = '<div style="margin-top:20px;padding:12px;background:rgba(217,119,6,0.15);border:2px solid rgba(217,119,6,0.4);border-radius:6px">';
+  html += '<div style="font-weight:700;color:var(--orange2);margin-bottom:8px">🏢 Debitamentos de Setores</div>';
+  
+  Object.keys(debitamentos).forEach(setor => {
+    const dados = debitamentos[setor];
+    html += `<div style="margin-bottom:12px;padding:10px;background:rgba(255,255,255,0.05);border-left:3px solid var(--orange2);border-radius:4px">`;
+    html += `<div style="font-weight:600;color:var(--text)">Setor: ${setor}</div>`;
+    html += `<div style="font-size:12px;color:var(--text2);margin-top:3px">Debitamentos: <strong>${dados.quantidade}</strong> ponto(s) na próxima inspeção</div>`;
+    
+    if (dados.criterios && dados.criterios.length > 0) {
+      html += '<div style="font-size:11px;color:var(--text2);margin-top:6px">';
+      dados.criterios.forEach((crit, idx) => {
+        html += `<div style="margin:3px 0">• ${crit.motivo}</div>`;
+        html += `<div style="margin-left:16px;font-size:10px;color:var(--text2)">${crit.senso} - ${crit.criterio}</div>`;
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+  });
+  
+  html += '</div>';
+  return html;
 }
 
 // === Function: updateScoreMini ===
@@ -7475,6 +7790,10 @@ async function salvarInspecao() {
     });
     currentInsp.penalidadesS = penalidadesS;
     currentInsp.notaGeral = calcNotaGeralFinal(currentInsp, inspAnterior);
+    
+    // Aplicar debitamentos de técnicos responsável e corresponsável
+    aplicarDebitamentosTecnicos(currentInsp);
+    
     const finalizadaEm = new Date().toISOString();
     currentInsp.finalizadaEm = currentInsp.finalizadaEm || finalizadaEm;
     const inicioRef = currentInsp.inicioEm || (!isEditing ? currentInsp.data : finalizadaEm) || finalizadaEm;
@@ -7741,6 +8060,7 @@ function iniciarNovaComBase(baseId) {
   if (sameLocal(currentInsp, base)) {
     aplicarRegraReincidencia(base);
   }
+  aplicarDebitamentoNCCorrespondente();
 
   saveDraftNow();
   renderInspecaoForm();
@@ -9660,13 +9980,19 @@ async function gerarPDFSetorial(setor, options = {}) {
         ? `NC corresponsável - Origem: ${nc.origemSetor} · ${nc.origemLocal} | Destino: ${nc.destinoSetor}`
         : '';
       const correspLines = correspTxt ? doc.splitTextToSize(correspTxt, W - margin * 2 - 8) : [];
+      const debitoTxt = nc.debitamentoNCCorrespondente
+        ? `Motivo do débito: NC recebida do setor ${nc.debitamentoNCCorrespondente.origemSetor} (${nc.debitamentoNCCorrespondente.origemLocal}) permaneceu aberta. A nota deste critério foi debitada de ${nc.debitamentoNCCorrespondente.notaOrigem} para ${nc.debitamentoNCCorrespondente.notaAplicada}. A resolução deve ser registrada no setor de origem.`
+        : (nc.origemTipo === 'encaminhada'
+          ? `Motivo do débito: esta NC foi encaminhada de ${nc.origemSetor} para ${nc.destinoSetor}. Enquanto permanecer aberta, o setor corresponsável recebe o débito no critério correspondente; a resolução deve ser registrada no setor de origem.`
+          : '');
+      const debitoLines = debitoTxt ? doc.splitTextToSize(debitoTxt, W - margin * 2 - 8) : [];
       const fotosPorLinha = 2;
       const fotoW = 118;
       const fotoH = 78;
       const gapFoto = 8;
       const fotosPorPagina = fotosPorLinha;
       const chunks = splitArrayIntoChunks(fotosDataUrl, fotosPorPagina);
-      const linhasBase = criterioLines.length + obsLines.length + sugLines.length + reincLines.length + correspLines.length;
+      const linhasBase = criterioLines.length + obsLines.length + sugLines.length + reincLines.length + correspLines.length + debitoLines.length;
       const lineH = 4.4;
       const blocos = chunks.length ? chunks : [[]];
 
@@ -9709,6 +10035,12 @@ async function gerarPDFSetorial(setor, options = {}) {
           doc.setFont('helvetica', 'bold');
           doc.text(correspLines, margin + 3, by);
           by += correspLines.length * 4 + 1;
+        }
+        if (debitoLines.length) {
+          doc.setTextColor(180, 83, 9);
+          doc.setFont('helvetica', 'bold');
+          doc.text(debitoLines, margin + 3, by);
+          by += debitoLines.length * 4 + 1;
         }
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(22, 53, 159);
@@ -10097,7 +10429,7 @@ async function gerarPDFInsp(id, options = {}) {
 
   // Pendencias e não conformidades
   let hasPend = false;
-  SENSOS.forEach(s => insp.sensos[s.id].forEach(cr => { if ((cr.nota||0)<2) hasPend=true; }));
+  SENSOS.forEach(s => insp.sensos[s.id].forEach(cr => { if (criterioTemNCAberta(cr)) hasPend=true; }));
 
   if (hasPend) {
     doc.addPage();
@@ -10147,6 +10479,17 @@ async function gerarPDFInsp(id, options = {}) {
           doc.text(`Encaminhada para: ${cr.encaminharSetor}`, margin+8, y);
           y += 6;
         }
+        if (cr.debitamentoNCCorrespondente) {
+          checkY(12);
+          doc.setTextColor(180,83,9); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
+          const deb = cr.debitamentoNCCorrespondente;
+          const debLines = doc.splitTextToSize(
+            `Motivo do débito: NC recebida de ${deb.origemSetor} (${deb.origemLocal}) permaneceu aberta. Nota debitada de ${deb.notaOrigem} para ${deb.notaAplicada}. A resolução deve ser registrada somente no setor de origem.`,
+            W-margin*2-10
+          );
+          doc.text(debLines, margin+8, y);
+          y += debLines.length * 4 + 3;
+        }
       });
     });
   }
@@ -10162,13 +10505,14 @@ async function gerarPDFInsp(id, options = {}) {
     for (const item of pendenciasRecebidas) {
       const origemLines = doc.splitTextToSize(`${item.origemSetor} · ${item.origemLocal}`, W - margin * 2 - 8);
       const correspLines = doc.splitTextToSize(`NC corresponsável - Origem: ${item.origemSetor} · ${item.origemLocal} | Destino: ${insp.setor}`, W - margin * 2 - 8);
+      const debitoLines = doc.splitTextToSize(`Motivo do débito: esta NC foi encaminhada para ${insp.setor}. Enquanto permanecer aberta, debita a nota do critério correspondente do setor corresponsável. A resolução deve ser registrada somente no setor de origem (${item.origemSetor}).`, W - margin * 2 - 8);
       const critLines = doc.splitTextToSize(`${item.senso} · Critério ${item.criterioIndice} - ${item.criterioTexto}`, W - margin * 2 - 8);
       const obsLines = item.obs ? doc.splitTextToSize(`Obs: ${item.obs}`, W - margin * 2 - 8) : [];
       const fotosDataUrl = (await Promise.all((Array.isArray(item.fotos) ? item.fotos : []).map(imageUrlToDataURL))).filter(Boolean);
       const fotosPorLinha = 2;
       const linhasFotos = fotosDataUrl.length ? Math.ceil(fotosDataUrl.length / fotosPorLinha) : 0;
       const imgH = linhasFotos ? (linhasFotos * 62 + (linhasFotos - 1) * 4) : 0;
-      const blocoH = 20 + origemLines.length * 4 + correspLines.length * 4 + critLines.length * 4 + obsLines.length * 4 + imgH;
+      const blocoH = 20 + origemLines.length * 4 + correspLines.length * 4 + debitoLines.length * 4 + critLines.length * 4 + obsLines.length * 4 + imgH;
 
       if (y + blocoH > 280) {
         doc.addPage();
@@ -10182,9 +10526,10 @@ async function gerarPDFInsp(id, options = {}) {
       doc.text(origemLines, margin+4, y+7);
       doc.setTextColor(180,83,9); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
       doc.text(correspLines, margin+4, y+11 + origemLines.length * 4);
+      doc.text(debitoLines, margin+4, y+11 + origemLines.length * 4 + correspLines.length * 4);
       doc.setTextColor(22,53,159); doc.setFontSize(8); doc.setFont('helvetica','normal');
-      doc.text(critLines, margin+4, y+15 + origemLines.length * 4 + correspLines.length * 4);
-      let blocoY = y + 15 + origemLines.length * 4 + correspLines.length * 4 + critLines.length * 4;
+      doc.text(critLines, margin+4, y+15 + origemLines.length * 4 + correspLines.length * 4 + debitoLines.length * 4);
+      let blocoY = y + 15 + origemLines.length * 4 + correspLines.length * 4 + debitoLines.length * 4 + critLines.length * 4;
       doc.setTextColor(22,53,159); doc.setFontSize(7.5);
       doc.text(`${formatDate(item.origemData)} · ${item.origemPeriodo || 'sem período'} · ${item.tecnico} · Nota ${item.nota}`, margin+4, blocoY);
       blocoY += 5;
