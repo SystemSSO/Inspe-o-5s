@@ -7508,11 +7508,98 @@ function getPenalidadeS(insp, sId, inspAnterior = null) {
   return penalidade;
 }
 
+// === Function: getDebitamentoSenso ===
+function getDebitamentoSenso(insp, sId, inspAnterior = null) {
+  // Retorna a quantidade de debitamentos para um senso específico
+  const anterior = inspAnterior || getInspecaoAnteriorMesmoLocal(insp);
+  if (!anterior) return 0;
+
+  const critériosAtuais = insp?.sensos?.[sId] || [];
+  const critériosAnteriores = anterior?.sensos?.[sId] || [];
+  
+  let debitamento = 0;
+  critériosAtuais.forEach((crAtual, ci) => {
+    const crAnterior = critériosAnteriores[ci];
+    if (!crAnterior) return;
+    
+    if (criterioTemNCAberta(crAnterior) && criterioTemNCAberta(crAtual)) {
+      if (crAnterior.encaminharSetor && crAnterior.encaminharSetor !== anterior.setor) {
+        debitamento += 1;
+      }
+    }
+  });
+
+  return debitamento;
+}
+
+// === Function: getDeducaoSensosPorReincidencia ===
+function getDeducaoSensosPorReincidencia(insp, inspAnterior = null) {
+  // Retorna { sensoId: { deducaoLocal: X, deducaoCorrespon: Y } }
+  const anterior = inspAnterior || getInspecaoAnteriorMesmoLocal(insp);
+  if (!anterior) return {};
+
+  const deducoes = {}; // { sensoId: { deducaoLocal: 0, deducaoCorrespon: 0 } }
+
+  SENSOS.forEach(s => {
+    const atuais = insp.sensos[s.id] || [];
+    const anteriores = anterior.sensos[s.id] || [];
+    
+    let deducaoLocal = 0;
+    let deducaoCorrespon = 0;
+
+    atuais.forEach((crAtual, ci) => {
+      const crAnterior = anteriores[ci];
+      if (!crAnterior) return;
+      
+      // Se havia NC anterior aberta e a NC continua aberta (reincidência)
+      if (criterioTemNCAberta(crAnterior) && criterioTemNCAberta(crAtual)) {
+        // Se foi encaminhado a um corresponsável (reincidência)
+        if (crAnterior.encaminharSetor && crAnterior.encaminharSetor !== anterior.setor) {
+          // Deduzir 1 ponto do senso no local de origem
+          deducaoLocal += 1;
+          // Deduzir 1 ponto do senso no corresponsável (mesmo senso)
+          deducaoCorrespon += 1;
+        }
+      }
+    });
+
+    if (deducaoLocal > 0 || deducaoCorrespon > 0) {
+      deducoes[s.id] = { deducaoLocal, deducaoCorrespon };
+    }
+  });
+
+  return deducoes;
+}
+
 // === Function: calcMediaSFinal ===
 function calcMediaSFinal(insp, sId, inspAnterior = null) {
   const mediaBase = calcMediaS(insp?.sensos?.[sId]);
   const penalidade = getPenalidadeS(insp, sId, inspAnterior);
-  return Math.max(0, mediaBase - penalidade);
+  
+  // Aplicar debitamento por reincidência (debita do mesmo senso)
+  const anterior = inspAnterior || getInspecaoAnteriorMesmoLocal(insp);
+  let debitamentoSenso = 0;
+  
+  if (anterior) {
+    const critériosAtuais = insp?.sensos?.[sId] || [];
+    const critériosAnteriores = anterior?.sensos?.[sId] || [];
+    
+    // Verificar se houve reincidência neste senso com corresponsável
+    critériosAtuais.forEach((crAtual, ci) => {
+      const crAnterior = critériosAnteriores[ci];
+      if (!crAnterior) return;
+      
+      // Se havia NC anterior aberta e continua aberta E foi encaminhada a corresponsável
+      if (criterioTemNCAberta(crAnterior) && criterioTemNCAberta(crAtual)) {
+        if (crAnterior.encaminharSetor && crAnterior.encaminharSetor !== anterior.setor) {
+          // Debitar 1 ponto deste senso na inspeção atual
+          debitamentoSenso += 1;
+        }
+      }
+    });
+  }
+  
+  return Math.max(0, mediaBase - penalidade - debitamentoSenso);
 }
 
 // === Function: calcNotaGeralFinal ===
@@ -7522,6 +7609,7 @@ function calcNotaGeralFinal(insp, inspAnterior = null) {
   SENSOS.forEach(s => {
     const notas = (insp.sensos[s.id] || []).filter(criterioTemNotaNumerica);
     if (!notas.length) return;
+    // calcMediaSFinal já aplica os debitamentos por reincidência no senso
     total += calcMediaSFinal(insp, s.id, inspAnterior);
     count += 1;
   });
@@ -8313,11 +8401,21 @@ function compararInspecoes() {
     const diff = mb - ma;
     const arrow = diff > 0.05 ? '↑' : diff < -0.05 ? '↓' : '=';
     const cls = diff > 0.05 ? 'comp-up' : diff < -0.05 ? 'comp-down' : 'comp-eq';
+    
+    // Verificar debitamentos de reincidência
+    const debitB = getDebitamentoSenso(b, s.id, a);
+    const debitHint = debitB > 0 
+      ? `<div style="font-size:11px;color:var(--red);margin-top:4px;font-weight:600">⚠️ Nota debitada em ${debitB} ponto(s) por NC${debitB > 1 ? 's' : ''} reincidente${debitB > 1 ? 's' : ''}</div>`
+      : '';
+    
     html += `<div class="comp-row">
       <div class="comp-s-name" style="font-size:12px">${s.nome}</div>
       <div class="comp-nota" style="color:${notaCor(ma)};font-size:14px">${ma.toFixed(2)}</div>
       <div class="comp-arrow ${cls}">${arrow}</div>
-      <div class="comp-nota" style="color:${notaCor(mb)};font-size:14px">${mb.toFixed(2)}</div>
+      <div style="flex:1">
+        <div class="comp-nota" style="color:${notaCor(mb)};font-size:14px">${mb.toFixed(2)}</div>
+        ${debitHint}
+      </div>
     </div>`;
   });
 
