@@ -273,6 +273,9 @@ html, body {
 
 .light-mode .nota-btn { background: #f1f5f9; color: var(--text2); }
 .light-mode .nota-btn.sel-0 { background: var(--red); color: white; }
+.light-mode .nota-btn.sel-1 { background: #ea580c; border-color: #ea580c; color: white; }
+.light-mode .nota-btn.sel-2 { background: #ca8a04; border-color: #ca8a04; color: white; }
+.light-mode .nota-btn.sel-3 { background: #16a34a; border-color: #16a34a; color: white; }
 .light-mode .nota-btn.sel-4 { background: var(--green); color: white; }
 .light-mode .nota-btn.sel-na { background: var(--text2); color: white; }
 
@@ -3041,6 +3044,7 @@ const SMARTSHEET_ADMIN_UNLOCK_KEY = 'aa5s_smartsheet_admin_unlocked';
 const SMARTSHEET_ADMIN_PASSWORD = 'Codemin@123';
 const AUTH_CACHE_KEY = 'aa5s_offline_auth_v1';
 const AUTH_SESSION_KEY = 'aa5s_auth_session_v1';
+const PENDING_OFFLINE_AUTH_KEY = 'aa5s_pending_offline_auth_v1';
 const EMAIL_AUTO_ENABLED_KEY = 'aa5s_email_auto_enabled';
 const EMAIL_AUTO_TO_KEY = 'aa5s_email_auto_to';
 const EMAIL_HISTORY_KEY = 'aa5s_email_history';
@@ -5145,6 +5149,7 @@ let currentUnidade = localStorage.getItem('aa5s_unit') || 'CD';
 let currentUserEmail = sessionStorage.getItem('aa5s_auth_email') || '';
 let appStarted = false;
 let pendingOfflineAuth = null;
+pendingOfflineAuth = getPendingOfflineAuth();
 let pendingUnidade = currentUnidade;
 let currentInsp = null; // inspeÃ§Ã£o em andamento
 let isSavingInspecao = false;
@@ -5224,7 +5229,28 @@ function setAuthSession(profile, mode = 'online') {
 function clearAuthSession() {
   sessionStorage.removeItem(AUTH_SESSION_KEY);
   sessionStorage.removeItem('aa5s_auth_email');
-  pendingOfflineAuth = null;
+  setPendingOfflineAuth(null);
+}
+
+function getPendingOfflineAuth() {
+  try {
+    return JSON.parse(sessionStorage.getItem(PENDING_OFFLINE_AUTH_KEY) || 'null');
+  } catch {
+    return null;
+  }
+}
+
+function setPendingOfflineAuth(auth) {
+  if (auth && auth.email && auth.senha) {
+    sessionStorage.setItem(PENDING_OFFLINE_AUTH_KEY, JSON.stringify({
+      email: auth.email,
+      senha: auth.senha
+    }));
+    pendingOfflineAuth = { email: auth.email, senha: auth.senha };
+  } else {
+    sessionStorage.removeItem(PENDING_OFFLINE_AUTH_KEY);
+    pendingOfflineAuth = null;
+  }
 }
 
 // === Function: hasActiveLocalAuthSession ===
@@ -5334,6 +5360,9 @@ function showLoginScreen() {
 function startAppAfterLogin(profile = null) {
   if (appStarted) {
     navTo('home');
+    if (auth.currentUser) {
+      syncFromCloud().finally(() => scheduleSyncQueue(0));
+    }
     return;
   }
   appStarted = true;
@@ -5463,6 +5492,7 @@ async function loginUsuario(event) {
   try {
     await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
     const result = await auth.signInWithEmailAndPassword(email, senha);
+    setPendingOfflineAuth(null);
     applyFirebaseUserAsTecnico(result.user);
     setAuthSession({
       email: currentUserEmail,
@@ -5478,7 +5508,7 @@ async function loginUsuario(event) {
       try {
         const offlineSession = await tryOfflineLogin(email, senha);
         if (offlineSession) {
-          pendingOfflineAuth = { email, senha };
+          setPendingOfflineAuth({ email, senha });
           applyAuthProfileAsTecnico(offlineSession);
           if (senhaInput) senhaInput.value = '';
           toast('Acesso offline liberado. A sincronização será feita quando a internet voltar.');
@@ -5522,13 +5552,10 @@ async function logoutUsuario() {
 async function handleOnlineAuthRecheck() {
   if (!navigator.onLine || auth.currentUser || !isOfflineAuthSession()) return;
 
+  pendingOfflineAuth = pendingOfflineAuth || getPendingOfflineAuth();
   if (!pendingOfflineAuth?.email || !pendingOfflineAuth?.senha) {
-    toast('Conexão restaurada. Faça login online para validar o acesso e sincronizar.');
-    clearAuthSession();
-    currentUserEmail = '';
-    appStarted = false;
-    clearInterval(cloudRefreshTimer);
-    showLoginScreen();
+    setSyncStatus('offline', 'Sessão offline ativa. Faça login online para sincronizar.');
+    toast('Sessão offline ativa. Conecte-se e faça login online para sincronizar.');
     return;
   }
 
@@ -5542,9 +5569,9 @@ async function handleOnlineAuthRecheck() {
       tecnico: currentTec
     }, 'online');
     await saveOfflineAuthCache(pendingOfflineAuth.email, pendingOfflineAuth.senha, result.user);
-    pendingOfflineAuth = null;
+    setPendingOfflineAuth(null);
     toast('Login online validado. Sincronizando dados pendentes...');
-    syncFromCloud().finally(() => scheduleSyncQueue(0));
+    scheduleSyncQueue(0);
   } catch (error) {
     console.warn('A validação online do acesso offline falhou:', error);
     clearAuthSession();
@@ -10615,7 +10642,10 @@ window.addEventListener('load', () => {
   if (existingSession) {
     applyAuthProfileAsTecnico(existingSession);
     startAppAfterLogin(existingSession);
-    if (navigator.onLine) setTimeout(() => handleOnlineAuthRecheck(), 0);
+    if (navigator.onLine) setTimeout(async () => {
+      await handleOnlineAuthRecheck();
+      syncFromCloud();
+    }, 0);
   } else {
     showLoginScreen();
   }
@@ -10626,7 +10656,7 @@ window.addEventListener('load', () => {
         email: currentUserEmail,
         tecnico: currentTec
       }, 'online');
-      pendingOfflineAuth = null;
+      setPendingOfflineAuth(null);
       startAppAfterLogin();
       return;
     }
