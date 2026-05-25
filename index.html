@@ -399,6 +399,22 @@ html, body {
   border: 1px solid rgba(245, 158, 11, 0.35);
   background: rgba(245, 158, 11, 0.12);
 }
+.s-debito-corresp {
+  margin-top: 7px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  background: rgba(245, 158, 11, 0.14);
+  color: #fcd34d;
+  font-size: 11px;
+  line-height: 1.35;
+  font-weight: 700;
+}
+body.light-mode .s-debito-corresp {
+  color: #92400e;
+  background: rgba(245, 158, 11, 0.14);
+  border-color: rgba(245, 158, 11, 0.38);
+}
 .criterio-section {
   margin-top: 9px;
   padding: 9px;
@@ -3900,6 +3916,7 @@ function getSetorialReportDashboardData(setor) {
   const periodoTitulo = `${periodo.mesNome.charAt(0).toUpperCase()}${periodo.mesNome.slice(1)} de ${periodo.ano}`;
   const inspsPeriodo = getInspectionsForReportPeriod(periodo);
   const inspsSetor = inspsPeriodo.filter(i => i.setor === setor);
+  const debitoList = uniqueDebitoRazoes(inspsSetor.flatMap(getDebitoRazoesInspecao));
 
   const ncList = [];
   const latestOwnByCrit = {};
@@ -4088,7 +4105,8 @@ function getSetorialReportDashboardData(setor) {
     totalResolvidas: resolvidasList.length,
     rankingMedias,
     melhorLocal: rankingMedias[0] || null,
-    piorLocal: rankingMedias[rankingMedias.length - 1] || null
+    piorLocal: rankingMedias[rankingMedias.length - 1] || null,
+    debitoList
   };
 }
 
@@ -4100,6 +4118,7 @@ function getGerenciaReportDashboardData(gerencia) {
   const setores = (gerMap[gerencia] || []).filter(s => SETORES.some(x => x.nome === s));
   const inspsPeriodo = getGerenciaReportInspections(gerencia);
   const ncDetalhes = [];
+  const debitoList = uniqueDebitoRazoes(inspsPeriodo.flatMap(getDebitoRazoesInspecao));
 
   const resumo = setores.map(setor => {
     const inspsSetor = inspsPeriodo.filter(i => i.setor === setor);
@@ -4161,7 +4180,7 @@ function getGerenciaReportDashboardData(gerencia) {
   }, { inspecoes: 0, ncAbertas: 0, ncResolvidas: 0, somaMedia: 0, countMedia: 0 });
 
   const mediaGerencia = totais.countMedia ? (totais.somaMedia / totais.countMedia) : null;
-  return { periodo, periodoTitulo, setores, inspsPeriodo, resumo, totais, mediaGerencia, ncDetalhes };
+  return { periodo, periodoTitulo, setores, inspsPeriodo, resumo, totais, mediaGerencia, ncDetalhes, debitoList };
 }
 
 // === Function: buildSetorialReportEmailPayload ===
@@ -6767,6 +6786,28 @@ function renderInspecaoForm() {
   // se tem base, carrega para mostrar notas anteriores
   const baseRef = currentInsp.baseId ? APP.inspecoes.find(i => i.id === currentInsp.baseId) : null;
   const base = sameLocal(currentInsp, baseRef) ? baseRef : null;
+  const debitosCorresponsavelPorSenso = {};
+  uniqueDebitoRazoes(getDebitoRazoesInspecao(currentInsp))
+    .filter(item => item.tipo === 'corresponsavel')
+    .forEach(item => {
+      if (!debitosCorresponsavelPorSenso[item.sensoId]) debitosCorresponsavelPorSenso[item.sensoId] = [];
+      debitosCorresponsavelPorSenso[item.sensoId].push(item);
+    });
+
+  const renderDebitoCorresponsavelHint = (sId) => {
+    const itens = debitosCorresponsavelPorSenso[sId] || [];
+    if (!itens.length) return '';
+    const total = itens.reduce((acc, item) => acc + (Number(item.pontos) || 1), 0);
+    const detalhe = itens
+      .slice(0, 2)
+      .map(item => `${escapeHtml(item.origemSetor)} - ${escapeHtml(item.origemLocal)} · Critério ${item.criterioIndice}`)
+      .join('<br>');
+    const extra = itens.length > 2 ? `<br>+ ${itens.length - 2} outra(s) NC(s) reincidente(s)` : '';
+    return `<div class="s-debito-corresp">
+      Débito de -${total.toFixed(0)} ponto(s) aplicado neste senso por NC reincidente de outra área sob corresponsabilidade deste setor.<br>
+      Origem: ${detalhe}${extra}
+    </div>`;
+  };
 
   const body = document.getElementById('insp-form-body');
   body.innerHTML = SENSOS.map((s, si) => `
@@ -6777,6 +6818,7 @@ function renderInspecaoForm() {
           <div class="s-title">${s.nome}</div>
           <div class="s-desc">${SENSO_DESCRICOES[s.id] || 'Avalie os critérios deste senso com atenção e registre evidências objetivas.'}</div>
           ${base ? `<div style="font-size:11px;color:var(--text2)">Nota anterior: ${calcMediaSFinal(base, s.id).toFixed(2)}</div>` : ''}
+          ${renderDebitoCorresponsavelHint(s.id)}
         </div>
 	        <div class="s-score-mini" id="score-mini-${s.id}" style="color:var(--text2)">—</div>
         <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="var(--text2)" stroke-width="2" style="flex-shrink:0"><path d="M5 8l5 5 5-5"/></svg>
@@ -7326,10 +7368,122 @@ function getInspecaoAnteriorMesmoLocal(insp) {
     .sort((a, b) => new Date(b.data) - new Date(a.data))[0] || null;
 }
 
+// === Function: getPenalidadeCorresponsavelS ===
+function getPenalidadeCorresponsavelS(insp, sId) {
+  if (!insp?.setor || !sId) return 0;
+  const limite = insp.data || new Date().toISOString();
+  let penalidade = 0;
+
+  getLatestInspecoesByLocal(limite).forEach(inspOrigem => {
+    if (!inspOrigem || inspOrigem.id === insp.id) return;
+    if (inspOrigem.setor === insp.setor) return;
+    if (getInspectionUnidade(inspOrigem) !== getInspectionUnidade(insp)) return;
+
+    const criteriosOrigem = inspOrigem.sensos?.[sId] || [];
+    criteriosOrigem.forEach((crAtual, ci) => {
+      if ((crAtual?.encaminharSetor || '') !== insp.setor) return;
+      if (!criterioTemNCAberta(crAtual)) return;
+
+      const inspAnteriorOrigem = getInspecaoAnteriorMesmoLocal(inspOrigem);
+      const crAnterior = inspAnteriorOrigem?.sensos?.[sId]?.[ci] || null;
+      if (!criterioTemNCAberta(crAnterior)) return;
+
+      penalidade += 1;
+    });
+  });
+
+  return penalidade;
+}
+
+// === Function: getDebitoRazoesInspecao ===
+function getDebitoRazoesInspecao(insp) {
+  if (!insp?.setor || !insp?.sensos) return [];
+  const razoes = [];
+  const anterior = getInspecaoAnteriorMesmoLocal(insp);
+
+  SENSOS.forEach(s => {
+    const atuais = insp.sensos?.[s.id] || [];
+    const anteriores = anterior?.sensos?.[s.id] || [];
+    atuais.forEach((crAtual, ci) => {
+      if (!criterioTemNCAberta(crAtual)) return;
+      if (!criterioTemNCAberta(anteriores[ci])) return;
+      razoes.push({
+        tipo: 'origem',
+        setorImpactado: insp.setor,
+        localImpactado: localLabel(insp),
+        origemSetor: insp.setor,
+        origemLocal: localLabel(insp),
+        destinoSetor: crAtual.encaminharSetor || '',
+        sensoId: s.id,
+        senso: s.nome,
+        criterioIndice: ci + 1,
+        criterioTexto: s.criterios[ci],
+        pontos: 1,
+        motivo: `NC reincidente no setor de origem (${insp.setor} - ${localLabel(insp)}), no senso ${s.nome}.`
+      });
+    });
+  });
+
+  const limite = insp.data || new Date().toISOString();
+  getLatestInspecoesByLocal(limite).forEach(inspOrigem => {
+    if (!inspOrigem || inspOrigem.id === insp.id) return;
+    if (inspOrigem.setor === insp.setor) return;
+    if (getInspectionUnidade(inspOrigem) !== getInspectionUnidade(insp)) return;
+
+    SENSOS.forEach(s => {
+      const criteriosOrigem = inspOrigem.sensos?.[s.id] || [];
+      criteriosOrigem.forEach((crAtual, ci) => {
+        if ((crAtual?.encaminharSetor || '') !== insp.setor) return;
+        if (!criterioTemNCAberta(crAtual)) return;
+
+        const inspAnteriorOrigem = getInspecaoAnteriorMesmoLocal(inspOrigem);
+        const crAnterior = inspAnteriorOrigem?.sensos?.[s.id]?.[ci] || null;
+        if (!criterioTemNCAberta(crAnterior)) return;
+
+        razoes.push({
+          tipo: 'corresponsavel',
+          setorImpactado: insp.setor,
+          localImpactado: localLabel(insp),
+          origemSetor: inspOrigem.setor,
+          origemLocal: localLabel(inspOrigem),
+          destinoSetor: insp.setor,
+          sensoId: s.id,
+          senso: s.nome,
+          criterioIndice: ci + 1,
+          criterioTexto: s.criterios[ci],
+          pontos: 1,
+          motivo: `NC reincidente encaminhada ao corresponsável ${insp.setor}; débito aplicado no senso ${s.nome}.`
+        });
+      });
+    });
+  });
+
+  return razoes;
+}
+
+// === Function: uniqueDebitoRazoes ===
+function uniqueDebitoRazoes(razoes = []) {
+  const map = new Map();
+  razoes.forEach(item => {
+    const key = [
+      item.tipo,
+      item.setorImpactado,
+      item.origemSetor,
+      item.origemLocal,
+      item.destinoSetor,
+      item.sensoId,
+      item.criterioIndice
+    ].join('||');
+    if (!map.has(key)) map.set(key, item);
+  });
+  return Array.from(map.values());
+}
+
 // === Function: getPenalidadeS ===
 function getPenalidadeS(insp, sId, inspAnterior = null) {
   const anterior = inspAnterior || getInspecaoAnteriorMesmoLocal(insp);
-  if (!anterior || !anterior.sensos?.[sId] || !insp.sensos?.[sId]) return 0;
+  const penalidadeCorresponsavel = getPenalidadeCorresponsavelS(insp, sId);
+  if (!anterior || !anterior.sensos?.[sId] || !insp.sensos?.[sId]) return penalidadeCorresponsavel;
 
   let penalidade = 0;
   for (let ci = 0; ci < insp.sensos[sId].length; ci++) {
@@ -7338,7 +7492,7 @@ function getPenalidadeS(insp, sId, inspAnterior = null) {
     if (anteriorAberta && atualAberta) penalidade += 1;
   }
 
-  return penalidade;
+  return penalidade + penalidadeCorresponsavel;
 }
 
 // === Function: calcMediaSFinal ===
@@ -8653,6 +8807,7 @@ async function gerarPDFGerencia(options = {}) {
   const totais = gerenciaData.totais;
   const mediaGerencia = gerenciaData.mediaGerencia;
   const ncDetalhes = gerenciaData.ncDetalhes;
+  const debitoList = gerenciaData.debitoList || [];
   const inspsPeriodo = gerenciaData.inspsPeriodo || [];
 
   const { jsPDF } = window.jspdf;
@@ -9058,6 +9213,40 @@ async function gerarPDFGerencia(options = {}) {
       doc.setTextColor(22, 53, 159);
       doc.setFont('helvetica', 'bold');
       doc.text(r.media.toFixed(2), chartX + chartW - 2, yy, { align: 'right' });
+    });
+  }
+
+  y = novaPaginaComCabecalho('Razões dos Débitos', `${gerencia} · ${mesAnoAtual}`);
+  if (!debitoList.length) {
+    doc.setTextColor(22, 53, 159);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.text('Não há débitos por reincidência registrados no período selecionado.', margin, y);
+  } else {
+    debitoList.forEach((item, idx) => {
+      const titulo = `${idx + 1}. ${item.setorImpactado} · ${item.senso} · Critério ${item.criterioIndice} · Débito: -${item.pontos}`;
+      const detalhe = item.tipo === 'corresponsavel'
+        ? `Motivo: ${item.motivo} Origem da NC: ${item.origemSetor} - ${item.origemLocal}.`
+        : `Motivo: ${item.motivo}${item.destinoSetor ? ` Corresponsável indicado: ${item.destinoSetor}.` : ''}`;
+      const criterioLines = doc.splitTextToSize(`Critério: ${item.criterioTexto}`, W - margin * 2 - 8);
+      const detalheLines = doc.splitTextToSize(detalhe, W - margin * 2 - 8);
+      const h = 13 + (criterioLines.length + detalheLines.length) * 4.2;
+      if (y + h > H - 14) y = novaPaginaComCabecalho('Razões dos Débitos', `${gerencia} · ${mesAnoAtual}`);
+
+      doc.setFillColor(item.tipo === 'corresponsavel' ? 255 : 248, item.tipo === 'corresponsavel' ? 251 : 250, item.tipo === 'corresponsavel' ? 235 : 252);
+      doc.setDrawColor(item.tipo === 'corresponsavel' ? 245 : 226, item.tipo === 'corresponsavel' ? 158 : 232, item.tipo === 'corresponsavel' ? 11 : 240);
+      doc.roundedRect(margin, y, W - margin * 2, h, 2, 2, 'FD');
+      doc.setTextColor(22, 53, 159);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.text(titulo, margin + 3, y + 6);
+      let by = y + 11;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.text(criterioLines, margin + 3, by);
+      by += criterioLines.length * 4.2;
+      doc.text(detalheLines, margin + 3, by);
+      y += h + 4;
     });
   }
 
@@ -9528,7 +9717,8 @@ async function gerarPDFSetorial(setor, options = {}) {
     totalNCRecebidas,
     totalResolvidas,
     melhorLocal,
-    piorLocal
+    piorLocal,
+    debitoList
   } = setorialData;
 
   const setorCfg = SETORES.find(s => s.nome === setor);
@@ -9638,6 +9828,47 @@ async function gerarPDFSetorial(setor, options = {}) {
   const piorTxt = piorLocal ? `${piorLocal.label} (${piorLocal.media.toFixed(2)})` : 'Sem dados';
   doc.text(`Área melhor avaliada: ${melhorTxt}`, margin + 6, boxY + 16);
   doc.text(`Área com menor avaliação: ${piorTxt}`, margin + 6, boxY + 23);
+
+  addNewPage();
+  y = 18;
+  doc.setTextColor(22, 53, 159);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.text('Razões dos débitos', margin, y);
+  y += 8;
+
+  if (!debitoList.length) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(22, 53, 159);
+    doc.text('Não há débitos por reincidência registrados no mês atual para este setor.', margin, y + 4);
+  } else {
+    debitoList.forEach((item, idx) => {
+      const titulo = `${idx + 1}. ${item.senso} · Critério ${item.criterioIndice} · Débito: -${item.pontos}`;
+      const detalhe = item.tipo === 'corresponsavel'
+        ? `Motivo: ${item.motivo} Origem da NC: ${item.origemSetor} - ${item.origemLocal}.`
+        : `Motivo: ${item.motivo}${item.destinoSetor ? ` Corresponsável indicado: ${item.destinoSetor}.` : ''}`;
+      const criterioLines = doc.splitTextToSize(`Critério: ${item.criterioTexto}`, W - margin * 2 - 8);
+      const detalheLines = doc.splitTextToSize(detalhe, W - margin * 2 - 8);
+      const h = 13 + (criterioLines.length + detalheLines.length) * 4.2;
+      ensureY(h + 8);
+
+      doc.setFillColor(item.tipo === 'corresponsavel' ? 255 : 248, item.tipo === 'corresponsavel' ? 251 : 250, item.tipo === 'corresponsavel' ? 235 : 252);
+      doc.setDrawColor(item.tipo === 'corresponsavel' ? 245 : 226, item.tipo === 'corresponsavel' ? 158 : 232, item.tipo === 'corresponsavel' ? 11 : 240);
+      doc.roundedRect(margin, y, W - margin * 2, h, 2, 2, 'FD');
+      doc.setTextColor(22, 53, 159);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.text(titulo, margin + 3, y + 6);
+      let by = y + 11;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.text(criterioLines, margin + 3, by);
+      by += criterioLines.length * 4.2;
+      doc.text(detalheLines, margin + 3, by);
+      y += h + 4;
+    });
+  }
 
   addNewPage();
   y = 18;
