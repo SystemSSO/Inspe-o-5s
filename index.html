@@ -4214,6 +4214,7 @@ function getSetorialReportDashboardData(setor) {
   const debitoList = uniqueDebitoRazoes(inspsSetor.flatMap(getDebitoRazoesInspecao));
 
   const ncList = [];
+  const resolucoesIncompletas = [];
   const latestOwnByCrit = {};
   [...inspsSetor]
     .sort((a, b) => new Date(b.data) - new Date(a.data))
@@ -4295,6 +4296,15 @@ function getSetorialReportDashboardData(setor) {
 
         const reinc = getReincidenciasAteConclusao(insp, s.id, ci);
         const destinoSetor = crAnterior.encaminharSetor || crAtual?.encaminharSetor || insp.setor;
+        const resolucaoIncompleta = getResolucaoIncompletaInfo(insp, s, ci, crAtual, {
+          origemSetor: insp.setor,
+          origemLocal: localLabel(insp),
+          destinoSetor
+        });
+        if (resolucaoIncompleta) {
+          resolucoesIncompletas.push(resolucaoIncompleta);
+          return;
+        }
         resolvidasList.push({
           dataResolucao: insp.data,
           dataAnterior: inspAnterior.data,
@@ -4302,7 +4312,7 @@ function getSetorialReportDashboardData(setor) {
           senso: s.nome,
           criterio: s.criterios[ci],
           obsAnterior: crAnterior.obs || 'Sem observação.',
-          obsAtual: crAtual?.obs || 'Sem observação.',
+          obsAtual: String(crAtual?.obs || '').trim(),
           sugestaoAtual: crAtual?.sugestao || 'Não informada.',
           fotosAnterior: getFotosNCAbertaComFallback(inspAnterior, s.id, ci, crAnterior),
           fotosResolucao: getFotosValidasCriterio(crAtual),
@@ -4333,6 +4343,15 @@ function getSetorialReportDashboardData(setor) {
         if (destinoSetor !== setor) return;
 
         const reinc = getReincidenciasAteConclusao(inspOrigem, s.id, ci);
+        const resolucaoIncompleta = getResolucaoIncompletaInfo(inspOrigem, s, ci, crAtual, {
+          origemSetor: inspOrigem.setor,
+          origemLocal: localLabel(inspOrigem),
+          destinoSetor
+        });
+        if (resolucaoIncompleta) {
+          resolucoesIncompletas.push(resolucaoIncompleta);
+          return;
+        }
         resolvidasList.push({
           dataResolucao: inspOrigem.data,
           dataAnterior: inspAnteriorOrigem.data,
@@ -4340,7 +4359,7 @@ function getSetorialReportDashboardData(setor) {
           senso: s.nome,
           criterio: s.criterios[ci],
           obsAnterior: crAnterior.obs || 'Sem observação.',
-          obsAtual: crAtual?.obs || 'Sem observação.',
+          obsAtual: String(crAtual?.obs || '').trim(),
           sugestaoAtual: crAtual?.sugestao || 'Não informada.',
           fotosAnterior: getFotosNCAbertaComFallback(inspAnteriorOrigem, s.id, ci, crAnterior),
           fotosResolucao: getFotosValidasCriterio(crAtual),
@@ -4380,6 +4399,7 @@ function getSetorialReportDashboardData(setor) {
     inspsSetor,
     ncList,
     resolvidasList,
+    resolucoesIncompletas,
     totalInspecoes: inspsSetor.length,
     locaisUnicos: new Set(inspsSetor.map(i => localKey(i))).size,
     mediaGeral,
@@ -4400,6 +4420,7 @@ function getGerenciaReportDashboardData(gerencia) {
   const setores = getGerenciaSetoresAtivos(gerencia);
   const inspsPeriodo = getGerenciaReportInspections(gerencia);
   const ncDetalhes = [];
+  const resolucoesIncompletas = [];
   const debitoList = uniqueDebitoRazoes(inspsPeriodo.flatMap(getDebitoRazoesInspecao));
 
   const resumo = setores.map(setor => {
@@ -4409,39 +4430,68 @@ function getGerenciaReportDashboardData(gerencia) {
     let ncAbertas = 0;
     let ncResolvidas = 0;
 
+    const latestByCrit = {};
+    [...inspsSetor]
+      .sort((a, b) => new Date(b.data) - new Date(a.data))
+      .forEach(insp => {
+        SENSOS.forEach(s => {
+          (insp.sensos?.[s.id] || []).forEach((cr, ci) => {
+            const key = `${localKey(insp)}||${s.id}||${ci}`;
+            if (latestByCrit[key]) return;
+            latestByCrit[key] = { insp, s, ci, cr };
+          });
+        });
+      });
+
+    Object.values(latestByCrit).forEach(({ insp, s, ci, cr }) => {
+      if (!criterioTemNCAberta(cr)) return;
+      ncAbertas++;
+      ncDetalhes.push({
+        tipo: 'aberta',
+        setor,
+        local: localLabel(insp),
+        data: insp.data,
+        senso: s.nome,
+        criterio: s.criterios[ci],
+        obs: cr?.obs || 'Sem observação.',
+        sugestao: cr?.sugestao || 'Não informada.',
+        nota: cr?.nota ?? null,
+        fotos: getFotosNCAbertaComFallback(insp, s.id, ci, cr)
+      });
+    });
+
     inspsSetor.forEach(insp => {
       const anterior = getInspecaoAnteriorMesmoLocal(insp);
       SENSOS.forEach(s => {
         (insp.sensos?.[s.id] || []).forEach((cr, ci) => {
-          if (criterioTemNCAberta(cr)) {
-            ncAbertas++;
-            ncDetalhes.push({
-              tipo: 'aberta',
-              setor,
-              local: localLabel(insp),
-              data: insp.data,
-              senso: s.nome,
-              criterio: s.criterios[ci],
-              obs: cr?.obs || 'Sem observação.',
-              sugestao: cr?.sugestao || 'Não informada.',
-              nota: cr?.nota ?? null,
-              fotos: getFotosNCAbertaComFallback(insp, s.id, ci, cr)
-            });
-          }
           const crAnt = anterior?.sensos?.[s.id]?.[ci] || null;
           if (criterioFoiResolvido(crAnt, cr)) {
+            const resolucaoIncompleta = getResolucaoIncompletaInfo(insp, s, ci, cr, {
+              origemSetor: insp.setor,
+              origemLocal: localLabel(insp),
+              destinoSetor: crAnt?.encaminharSetor || cr?.encaminharSetor || insp.setor
+            });
+            if (resolucaoIncompleta) {
+              resolucoesIncompletas.push(resolucaoIncompleta);
+              return;
+            }
             ncResolvidas++;
             ncDetalhes.push({
               tipo: 'resolvida',
               setor,
               local: localLabel(insp),
               data: insp.data,
+              dataAnterior: anterior?.data || '',
               senso: s.nome,
               criterio: s.criterios[ci],
-              obs: cr?.obs || 'Sem observação.',
+              obs: String(cr?.obs || '').trim(),
+              obsAnterior: crAnt?.obs || 'Sem observação.',
+              obsAtual: String(cr?.obs || '').trim(),
               sugestao: cr?.sugestao || 'Não informada.',
               nota: cr?.nota ?? null,
-              fotos: getFotosValidasCriterio(cr)
+              fotos: getFotosValidasCriterio(cr),
+              fotosAnterior: getFotosNCAbertaComFallback(anterior, s.id, ci, crAnt),
+              fotosResolucao: getFotosValidasCriterio(cr)
             });
           }
         });
@@ -4460,7 +4510,7 @@ function getGerenciaReportDashboardData(gerencia) {
   }, { inspecoes: 0, ncAbertas: 0, ncResolvidas: 0, somaMedia: 0, countMedia: 0 });
 
   const mediaGerencia = totais.countMedia ? (totais.somaMedia / totais.countMedia) : null;
-  return { periodo, periodoTitulo, setores, inspsPeriodo, resumo, totais, mediaGerencia, ncDetalhes, debitoList };
+  return { periodo, periodoTitulo, setores, inspsPeriodo, resumo, totais, mediaGerencia, ncDetalhes, resolucoesIncompletas, debitoList };
 }
 
 // === Function: buildSetorialReportEmailPayload ===
@@ -7184,6 +7234,47 @@ function criterioFoiResolvido(crAnterior, crAtual) {
   return !criterioTemNCAberta(crAtual) && (marcadoComoResolvido || notaConforme);
 }
 
+// === Function: criterioFoiResolvidoComEvidencia ===
+function criterioFoiResolvidoComEvidencia(crAnterior, crAtual) {
+  if (!criterioFoiResolvido(crAnterior, crAtual)) return false;
+  return getCamposFaltantesResolucao(crAtual).length === 0;
+}
+
+// === Function: getCamposFaltantesResolucao ===
+function getCamposFaltantesResolucao(crAtual) {
+  const faltantes = [];
+  if (!String(crAtual?.obs || '').trim()) faltantes.push('observação da resolução');
+  if (!getFotosValidasCriterio(crAtual).length) faltantes.push('evidência da resolução');
+  return faltantes;
+}
+
+// === Function: getResolucaoIncompletaInfo ===
+function getResolucaoIncompletaInfo(insp, s, ci, crAtual, extras = {}) {
+  const faltantes = getCamposFaltantesResolucao(crAtual);
+  if (!faltantes.length) return null;
+  return {
+    setor: insp?.setor || '',
+    local: localLabel(insp || {}),
+    data: insp?.data || '',
+    senso: s?.nome || '',
+    criterioIndice: ci + 1,
+    criterio: s?.criterios?.[ci] || '',
+    faltantes,
+    ...extras
+  };
+}
+
+// === Function: getMensagemResolucaoIncompleta ===
+function getMensagemResolucaoIncompleta(lista) {
+  const itens = Array.isArray(lista) ? lista : [];
+  const primeiro = itens[0];
+  if (!primeiro) return 'Há NC resolvida sem observação ou evidência de resolução.';
+  const detalhe = `${primeiro.setor || 'Setor'} - ${primeiro.local || 'Área'} · ${primeiro.senso || 'Senso'} · Critério ${primeiro.criterioIndice || ''}`;
+  const campos = (primeiro.faltantes || []).join(' e ') || 'dados obrigatórios';
+  const extra = itens.length > 1 ? ` (+${itens.length - 1} outra(s))` : '';
+  return `Corrija a resolução da NC antes de gerar o relatório: ${detalhe} sem ${campos}${extra}.`;
+}
+
 // === Function: hasPendenciaAnterior ===
 function hasPendenciaAnterior(sId, ci) {
   return !!getNCAnteriorReferencia(sId, ci);
@@ -7403,7 +7494,7 @@ function criterioHTML(s, si, cr, ci, base) {
     <div class="criterio-section">
       <div class="criterio-section-title">Evidências</div>
       <div>
-        <div class="foto-area" onclick="triggerFoto('${s.id}',${ci})" style="margin-top:2px">
+        <div class="foto-area" id="foto-area-${s.id}-${ci}" onclick="triggerFoto('${s.id}',${ci})" style="margin-top:2px">
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="var(--text2)" stroke-width="1.8"><rect x="2" y="5" width="16" height="12" rx="2"/><circle cx="10" cy="11" r="3"/><path d="M7 5l1.5-2h3L13 5"/></svg>
           <span style="font-size:12px;color:var(--text2)">Adicionar foto</span>
           <input type="file" accept="image/*" multiple capture="environment" style="display:none" id="foto-inp-camera-${s.id}-${ci}" onchange="addFotos('${s.id}',${ci},this)">
@@ -7485,6 +7576,8 @@ function updateResolvedButton(sId, ci, isResolved) {
 function setObs(sId, ci, val) {
   touchDraftContext({ lastSensoId: sId, lastCriterioIndex: ci, lastAction: 'obs', lastFieldId: `obs-${sId}-${ci}` });
   currentInsp.sensos[sId][ci].obs = val;
+  const obs = document.getElementById(`obs-${sId}-${ci}`);
+  if (obs && String(val || '').trim()) obs.style.borderColor = '';
   scheduleDraftSave();
 }
 
@@ -7610,6 +7703,8 @@ async function addFotos(sId, ci, inp) {
       toast('Processando foto...');
       const fotoSrc = await comprimirImagem(file);
       currentInsp.sensos[sId][ci].fotos.push(fotoSrc);
+      const fotoArea = document.getElementById(`foto-area-${sId}-${ci}`);
+      if (fotoArea) fotoArea.style.borderColor = '';
       renderFotoGrid(sId, ci);
       scheduleDraftSave();
     } catch (e) {
@@ -7863,6 +7958,30 @@ function setSalvarButtonState(isSaving) {
     : `<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 13l4 4L16 7"/></svg>Finalizar e Salvar`;
 }
 
+function criterioResolvidoNoFormulario(sId, ci, cr) {
+  if (!hasPendenciaAnterior(sId, ci)) return false;
+  return cr?.ncResolvida === true || (typeof cr?.nota === 'number' && cr.nota >= 4);
+}
+
+function destacarCriterioPendente(sId, ci, campo = 'obs') {
+  const si = SENSOS.findIndex(s => s.id === sId);
+  const body = si >= 0 ? document.getElementById(`s-body-${si}`) : null;
+  if (body) body.style.display = 'block';
+
+  const card = document.getElementById(`cr-${sId}-${ci}`);
+  if (card) card.scrollIntoView({ block: 'center', behavior: 'smooth' });
+
+  const target = campo === 'foto'
+    ? document.getElementById(`foto-area-${sId}-${ci}`)
+    : document.getElementById(`obs-${sId}-${ci}`);
+  if (target) {
+    target.style.borderColor = 'var(--red)';
+    setTimeout(() => {
+      if (typeof target.focus === 'function') target.focus({ preventScroll: true });
+    }, 250);
+  }
+}
+
 // === Function: salvarInspecao ===
 async function salvarInspecao() {
   if (!currentInsp) {
@@ -7879,27 +7998,43 @@ async function salvarInspecao() {
   // validaÃ§Ã£o
   let ok = true;
   let faltamObs = [];
+  let faltamObsResolucao = [];
   let faltamFotoResolucao = [];
+  let primeiraPendencia = null;
   SENSOS.forEach(s => {
     currentInsp.sensos[s.id].forEach((cr, ci) => {
       if (cr.nota === null) { ok = false; return; }
-      if (cr.nota <= 3 && !cr.obs.trim()) {
+      const obsTxt = String(cr.obs || '').trim();
+      if (cr.nota <= 3 && !obsTxt) {
         faltamObs.push(`${s.nome} - Critério ${ci+1}`);
+        if (!primeiraPendencia) primeiraPendencia = { sId: s.id, ci, campo: 'obs' };
       }
-      if (hasPendenciaAnterior(s.id, ci) && cr.ncResolvida === true) {
+      if (criterioResolvidoNoFormulario(s.id, ci, cr)) {
         const fotos = getFotosValidasCriterio(cr);
+        if (!obsTxt) {
+          faltamObsResolucao.push(`${s.nome} - Critério ${ci+1}`);
+          if (!primeiraPendencia) primeiraPendencia = { sId: s.id, ci, campo: 'obs' };
+        }
         if (!fotos.length) {
           faltamFotoResolucao.push(`${s.nome} - Critério ${ci+1}`);
+          if (!primeiraPendencia) primeiraPendencia = { sId: s.id, ci, campo: 'foto' };
         }
       }
     });
   });
   if (!ok) { toast('Preencha todas as notas antes de salvar'); return; }
   if (faltamObs.length > 0) {
+    destacarCriterioPendente(primeiraPendencia.sId, primeiraPendencia.ci, primeiraPendencia.campo);
     toast('Adicione observação nos itens com nota de 0 a 3');
     return;
   }
+  if (faltamObsResolucao.length > 0) {
+    destacarCriterioPendente(primeiraPendencia.sId, primeiraPendencia.ci, primeiraPendencia.campo);
+    toast('Informe a observação da resolução da NC');
+    return;
+  }
   if (faltamFotoResolucao.length > 0) {
+    destacarCriterioPendente(primeiraPendencia.sId, primeiraPendencia.ci, primeiraPendencia.campo);
     toast('Anexe foto de evidência para NC marcada como resolvida');
     return;
   }
@@ -9106,6 +9241,10 @@ async function gerarPDFGerencia(options = {}) {
   if (!setores.length) { toast('Nenhum setor mapeado para esta gerência'); return; }
 
   const gerenciaData = getGerenciaReportDashboardData(gerencia);
+  if (gerenciaData.resolucoesIncompletas?.length) {
+    if (shouldToast) toast(getMensagemResolucaoIncompleta(gerenciaData.resolucoesIncompletas));
+    return;
+  }
   const periodoAtual = gerenciaData.periodo.periodoCodigo;
   const mesAnoAtual = gerenciaData.periodoTitulo;
   const resumo = gerenciaData.resumo;
@@ -9135,6 +9274,27 @@ async function gerarPDFGerencia(options = {}) {
       });
     } catch {
       return null;
+    }
+  }
+
+  function drawGerencialImageInsideBox(dataUrl, x, yBox, w, h) {
+    try {
+      const props = doc.getImageProperties(dataUrl);
+      const ratio = props.width / props.height;
+      let dw = w;
+      let dh = dw / ratio;
+      if (dh > h) {
+        dh = h;
+        dw = dh * ratio;
+      }
+      const dx = x + (w - dw) / 2;
+      const dy = yBox + (h - dh) / 2;
+      doc.addImage(dataUrl, dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG', dx, dy, dw, dh, undefined, 'FAST');
+    } catch {
+      doc.setTextColor(100, 116, 139);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.text('Foto indisponível', x + w / 2, yBox + h / 2, { align: 'center' });
     }
   }
 
@@ -9384,37 +9544,15 @@ async function gerarPDFGerencia(options = {}) {
     doc.text(subtitle, x + 6, yPos + 23);
   }
 
-  // Capa + objetivo (padrão setorial)
-  await renderGerenciaCover();
-  doc.addPage();
-  y = 18;
-  doc.setTextColor(22, 53, 159);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(18);
-  doc.text('Objetivo do Relatório', margin, y);
-  y += 12;
-  const objetivoTxt = `Este relatório apresenta a consolidação de Housekeeping da gerência ${gerencia} no período selecionado, com análise integrada dos setores mapeados para apoiar a priorização de ações, melhoria contínua e tomada de decisão operacional.`;
-  const objetivoLines = doc.splitTextToSize(objetivoTxt, W - margin * 2 - 10);
-  const setoresLista = setores.length ? setores : ['Setores não informados'];
-  const setoresBulletLines = setoresLista.flatMap(setorNome => doc.splitTextToSize(`• ${setorNome}`, W - margin * 2 - 14));
-  const cardHObjetivo = 54 + (setoresBulletLines.length * 4.2) + (objetivoLines.length * 4.2);
-  doc.setDrawColor(226, 232, 240);
-  doc.setFillColor(248, 250, 252);
-  doc.roundedRect(margin, y, W - margin * 2, cardHObjetivo, 3, 3, 'FD');
-  doc.setTextColor(22, 53, 159);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.text(`Gerência: ${gerencia}`, margin + 6, y + 10);
-  doc.text(`Período: ${mesAnoAtual}`, margin + 6, y + 17);
-  doc.text(`Técnico(a): ${tecnicoGerencialTxt}`, margin + 6, y + 24);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Setores considerados:', margin + 6, y + 31);
-  doc.setFont('helvetica', 'normal');
-  doc.text(setoresBulletLines, margin + 8, y + 37);
-  doc.setFontSize(9.5);
-  doc.text(objetivoLines, margin + 6, y + 41 + (setoresBulletLines.length * 4.2));
+  function getReportStatus(media, ncAbertas = 0) {
+    if (typeof media !== 'number') return { label: 'Sem dados', color: [100, 116, 139] };
+    if (media >= 3.5 && ncAbertas === 0) return { label: 'Bom', color: [16, 185, 129] };
+    if (media >= 2.5) return { label: 'Atenção', color: [245, 158, 11] };
+    return { label: 'Crítico', color: [244, 63, 94] };
+  }
 
-  // Dashboard (padrão setorial)
+  // Capa + resumo executivo
+  await renderGerenciaCover();
   doc.addPage();
   doc.setFillColor(255, 255, 255);
   doc.rect(0, 0, W, H, 'F');
@@ -9433,9 +9571,11 @@ async function gerarPDFGerencia(options = {}) {
   const cardH = 30;
   const row1Y = 36;
   const row2Y = row1Y + cardH + 8;
+  const totalNCGerencia = totais.ncAbertas + totais.ncResolvidas;
+  const taxaResolucaoGerencia = totalNCGerencia ? `${Math.round((totais.ncResolvidas / totalNCGerencia) * 100)}%` : '—';
   drawDashCard(margin, row1Y, cardW, cardH, 'Inspeções', totais.inspecoes, 'No mês atual', [22, 53, 159]);
   drawDashCard(margin + cardW + gap, row1Y, cardW, cardH, 'Média Geral', mediaGerencia !== null ? mediaGerencia.toFixed(2) : '—', 'Nota média da gerência', [14, 165, 233]);
-  drawDashCard(margin + (cardW + gap) * 2, row1Y, cardW, cardH, 'Áreas Inspecionadas', resumo.filter(r => r.inspecoes > 0).length, 'Com inspeção no mês', [100, 116, 139]);
+  drawDashCard(margin + (cardW + gap) * 2, row1Y, cardW, cardH, 'Taxa de Resolução', taxaResolucaoGerencia, 'Resolvidas sobre NCs do período', [16, 185, 129]);
   drawDashCard(margin, row2Y, cardW, cardH, 'NC Abertas', totais.ncAbertas, 'Pendências identificadas', [244, 63, 94]);
   drawDashCard(margin + cardW + gap, row2Y, cardW, cardH, 'NC Resolvidas', totais.ncResolvidas, 'Concluídas no período', [16, 185, 129]);
   drawDashCard(margin + (cardW + gap) * 2, row2Y, cardW, cardH, 'Setores Totais', setores.length, 'Mapeados na gerência', [245, 158, 11]);
@@ -9445,9 +9585,10 @@ async function gerarPDFGerencia(options = {}) {
   const resumoTableW = W - margin * 2;
   const resumoColX = {
     setor: margin + 4,
-    inspecoes: margin + resumoTableW * 0.54,
-    media: margin + resumoTableW * 0.67,
-    ncAbertas: margin + resumoTableW * 0.82,
+    status: margin + resumoTableW * 0.52,
+    inspecoes: margin + resumoTableW * 0.64,
+    media: margin + resumoTableW * 0.74,
+    ncAbertas: margin + resumoTableW * 0.86,
     ncResolvidas: margin + resumoTableW - 4
   };
   doc.setTextColor(22, 53, 159);
@@ -9462,6 +9603,7 @@ async function gerarPDFGerencia(options = {}) {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9.5);
   doc.text('Setor', resumoColX.setor, y + 6.5);
+  doc.text('Status', resumoColX.status, y + 6.5, { align: 'center' });
   doc.text('Inspeções', resumoColX.inspecoes, y + 6.5, { align: 'right' });
   doc.text('Média', resumoColX.media, y + 6.5, { align: 'right' });
   doc.text('NC abertas', resumoColX.ncAbertas, y + 6.5, { align: 'right' });
@@ -9480,6 +9622,12 @@ async function gerarPDFGerencia(options = {}) {
     }
     doc.setTextColor(22, 53, 159);
     doc.text(r.setor, resumoColX.setor, y);
+    const status = getReportStatus(r.media, r.ncAbertas);
+    doc.setTextColor(...status.color);
+    doc.setFont('helvetica', 'bold');
+    doc.text(status.label, resumoColX.status, y, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(22, 53, 159);
     doc.text(String(r.inspecoes), resumoColX.inspecoes, y, { align: 'right' });
     doc.text(r.media !== null ? r.media.toFixed(2) : '—', resumoColX.media, y, { align: 'right' });
     doc.text(String(r.ncAbertas), resumoColX.ncAbertas, y, { align: 'right' });
@@ -9489,7 +9637,9 @@ async function gerarPDFGerencia(options = {}) {
 
   // Página de ranking por setor (média)
   y = novaPaginaComCabecalho('Ranking por Setor', `${gerencia} · ${mesAnoAtual}`);
-  const ranking = resumo.filter(r => typeof r.media === 'number');
+  const ranking = resumo
+    .filter(r => typeof r.media === 'number')
+    .sort((a, b) => b.media - a.media || a.setor.localeCompare(b.setor, 'pt-BR'));
   if (!ranking.length) {
     doc.setTextColor(22, 53, 159);
     doc.setFont('helvetica', 'normal');
@@ -9548,6 +9698,87 @@ async function gerarPDFGerencia(options = {}) {
       const criterioLines = doc.splitTextToSize(`Critério: ${item.criterio}`, W - margin * 2 - 8);
       const obsLines = doc.splitTextToSize(`Obs: ${item.obs}`, W - margin * 2 - 8);
       const sugLines = doc.splitTextToSize(`Sugestão: ${item.sugestao}`, W - margin * 2 - 8);
+
+      if (item.tipo === 'resolvida') {
+        const fotoAntesDataUrl = (await imageToDataUrl((Array.isArray(item.fotosAnterior) ? item.fotosAnterior : [])[0])) || null;
+        const fotoDepoisDataUrl = (await imageToDataUrl((Array.isArray(item.fotosResolucao) ? item.fotosResolucao : [])[0])) || null;
+        const antesLines = doc.splitTextToSize(`Antes: ${item.obsAnterior || 'Sem observação.'}`, W - margin * 2 - 8);
+        const agoraLines = doc.splitTextToSize(`Depois: ${item.obsAtual || item.obs || 'Sem observação.'}`, W - margin * 2 - 8);
+        const acaoLines = doc.splitTextToSize(`Ação/Sugestão: ${item.sugestao || 'Não informada.'}`, W - margin * 2 - 8);
+        const origemLines = item.dataAnterior ? doc.splitTextToSize(`Origem da NC: ${formatDate(item.dataAnterior)}`, W - margin * 2 - 8) : [];
+        const comparativoH = 108;
+        const lineH = 4.4;
+        const linhasBase = criterioLines.length + antesLines.length + agoraLines.length + acaoLines.length + origemLines.length;
+        const h = 14 + (linhasBase * lineH) + comparativoH + 16;
+        if (y + h > H - 14 && y > 32) y = novaPaginaNCSemFaixa(tituloSecao);
+
+        doc.setFillColor(...cardFill);
+        doc.setDrawColor(...cardStroke);
+        doc.roundedRect(margin, y, W - margin * 2, h, 2, 2, 'FD');
+        doc.setTextColor(22, 53, 159);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.text(blocoTitulo, margin + 3, y + 6);
+        doc.setFillColor(...tipoCol);
+        doc.roundedRect(W - margin - 30, y + 2, 26, 6, 2, 2, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(7);
+        doc.text(tipoTxt, W - margin - 17, y + 6.2, { align: 'center' });
+
+        let by = y + 11;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(22, 53, 159);
+        doc.text(criterioLines, margin + 3, by); by += criterioLines.length * 4 + 1;
+        doc.text(antesLines, margin + 3, by); by += antesLines.length * 4 + 1;
+        doc.setTextColor(22, 101, 52);
+        doc.text(agoraLines, margin + 3, by); by += agoraLines.length * 4 + 1;
+        doc.setTextColor(22, 53, 159);
+        doc.text(acaoLines, margin + 3, by); by += acaoLines.length * 4 + 1;
+        if (origemLines.length) {
+          doc.setTextColor(21, 128, 61);
+          doc.setFont('helvetica', 'bold');
+          doc.text(origemLines, margin + 3, by);
+          by += origemLines.length * 4 + 1;
+        }
+
+        const compX = margin + 3;
+        const compW = W - margin * 2 - 6;
+        const gapComp = 4;
+        const colW = (compW - gapComp) / 2;
+        const imgH = 82;
+        doc.setFillColor(236, 253, 245);
+        doc.setDrawColor(167, 243, 208);
+        doc.roundedRect(compX, by, compW, comparativoH - 4, 2, 2, 'FD');
+        doc.setTextColor(21, 128, 61);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.text('COMPARATIVO DE EVIDÊNCIA', compX + 3, by + 5);
+
+        [['ANTES', fotoAntesDataUrl], ['DEPOIS', fotoDepoisDataUrl]].forEach(([label, dataUrl], col) => {
+          const fx = compX + 3 + col * (colW + gapComp);
+          const fy = by + 8;
+          doc.setFillColor(255, 255, 255);
+          doc.setDrawColor(220, 230, 242);
+          doc.roundedRect(fx, fy, colW - 3, 96, 1.5, 1.5, 'FD');
+          doc.setTextColor(71, 85, 105);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(7);
+          doc.text(label, fx + 2, fy + 5);
+          if (dataUrl) {
+            drawGerencialImageInsideBox(dataUrl, fx + 2, fy + 7, colW - 7, imgH);
+          } else {
+            doc.setTextColor(100, 116, 139);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(7.5);
+            doc.text(label === 'ANTES' ? 'Sem foto anterior' : 'Sem foto da resolução', fx + 2, fy + 50);
+          }
+        });
+
+        y += h + 4;
+        continue;
+      }
+
       const fotos = Array.isArray(item.fotos) ? item.fotos : [];
       const fotosDataUrl = (await Promise.all(fotos.map(imageToDataUrl))).filter(Boolean);
       const fotosPorLinha = 2;
@@ -9659,16 +9890,20 @@ async function gerarPDFGerencia(options = {}) {
     }
   }
 
-  await renderGerencialNCSection(
-    ncsAbertasOrdenadas,
-    'Relatório de não conformidades',
-    'Nenhuma não conformidade aberta registrada no período selecionado.'
-  );
-  await renderGerencialNCSection(
-    ncsResolvidasOrdenadas,
-    'Relatório de não conformidades resolvidas',
-    'Nenhuma não conformidade foi concluída no período selecionado para esta gerência.'
-  );
+  if (ncsAbertasOrdenadas.length) {
+    await renderGerencialNCSection(
+      ncsAbertasOrdenadas,
+      'Relatório de não conformidades',
+      'Nenhuma não conformidade aberta registrada no período selecionado.'
+    );
+  }
+  if (ncsResolvidasOrdenadas.length) {
+    await renderGerencialNCSection(
+      ncsResolvidasOrdenadas,
+      'Relatório de não conformidades resolvidas',
+      'Nenhuma não conformidade foi concluída no período selecionado para esta gerência.'
+    );
+  }
 
   renderObrigadoSlide();
 
@@ -9707,7 +9942,6 @@ async function gerarPDFSetorial(setor, options = {}) {
   const anoAtual = now.getFullYear();
   const periodoAtual = `${anoAtual}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const mesAnoAtual = `${mesAtual.charAt(0).toUpperCase() + mesAtual.slice(1)} de ${anoAtual}`;
-  const textoObjetivo = `Este relatório tem como objetivo fornecer informações do Housekeeping realizado durante o mês de ${mesAtual} no setor de ${setor}, buscando identificar pontos de melhoria, promover a eficiência operacional, garantir a segurança no local de trabalho e cultivar uma cultura organizacional centrada na ordem, limpeza e eficácia, para todos os operadores e visitantes da área.`;
   let y = 0;
 
   // === Function: renderSetorialCover ===
@@ -9977,11 +10211,14 @@ async function gerarPDFSetorial(setor, options = {}) {
   }
 
   const setorialData = getSetorialReportDashboardData(setor);
+  if (setorialData.resolucoesIncompletas?.length) {
+    if (shouldToast) toast(getMensagemResolucaoIncompleta(setorialData.resolucoesIncompletas));
+    return;
+  }
   const {
     ncList,
     resolvidasList,
     totalInspecoes,
-    locaisUnicos,
     mediaGeral,
     totalNCAbertas,
     totalNCRecebidas,
@@ -9990,47 +10227,9 @@ async function gerarPDFSetorial(setor, options = {}) {
     piorLocal
   } = setorialData;
 
-  const setorCfg = getSetorConfigAtivo(setor);
-  const areasDoSetor = (setorCfg?.subareas || []).length
-    ? setorCfg.subareas
-    : [...new Set(APP.inspecoes
-      .filter(i => inspectionIsCurrentUnit(i) && i.setor === setor)
-      .map(i => i.subarea || 'Área geral do setor'))];
-
-  // Capa (slide) antes do dashboard
+  // Capa + resumo executivo
   const capaAplicada = await renderSetorialCover();
   if (capaAplicada) addNewPage();
-
-  // Página de objetivo (logo após a capa)
-  y = 18;
-  doc.setTextColor(22, 53, 159);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(18);
-  doc.text('Objetivo do Relatório', margin, y);
-  y += 12;
-
-  const areasLista = areasDoSetor.length ? areasDoSetor : ['Área geral do setor'];
-  const objetivoLines = doc.splitTextToSize(textoObjetivo, W - margin * 2 - 10);
-  const areasBulletLines = areasLista.flatMap(area => doc.splitTextToSize(`• ${area}`, W - margin * 2 - 14));
-  const cardHObjetivo = 46 + (areasBulletLines.length * 4.2) + (objetivoLines.length * 4.2);
-
-  doc.setDrawColor(226, 232, 240);
-  doc.setFillColor(248, 250, 252);
-  doc.roundedRect(margin, y, W - margin * 2, cardHObjetivo, 3, 3, 'FD');
-  doc.setTextColor(22, 53, 159);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.text(`Setor: ${setor}`, margin + 6, y + 10);
-  doc.text(`Período: ${mesAnoAtual}`, margin + 6, y + 17);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Áreas observadas:', margin + 6, y + 24);
-  doc.setFont('helvetica', 'normal');
-  doc.text(areasBulletLines, margin + 8, y + 30);
-  doc.setFontSize(9.5);
-  doc.text(objetivoLines, margin + 6, y + 34 + (areasBulletLines.length * 4.2));
-
-  // Página do dashboard
-  addNewPage();
 
   doc.setFillColor(255, 255, 255);
   doc.rect(0, 0, W, H, 'F');
@@ -10072,10 +10271,12 @@ async function gerarPDFSetorial(setor, options = {}) {
   const cardH = 30;
   const row1Y = 36;
   const row2Y = row1Y + cardH + 8;
+  const totalNCSetor = totalNCAbertas + totalResolvidas;
+  const taxaResolucaoSetor = totalNCSetor ? `${Math.round((totalResolvidas / totalNCSetor) * 100)}%` : '—';
 
   drawDashCard(margin, row1Y, cardW, cardH, 'Inspeções', totalInspecoes, 'No mês atual', [22, 53, 159]);
   drawDashCard(margin + cardW + gap, row1Y, cardW, cardH, 'Média Geral', mediaGeral !== null ? mediaGeral.toFixed(2) : '—', 'Nota média do setor', [14, 165, 233]);
-  drawDashCard(margin + (cardW + gap) * 2, row1Y, cardW, cardH, 'Áreas Inspecionadas', locaisUnicos, 'Subáreas/locais distintos', [100, 116, 139]);
+  drawDashCard(margin + (cardW + gap) * 2, row1Y, cardW, cardH, 'Taxa de Resolução', taxaResolucaoSetor, 'Resolvidas sobre NCs do período', [16, 185, 129]);
 
   drawDashCard(margin, row2Y, cardW, cardH, 'NC Abertas', totalNCAbertas, 'Inclui encaminhadas', [244, 63, 94]);
   drawDashCard(margin + cardW + gap, row2Y, cardW, cardH, 'NC Resolvidas', totalResolvidas, 'Resolvidas no período', [16, 185, 129]);
@@ -10098,20 +10299,15 @@ async function gerarPDFSetorial(setor, options = {}) {
   doc.text(`Área melhor avaliada: ${melhorTxt}`, margin + 6, boxY + 16);
   doc.text(`Área com menor avaliação: ${piorTxt}`, margin + 6, boxY + 23);
 
-  addNewPage();
-  y = 18;
-  doc.setTextColor(22, 53, 159);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.text('Relatório de não conformidades', margin, y);
-  y += 8;
-
-  if (!ncList.length) {
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(11);
+  if (ncList.length) {
+    addNewPage();
+    y = 18;
     doc.setTextColor(22, 53, 159);
-    doc.text('Não foram encontradas não conformidades no mês atual para este setor.', margin, y + 4);
-  } else {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.text('Relatório de não conformidades', margin, y);
+    y += 8;
+
     for (let idx = 0; idx < ncList.length; idx++) {
       const nc = ncList[idx];
       const fotosTodas = Array.isArray(nc.fotos) ? nc.fotos : [];
@@ -10222,15 +10418,10 @@ async function gerarPDFSetorial(setor, options = {}) {
     y += 8;
   }
 
-  addNewPage();
-  drawResolvedSectionHeader();
+  if (resolvidasList.length) {
+    addNewPage();
+    drawResolvedSectionHeader();
 
-  if (!resolvidasList.length) {
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(11);
-    doc.setTextColor(22, 53, 159);
-    doc.text('Nenhuma não conformidade foi concluída no mês atual para este setor.', margin, y + 4);
-  } else {
     for (let idx = 0; idx < resolvidasList.length; idx++) {
       const item = resolvidasList[idx];
       const fotoAntesDataUrl = (await toDataUrl((Array.isArray(item.fotosAnterior) ? item.fotosAnterior : [])[0])) || null;
@@ -11148,7 +11339,7 @@ window.addEventListener('load', () => {
         .then(regs => regs.forEach(reg => reg.unregister()))
         .catch(() => {});
     } else {
-      navigator.serviceWorker.register('sw.js').catch(() => {});
+      navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => {});
     }
   }
 
