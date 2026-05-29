@@ -3011,6 +3011,299 @@ const SETORES = [
   }
 ];
 
+const SETORES_BA = [
+  {
+    nome: 'Produção de Mina',
+    subareas: [
+      '1 – Balanças das áreas 03 e 05',
+      '2 – Enlonador site e área 03 e 05',
+      '3 – Áreas externas dos refeitórios (área 01 e 04)',
+      '4 – Áreas internas e externas do escritório principal (salas administrativas, copa, áreas comuns, estacionamento e etc.)',
+      '5 – Vestiários e sanitários',
+      '6 – Posto de combustível e borracharia - TGL',
+      '7 – Áreas de lavra, estoques e pátios de minério',
+      '8 – Operações perfuração e detonação (Compel)'
+    ]
+  },
+  {
+    nome: 'Serviços de Mina',
+    subareas: [
+      '1 – Up Grading',
+      '2 – Bulk Ore Sorting',
+      '3 – Serviços de Mina',
+      '4 – Área de estocagem de placas - Área 4',
+      '5 – Sinalização geral',
+      '6 – Infraestrutura (vias e estacionamentos)'
+    ]
+  },
+  {
+    nome: 'Serviços Técnicos',
+    subareas: [
+      '1 – Laboratório de geologia e sala de compressores',
+      '2 – Sondagem (praça e canteiros de empresas contratadas)',
+      '3 – Banheiros, vestiários e salas administrativas',
+      '4 – Pátio de armazenamento de amostras'
+    ]
+  },
+  {
+    nome: 'Manutenção de Máquinas',
+    subareas: [
+      '1 – Oficina de manutenção de máquinas e salas administrativas',
+      '2 – Ferramentaria',
+      '3 – Vestiários e sanitários',
+      '4 – Lavador de máquinas',
+      '5 – Borracharia',
+      '6 – Lubrificação',
+      '7 – Sala e área de instalação, manutenção e desinstalação de PTX',
+      '8 – Pátio de sucata e máquinas',
+      '9 – Container e sala das empresas contratadas'
+    ]
+  },
+  {
+    nome: 'Geotecnia',
+    subareas: [
+      '1 – Sondagem (praça e canteiros de empresas contratadas)',
+      '2 – Tenda e container',
+      '3 – Salas administrativas'
+    ]
+  },
+  {
+    nome: 'Preparação de Minério',
+    subareas: [
+      '1 – Rompedor hidráulico',
+      '2 – Sala auxiliar',
+      '3 – Sanitários',
+      '4 – Área operacional',
+      '5 – Sala de ferramentas',
+      '6 – Área operacional',
+      '7 – Área operacional',
+      '8 – Sala de apoio da produção piso zero',
+      '9 – Área operacional',
+      '10 – Área operacional',
+      '11 – Sanitários ao lado da planta',
+      '12 – Cabine de operação',
+      '13 – Salas de compressores',
+      '14 – Salas Elétricas',
+      '15 – Galpão (área geral e materiais da manutenção)',
+      '16 – Cabine de operação',
+      '17 – Sala elétrica',
+      '18 – Sala de ferramentas',
+      '19 – Galpão (área geral e materiais da manutenção)',
+      '20 – Sala de armários',
+      '21 – Sala de Descanso',
+      '22 – Sanitários',
+      '23 – Área da manutenção mecânica no piso zero',
+      '24 – Fornos secadores linha I e II',
+      '25 – Área 350 (óleo)',
+      '26 – Containers da manutenção',
+      '27 – Subestações',
+      '28 – Lavador de gases Linha I e II',
+      '29 – Sala de ferramentas',
+      '30 – Área operacional',
+      '31 – Área operacional',
+      '32 – Tripper',
+      '33 – Sanitários',
+      '34 – Área operacional'
+    ]
+  },
+  {
+    nome: 'Calcinação',
+    subareas: [
+      '1 – Prédio da moega',
+      '2 – Área operacional em geral',
+      '3 – Sala de ferramentas',
+      '4 – Área da moega de carvão',
+      '5 – Aglomerantes (431) e (354)',
+      '6 – Pelotização e secador de pelotas',
+      '7 – Precipitadores',
+      '8 – Fornos e 410',
+      '9 – Salas de descanso e sanitários'
+    ]
+  },
+  {
+    nome: 'Transporte Auxiliar',
+    subareas: [
+      '1 – Pátio de escória e vias de acesso ao pátio',
+      '2 – Máquinas e equipamentos (próprios e de contratadas do departamento)',
+      '3 – Sala administrativa de apoio (container modelo operacional)',
+      '4 – Canteiro TGL na planta industrial'
+    ]
+  },
+  {
+    nome: 'Redução',
+    subareas: [
+      '1 – Despoeiramento primário e secundário (Linha I e II)',
+      '2 – Salas administrativas',
+      '3 – Área de vazamento de escória, sala de descanso e sanitários (linha I e II)',
+      '4 – Baias de escória A e B ( Linha I e II)',
+      '5 – Piso zero',
+      '6 – Baias de escória',
+      '7 – Correia 533 e silo de escória'
+    ]
+  },
+  {
+    nome: 'Refino',
+    subareas: [
+      '1 – Refinaria geral (manutenção refratária, área de vazamento de metal, granulação, fornos panelas, sala de controle, sanitários, reagentes etc.)'
+    ]
+  },
+  {
+    nome: 'Expedição',
+    subareas: [
+      '1 – Áreas operacionais, administrativa e sanitários'
+    ]
+  },
+  {
+    nome: 'Engenharia de Manutenção e Confiabilidade',
+    subareas: [
+      '1 – Canteiros de contratadas deste departamento e salas da respectiva área'
+    ]
+  },
+  {
+    nome: 'Desempenho de Contratadas e Infra',
+    subareas: [
+      '1 – Pátio das contratadas',
+      '2 – Rodoviária e vias externas',
+      '3 – Áreas externas do centro de treinamento',
+      '4 – Canteiro H&F próximo ao CT',
+      '5 – ETE - 121',
+      '6 – ETA (mina)',
+      '7 – Escritório Principal',
+      '8 – Estacionamentos (externo e refeitório)',
+      '9 – 117',
+      '10 – Área de vivência'
+    ]
+  },
+  {
+    nome: 'Manutenção - Planta Industrial',
+    subareas: [
+      '1 – Oficina de manutenção incluindo caldeiraria, ajustagem, usinagem, automação, instrumentação, elétrica e salas administrativas',
+      '2 – Salas hidráulicas nas áreas de operação',
+      '3 – Containers da manutenção',
+      '4 – Utilidades (116 e 119)'
+    ]
+  },
+  {
+    nome: 'Segurança do Trabalho',
+    subareas: [
+      '1 – Salas administrativas',
+      '2 – Copa e sanitários',
+      '3 – Sala de inspeção',
+      '4 – Sala de armário de EPIs',
+      '5 – Salas externas',
+      '6 – Módulos do safety lab (altura, manuseio de materiais, refratários, içamento de cargas e NR 12)'
+    ]
+  },
+  {
+    nome: 'Riscos e Emergência',
+    subareas: [
+      '1 – Sala administrativa',
+      '2 – Containers e carretas da brigada de emergência',
+      '3 – Sala externa',
+      '4 – Módulos do safety lab (trabalho a quente e emergência)'
+    ]
+  },
+  {
+    nome: 'Saúde',
+    subareas: [
+      '1 – Ambulatório médico (salas administrativas, sanitários, copa e etc).'
+    ]
+  },
+  {
+    nome: 'Meio Ambiente',
+    subareas: [
+      '1 – Salas e canteiros das empresas contratadas (Agroflor, CEPEMAR, Novaluz etc.)',
+      '2 – Central de resíduos',
+      '3 – Viveiro',
+      '4 – Salas administrativas e sanitários'
+    ]
+  },
+  {
+    nome: 'Laboratório Químico',
+    subareas: [
+      '1 – Recebimento e preparação de amostras, salas internas, salas administrativas, sanitários e copa'
+    ]
+  },
+  {
+    nome: 'Suprimentos e Logística',
+    subareas: [
+      '1 – Armazém (mina e planta industrial)',
+      '2 – Postos de combustíveis (mina e planta industrial)',
+      '3 – Pátio de carretas',
+      '4 – AF\'s',
+      '5 – Central de GLP e Nitrogênio',
+      '6 – Pátio de carvão',
+      '7 – Lojas In-Company (nortel e sotreq)',
+      '8 – Salas administrativas, sanitários e copas das áreas.'
+    ]
+  },
+  {
+    nome: 'Administração e RH',
+    subareas: [
+      '1 – Refeitório da planta industrial',
+      '2 – Refeitórios da área 1 e 4 (mina)',
+      '3 – Áreas do centro de treinamento'
+    ]
+  },
+  {
+    nome: 'Projetos (Engenharia)',
+    subareas: [
+      '1 – Instalações do SIB (salas, sanitários etc.)',
+      '2 – Canteiro de empresas contratadas do departamento'
+    ]
+  }
+];
+
+const SETORES_POR_UNIDADE = {
+  CD: SETORES,
+  BA: SETORES_BA
+};
+
+const GERENCIAS_BA = {
+  'Mineração': [
+    'Produção de Mina',
+    'Serviços de Mina',
+    'Serviços Técnicos',
+    'Manutenção de Máquinas',
+    'Geotecnia'
+  ],
+  'Produção BA': [
+    'Preparação de Minério',
+    'Calcinação',
+    'Transporte Auxiliar',
+    'Redução',
+    'Refino',
+    'Expedição'
+  ],
+  'Desempenho de Contratadas Infra e Engenharia': [
+    'Engenharia de Manutenção e Confiabilidade',
+    'Desempenho de Contratadas e Infra'
+  ],
+  'Manutenção': [
+    'Manutenção - Planta Industrial'
+  ],
+  'Segurança Operacional': [
+    'Segurança do Trabalho',
+    'Riscos e Emergência',
+    'Saúde'
+  ],
+  'Sustentabilidade': [
+    'Meio Ambiente'
+  ],
+  'Planejamento Integrado e Modelo Operacional': [
+    'Laboratório Químico'
+  ],
+  'Suprimentos e Logística': [
+    'Suprimentos e Logística'
+  ],
+  'Administração e RH': [
+    'Administração e RH'
+  ],
+  'Projetos e Obras': [
+    'Projetos (Engenharia)'
+  ]
+};
+
 const UNIDADES = ['CD', 'BA', 'JC', 'MSB'];
 const UNIDADE_LABELS = {
   CD: 'Codemin',
@@ -3033,15 +3326,18 @@ function getInspectionUnidade(insp) {
   return 'CD';
 }
 
+// === Function: getSetoresBasePorUnidade ===
+function getSetoresBasePorUnidade(unidade = currentUnidade) {
+  const unit = normalizeUnidadeCode(unidade, currentUnidade || 'CD');
+  const base = SETORES_POR_UNIDADE[unit];
+  return Array.isArray(base) ? base : [];
+}
+
 // === Function: getSetoresAtivos ===
 function getSetoresAtivos(unidade = currentUnidade) {
   const unit = normalizeUnidadeCode(unidade, currentUnidade || 'CD');
-  if (unit === 'CD') {
-    return SETORES
-      .map(s => ({ ...s, subareas: getSetorSubareasAtivas(s.nome, unit) }));
-  }
-  // BA/JC/MSB: não herdam setores da Codemin automaticamente
-  return [];
+  return getSetoresBasePorUnidade(unit)
+    .map(s => ({ ...s, subareas: getSetorSubareasAtivas(s.nome, unit) }));
 }
 
 // === Function: getSetorConfigAtivo ===
@@ -3233,7 +3529,7 @@ function getSetorSubareasAtivas(setorNome, unidade = currentUnidade) {
   const store = getAreaOverridesStore();
   const override = store?.[unit]?.[setorNome];
   if (Array.isArray(override) && override.length) return override;
-  const base = SETORES.find(s => s.nome === setorNome);
+  const base = getSetoresBasePorUnidade(unit).find(s => s.nome === setorNome);
   return Array.isArray(base?.subareas) ? [...base.subareas] : [];
 }
 // ConfiguraÃ§Ã£o do Firebase (Substitua pelos seus dados do console do Firebase)
@@ -3510,7 +3806,7 @@ function getInspectionNcTotals(insp) {
     (insp?.sensos?.[s.id] || []).forEach((cr, ci) => {
       if (criterioTemNCAberta(cr)) abertas++;
       const crAnt = anterior?.sensos?.[s.id]?.[ci] || null;
-      if (crAnt && criterioTemNCAberta(crAnt) && !criterioTemNCAberta(cr)) resolvidas++;
+      if (criterioFoiResolvido(crAnt, cr)) resolvidas++;
     });
   });
   return { abertas, resolvidas };
@@ -3886,7 +4182,7 @@ function inspectionBelongsToReportPeriod(insp, periodo) {
 
 // === Function: getInspectionsForReportPeriod ===
 function getInspectionsForReportPeriod(periodo = getSetorialReportPeriod()) {
-  return APP.inspecoes.filter(i => inspectionBelongsToReportPeriod(i, periodo));
+  return APP.inspecoes.filter(i => inspectionIsCurrentUnit(i) && inspectionBelongsToReportPeriod(i, periodo));
 }
 
 // === Function: getSetorialReportInspections ===
@@ -3899,8 +4195,7 @@ function getSetorialReportInspections(setor) {
 
 // === Function: getGerenciaReportInspections ===
 function getGerenciaReportInspections(gerencia) {
-  const gerMap = getGerenciasMap();
-  const setores = (gerMap[gerencia] || []).filter(s => SETORES.some(x => x.nome === s));
+  const setores = getGerenciaSetoresAtivos(gerencia);
   const periodo = getSetorialReportPeriod();
   return getInspectionsForReportPeriod(periodo)
     .filter(i => setores.includes(i.setor))
@@ -3986,20 +4281,17 @@ function getSetorialReportDashboardData(setor) {
   });
 
   const resolvidasList = [];
-  const latestMesSetorPorLocal = getLatestInspecoesBySetor(setor)
-    .filter(i => inspectionBelongsToReportPeriod(i, periodo));
+  const inspsResolucaoSetor = [...inspsSetor]
+    .sort((a, b) => new Date(a.data) - new Date(b.data));
 
-  latestMesSetorPorLocal.forEach(insp => {
+  inspsResolucaoSetor.forEach(insp => {
     const inspAnterior = getInspecaoAnteriorMesmoLocal(insp);
     if (!inspAnterior) return;
 
     SENSOS.forEach(s => {
       (insp.sensos?.[s.id] || []).forEach((crAtual, ci) => {
         const crAnterior = inspAnterior.sensos?.[s.id]?.[ci] || {};
-        const notaAnterior = crAnterior.nota ?? null;
-        const notaAtual = crAtual?.nota ?? null;
-        const resolveuAgora = notaAnterior !== null && notaAnterior <= 3 && notaAtual !== null && notaAtual >= 4;
-        if (!resolveuAgora) return;
+        if (!criterioFoiResolvido(crAnterior, crAtual)) return;
 
         const reinc = getReincidenciasAteConclusao(insp, s.id, ci);
         const destinoSetor = crAnterior.encaminharSetor || crAtual?.encaminharSetor || insp.setor;
@@ -4025,28 +4317,19 @@ function getSetorialReportDashboardData(setor) {
     });
   });
 
-  const latestOutrosPorLocal = {};
-  getInspectionsForReportPeriod(periodo)
+  const inspsResolucaoOutros = getInspectionsForReportPeriod(periodo)
     .filter(i => i.setor !== setor)
-    .forEach(i => {
-      const k = localKey(i);
-      if (!latestOutrosPorLocal[k] || new Date(i.data) > new Date(latestOutrosPorLocal[k].data)) {
-        latestOutrosPorLocal[k] = i;
-      }
-    });
+    .sort((a, b) => new Date(a.data) - new Date(b.data));
 
-  Object.values(latestOutrosPorLocal).forEach(inspOrigem => {
+  inspsResolucaoOutros.forEach(inspOrigem => {
     const inspAnteriorOrigem = getInspecaoAnteriorMesmoLocal(inspOrigem);
     if (!inspAnteriorOrigem) return;
 
     SENSOS.forEach(s => {
       (inspOrigem.sensos?.[s.id] || []).forEach((crAtual, ci) => {
         const crAnterior = inspAnteriorOrigem.sensos?.[s.id]?.[ci] || {};
-        const notaAnterior = crAnterior.nota ?? null;
-        const notaAtual = crAtual?.nota ?? null;
         const destinoSetor = crAnterior.encaminharSetor || crAtual?.encaminharSetor || '';
-        const resolveuAgora = notaAnterior !== null && notaAnterior <= 3 && notaAtual !== null && notaAtual >= 4;
-        if (!resolveuAgora) return;
+        if (!criterioFoiResolvido(crAnterior, crAtual)) return;
         if (destinoSetor !== setor) return;
 
         const reinc = getReincidenciasAteConclusao(inspOrigem, s.id, ci);
@@ -4114,8 +4397,7 @@ function getSetorialReportDashboardData(setor) {
 function getGerenciaReportDashboardData(gerencia) {
   const periodo = getSetorialReportPeriod();
   const periodoTitulo = `${periodo.mesNome.charAt(0).toUpperCase()}${periodo.mesNome.slice(1)} de ${periodo.ano}`;
-  const gerMap = getGerenciasMap();
-  const setores = (gerMap[gerencia] || []).filter(s => SETORES.some(x => x.nome === s));
+  const setores = getGerenciaSetoresAtivos(gerencia);
   const inspsPeriodo = getGerenciaReportInspections(gerencia);
   const ncDetalhes = [];
   const debitoList = uniqueDebitoRazoes(inspsPeriodo.flatMap(getDebitoRazoesInspecao));
@@ -4147,9 +4429,7 @@ function getGerenciaReportDashboardData(gerencia) {
             });
           }
           const crAnt = anterior?.sensos?.[s.id]?.[ci] || null;
-          const notaAnt = crAnt?.nota ?? null;
-          const notaAtual = cr?.nota ?? null;
-          if (notaAnt !== null && notaAnt <= 3 && notaAtual !== null && notaAtual >= 4) {
+          if (criterioFoiResolvido(crAnt, cr)) {
             ncResolvidas++;
             ncDetalhes.push({
               tipo: 'resolvida',
@@ -4782,11 +5062,19 @@ function getDraftKeyFromInspection(insp) {
   return `${setor}||${subarea}`;
 }
 
+// === Function: isEditDraft ===
+function isEditDraft(draft) {
+  return draft?.__isEditing === true || !!draft?.__originalId;
+}
+
 // === Function: getDraftBySetorLocal ===
-function getDraftBySetorLocal(setor, subarea = '') {
+function getDraftBySetorLocal(setor, subarea = '', options = {}) {
   const key = `${String(setor || '').trim()}||${String(subarea || '').trim()}`;
   const store = getDraftStore();
-  return store.byKey?.[key] || null;
+  const draft = store.byKey?.[key] || null;
+  if (!draft) return null;
+  if (options.includeEditDrafts !== true && isEditDraft(draft)) return null;
+  return draft;
 }
 
 // === Function: listDraftEntries ===
@@ -4880,13 +5168,15 @@ function renderDraftsInNewInspModal() {
     const subareaTxt = draft.subarea || 'Área geral';
     const whenTxt = draft.__draftUpdatedAt ? new Date(draft.__draftUpdatedAt).toLocaleString('pt-BR') : 'Sem data';
     const periodoTxt = draft.periodo || 'Sem período';
+    const editDraft = isEditDraft(draft);
     const isMatch = matchKey && key === matchKey;
     return `
       <div class="draft-item${isMatch ? ' match' : ''}">
         <div class="draft-item-main">
           <div class="draft-item-title">${setorTxt} · ${subareaTxt}</div>
           <div class="draft-item-sub">Período: ${periodoTxt} · Atualizado: ${whenTxt}</div>
-          ${isMatch ? '<div class="draft-item-tag">Mesmo local selecionado</div>' : ''}
+          ${editDraft ? '<div class="draft-item-tag">Edição não salva</div>' : ''}
+          ${isMatch && !editDraft ? '<div class="draft-item-tag">Mesmo local selecionado</div>' : ''}
         </div>
         <div class="draft-item-actions">
           <button class="btn-secondary" onclick="resumeDraftByKey(decodeURIComponent('${encodeURIComponent(key)}'))">Retomar rascunho</button>
@@ -5831,13 +6121,14 @@ function renderDashboard() {
   const resolvidas = pendencias.filter(p => p.resolvida);
   const inspsHoje = APP.inspecoes.filter(i => {
     const d = new Date(i.data);
-    return d.getFullYear() === now.getFullYear() &&
+    return inspectionIsCurrentUnit(i) &&
+      d.getFullYear() === now.getFullYear() &&
       d.getMonth() === now.getMonth() &&
       d.getDate() === now.getDate();
   }).length;
-  const ultimas = [...APP.inspecoes].sort((a, b) => new Date(b.data) - new Date(a.data));
+  const ultimas = APP.inspecoes.filter(inspectionIsCurrentUnit).sort((a, b) => new Date(b.data) - new Date(a.data));
   const ultimaAtualizacao = ultimas[0]?.data ? new Date(ultimas[0].data) : null;
-  const notas = APP.inspecoes.map(i => i.notaGeral).filter(n => typeof n === 'number');
+  const notas = APP.inspecoes.filter(inspectionIsCurrentUnit).map(i => i.notaGeral).filter(n => typeof n === 'number');
   const mediaGlobal = notas.length ? (notas.reduce((a, b) => a + b, 0) / notas.length) : null;
 
   const setoresMap = {};
@@ -5849,7 +6140,7 @@ function renderDashboard() {
     if (p.resolvida) setoresMap[p.setor].resolvidas += 1;
   });
 
-  APP.inspecoes.forEach(i => {
+  APP.inspecoes.filter(inspectionIsCurrentUnit).forEach(i => {
     if (!setoresMap[i.setor]) setoresMap[i.setor] = { setor: i.setor, abertas: 0, resolvidas: 0, ultima: null, media: null, notas: [] };
     const row = setoresMap[i.setor];
     if (!row.ultima || new Date(i.data) > new Date(row.ultima.data)) row.ultima = i;
@@ -5863,12 +6154,12 @@ function renderDashboard() {
   const setoresCriticos = [...setores]
     .sort((a, b) => (b.abertas - a.abertas) || a.setor.localeCompare(b.setor, 'pt-BR'))
     .slice(0, 5);
-  const faltantesPorSetor = SETORES.map(setorCfg => {
+  const faltantesPorSetor = getSetoresAtivos().map(setorCfg => {
     const setor = setorCfg.nome;
     const areasEsperadas = (setorCfg.subareas && setorCfg.subareas.length)
       ? [...setorCfg.subareas]
       : ['Área geral do setor'];
-    const inspsSetor = APP.inspecoes.filter(i => i.setor === setor);
+    const inspsSetor = APP.inspecoes.filter(i => inspectionIsCurrentUnit(i) && i.setor === setor);
     const areasInspecionadas = new Set(inspsSetor.map(i => i.subarea || 'Área geral do setor'));
     const faltantes = Math.max(0, areasEsperadas.length - [...areasInspecionadas].filter(a => areasEsperadas.includes(a)).length);
     return { setor, faltantes, totalAreas: areasEsperadas.length };
@@ -6342,7 +6633,7 @@ function inspCardHTML(insp, opts = {}) {
   const badgeScore = notaBadge(score);
   const statusBadges = getInspectionStatusBadges(insp);
   const ordLocal = APP.inspecoes
-    .filter(i => sameLocal(i, insp))
+    .filter(i => sameLocal(i, insp) && getInspectionUnidade(i) === getInspectionUnidade(insp))
     .sort((a, b) => new Date(a.data) - new Date(b.data))
     .findIndex(i => i.id === insp.id) + 1;
   const ordemBadge = `<span class="badge" style="background:rgba(255,255,255,0.05);color:var(--text2);font-size:9px">${ordLocal}ª inspeção</span>`;
@@ -6519,18 +6810,15 @@ function getPendenciasResolvidas(insp, baseComparativa = null) {
   SENSOS.forEach(s => {
     (insp.sensos[s.id] || []).forEach((crAtual, ci) => {
       const crAnterior = baseRef.sensos?.[s.id]?.[ci] || {};
-      const notaAnterior = crAnterior.nota ?? null;
-      const notaAtual = crAtual?.nota ?? null;
-      const isResolvida = notaAnterior !== null && notaAnterior <= 3 && notaAtual !== null && notaAtual >= 4;
-      if (!isResolvida) return;
+      if (!criterioFoiResolvido(crAnterior, crAtual)) return;
 
       resolvidas.push({
         senso: s.nome,
         criterioIndice: ci + 1,
         criterioTexto: s.criterios[ci],
-        notaAnterior,
+        notaAnterior: crAnterior.nota ?? null,
         obsAnterior: crAnterior.obs || '',
-        notaAtual,
+        notaAtual: crAtual?.nota ?? null,
         obsAtual: crAtual?.obs || '',
         fotosAnterior: getFotosNCAbertaComFallback(baseRef, s.id, ci, crAnterior),
         fotosAtual: getFotosValidasCriterio(crAtual),
@@ -6685,7 +6973,7 @@ function checkInspAnterior() {
 
   const subareaNorm = subarea || '';
   const anteriores = APP.inspecoes
-    .filter(i => i.setor === setor && (i.subarea || '') === subareaNorm)
+    .filter(i => inspectionIsCurrentUnit(i) && i.setor === setor && (i.subarea || '') === subareaNorm)
     .sort((a, b) => new Date(b.data) - new Date(a.data));
 
   if (anteriores.length > 0) {
@@ -6736,7 +7024,7 @@ function iniciarInspecao() {
   // Regra: se já existir inspeção no mesmo local, sempre usa a última como base.
   const subareaNorm = subarea || '';
   const ultimaMesmoLocal = APP.inspecoes
-    .filter(i => i.setor === setor && (i.subarea || '') === subareaNorm)
+    .filter(i => inspectionIsCurrentUnit(i) && i.setor === setor && (i.subarea || '') === subareaNorm)
     .sort((a, b) => new Date(b.data) - new Date(a.data))[0] || null;
   const validBaseId = ultimaMesmoLocal ? ultimaMesmoLocal.id : null;
 
@@ -6886,6 +7174,16 @@ function criterioTemNCAberta(criterio) {
   return false;
 }
 
+// === Function: criterioFoiResolvido ===
+function criterioFoiResolvido(crAnterior, crAtual) {
+  if (!criterioTemNCAberta(crAnterior)) return false;
+  if (!crAtual) return false;
+  const notaAtual = crAtual.nota ?? null;
+  const marcadoComoResolvido = crAtual.ncResolvida === true;
+  const notaConforme = typeof notaAtual === 'number' && notaAtual >= 4;
+  return !criterioTemNCAberta(crAtual) && (marcadoComoResolvido || notaConforme);
+}
+
 // === Function: hasPendenciaAnterior ===
 function hasPendenciaAnterior(sId, ci) {
   return !!getNCAnteriorReferencia(sId, ci);
@@ -6895,7 +7193,7 @@ function hasPendenciaAnterior(sId, ci) {
 function getNCAnteriorReferencia(sId, ci) {
   if (!currentInsp) return null;
   const historico = APP.inspecoes
-    .filter(i => sameLocal(i, currentInsp))
+    .filter(i => sameLocal(i, currentInsp) && getInspectionUnidade(i) === getInspectionUnidade(currentInsp))
     .sort((a, b) => new Date(b.data) - new Date(a.data));
   // Regra correta: considerar apenas o estado mais recente do critério.
   // Se a inspeção mais recente não está aberta, não existe NC pendente.
@@ -6922,7 +7220,7 @@ function getFotosNCAbertaComFallback(insp, sId, ci, crAtual = null) {
   if (!insp) return [];
   const dataLimite = new Date(insp.data).getTime();
   const historico = APP.inspecoes
-    .filter(i => sameLocal(i, insp) && new Date(i.data).getTime() <= dataLimite)
+    .filter(i => sameLocal(i, insp) && getInspectionUnidade(i) === getInspectionUnidade(insp) && new Date(i.data).getTime() <= dataLimite)
     .sort((a, b) => new Date(b.data) - new Date(a.data));
   for (const h of historico) {
     const crHist = h?.sensos?.[sId]?.[ci] || null;
@@ -6937,7 +7235,7 @@ function getFotosNCAbertaComFallback(insp, sId, ci, crAtual = null) {
 function getUltimaEvidenciaNC(sId, ci) {
   if (!currentInsp) return [];
   const historico = APP.inspecoes
-    .filter(i => sameLocal(i, currentInsp))
+    .filter(i => sameLocal(i, currentInsp) && getInspectionUnidade(i) === getInspectionUnidade(currentInsp))
     .sort((a, b) => new Date(b.data) - new Date(a.data));
   for (const insp of historico) {
     const cr = insp?.sensos?.[sId]?.[ci] || null;
@@ -8059,6 +8357,10 @@ function renderRelatorios() {
 
 // === Function: getGerenciasMap ===
 function getGerenciasMap() {
+  const unit = normalizeUnidadeCode(currentUnidade, 'CD');
+  if (unit === 'BA') return GERENCIAS_BA;
+  if (unit !== 'CD') return {};
+
   const map = {
     'Produção CD': ['Preparação de Carga', 'Expedição', 'Refino', 'Calcinação e Redução', 'Reflorestamento'],
     'Manutenção': ['Manutenção Mecânica', 'Manutenção Elétrica'],
@@ -8084,10 +8386,16 @@ function getGerenciasMap() {
   return map;
 }
 
+// === Function: getGerenciaSetoresAtivos ===
+function getGerenciaSetoresAtivos(gerencia) {
+  const setoresAtivos = new Set(getSetoresAtivos().map(s => s.nome));
+  return [...new Set(getGerenciasMap()[gerencia] || [])].filter(s => setoresAtivos.has(s));
+}
+
 // === Function: getReincidenciaCount ===
 function getReincidenciaCount(insp, sId, ci) {
   const historicoLocal = APP.inspecoes
-    .filter(i => i.setor === insp.setor && (i.subarea || '') === (insp.subarea || ''))
+    .filter(i => i.setor === insp.setor && (i.subarea || '') === (insp.subarea || '') && getInspectionUnidade(i) === getInspectionUnidade(insp))
     .sort((a, b) => new Date(b.data) - new Date(a.data));
   const idx = historicoLocal.findIndex(i => i.id === insp.id);
   if (idx === -1) return 0;
@@ -8104,7 +8412,7 @@ function getReincidenciaCount(insp, sId, ci) {
 function getHistoricoMesmoLocalDesc(insp) {
   if (!insp) return [];
   return APP.inspecoes
-    .filter(i => sameLocal(i, insp))
+    .filter(i => sameLocal(i, insp) && getInspectionUnidade(i) === getInspectionUnidade(insp))
     .sort((a, b) => new Date(b.data) - new Date(a.data));
 }
 
@@ -8251,8 +8559,7 @@ async function enviarRelatorioGerenciaEmail() {
   const status = document.getElementById('rel-gerencia-email-status');
   const periodo = getSetorialReportPeriod();
   const periodoTitulo = `${periodo.mesNome.charAt(0).toUpperCase()}${periodo.mesNome.slice(1)} de ${periodo.ano}`;
-  const gerMap = getGerenciasMap();
-  const setores = (gerMap[gerencia] || []).filter(s => SETORES.some(x => x.nome === s));
+  const setores = getGerenciaSetoresAtivos(gerencia);
   const inspecoesRelatorio = getGerenciaReportInspections(gerencia);
   const destinatarios = parseEmailRecipients(to);
   const jaEnviadas = inspecoesRelatorio.filter(isInspectionEmailSent).length;
@@ -8427,7 +8734,7 @@ function gerarExcelSetorial() {
   const now = new Date();
   const periodoAtual = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const inspsMes = APP.inspecoes
-    .filter(i => i.setor === setor && (i.periodo || '') === periodoAtual)
+    .filter(i => inspectionIsCurrentUnit(i) && i.setor === setor && (i.periodo || '') === periodoAtual)
     .sort((a, b) => new Date(a.data) - new Date(b.data));
 
   const inspeRows = inspsMes.map(insp => {
@@ -8438,7 +8745,7 @@ function gerarExcelSetorial() {
       (insp.sensos?.[s.id] || []).forEach((cr, ci) => {
         if (criterioTemNCAberta(cr)) ncAbertas++;
         const crAnterior = inspAnterior?.sensos?.[s.id]?.[ci] || null;
-        if (crAnterior && criterioTemNCAberta(crAnterior) && !criterioTemNCAberta(cr)) ncResolvidas++;
+        if (criterioFoiResolvido(crAnterior, cr)) ncResolvidas++;
       });
     });
     return {
@@ -8475,7 +8782,7 @@ function gerarExcelSetorial() {
           });
         }
         const crAnterior = inspAnterior?.sensos?.[s.id]?.[ci] || null;
-        if (crAnterior && criterioTemNCAberta(crAnterior) && !criterioTemNCAberta(cr)) {
+        if (criterioFoiResolvido(crAnterior, cr)) {
           ncResolvidasRows.push({
             data_resolucao: formatDate(insp.data),
             data_origem: formatDate(inspAnterior.data),
@@ -8553,14 +8860,13 @@ function gerarExcelSetorial() {
 function gerarExcelGerencia() {
   const gerencia = document.getElementById('rel-gerencia-select')?.value || '';
   if (!gerencia) { toast('Selecione uma gerência'); return; }
-  const gerMap = getGerenciasMap();
-  const setores = (gerMap[gerencia] || []).filter(s => SETORES.some(x => x.nome === s));
+  const setores = getGerenciaSetoresAtivos(gerencia);
   if (!setores.length) { toast('Nenhum setor mapeado para esta gerência'); return; }
 
   const now = new Date();
   const periodoAtual = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const inspsPeriodo = APP.inspecoes
-    .filter(i => (i.periodo || '') === periodoAtual && setores.includes(i.setor))
+    .filter(i => inspectionIsCurrentUnit(i) && (i.periodo || '') === periodoAtual && setores.includes(i.setor))
     .sort((a, b) => new Date(a.data) - new Date(b.data));
 
   const resumoRows = setores.map(setor => {
@@ -8572,9 +8878,9 @@ function gerarExcelGerencia() {
       const anterior = getInspecaoAnteriorMesmoLocal(insp);
       SENSOS.forEach(s => {
         (insp.sensos?.[s.id] || []).forEach((cr, ci) => {
-          if (criterioTemNCAberta(cr)) ncAbertas++;
-          const crAnterior = anterior?.sensos?.[s.id]?.[ci] || null;
-          if (crAnterior && criterioTemNCAberta(crAnterior) && !criterioTemNCAberta(cr)) ncResolvidas++;
+        if (criterioTemNCAberta(cr)) ncAbertas++;
+        const crAnterior = anterior?.sensos?.[s.id]?.[ci] || null;
+          if (criterioFoiResolvido(crAnterior, cr)) ncResolvidas++;
         });
       });
     });
@@ -8612,7 +8918,7 @@ function gerarExcelGerencia() {
           });
         }
         const crAnterior = anterior?.sensos?.[s.id]?.[ci] || null;
-        if (crAnterior && criterioTemNCAberta(crAnterior) && !criterioTemNCAberta(cr)) {
+        if (criterioFoiResolvido(crAnterior, cr)) {
           detalheRows.push({
             status: 'RESOLVIDA',
             setor: insp.setor,
@@ -8683,7 +8989,7 @@ function gerarExcelGeral() {
       (insp.sensos?.[s.id] || []).forEach((cr, ci) => {
         if (criterioTemNCAberta(cr)) ncAbertas++;
         const crAnterior = anterior?.sensos?.[s.id]?.[ci] || null;
-        if (crAnterior && criterioTemNCAberta(crAnterior) && !criterioTemNCAberta(cr)) ncResolvidas++;
+        if (criterioFoiResolvido(crAnterior, cr)) ncResolvidas++;
       });
     });
     return {
@@ -8724,7 +9030,7 @@ function gerarExcelGeral() {
           });
         }
         const crAnterior = anterior?.sensos?.[s.id]?.[ci] || null;
-        if (crAnterior && criterioTemNCAberta(crAnterior) && !criterioTemNCAberta(cr)) {
+        if (criterioFoiResolvido(crAnterior, cr)) {
           rowsNC.push({
             status: 'RESOLVIDA',
             data: formatDate(insp.data),
@@ -8796,8 +9102,7 @@ async function gerarPDFGerencia(options = {}) {
   const gerencia = document.getElementById('rel-gerencia-select')?.value || '';
   if (!gerencia) { toast('Selecione uma gerência'); return; }
 
-  const gerMap = getGerenciasMap();
-  const setores = (gerMap[gerencia] || []).filter(s => SETORES.some(x => x.nome === s));
+  const setores = getGerenciaSetoresAtivos(gerencia);
   if (!setores.length) { toast('Nenhum setor mapeado para esta gerência'); return; }
 
   const gerenciaData = getGerenciaReportDashboardData(gerencia);
@@ -8807,7 +9112,6 @@ async function gerarPDFGerencia(options = {}) {
   const totais = gerenciaData.totais;
   const mediaGerencia = gerenciaData.mediaGerencia;
   const ncDetalhes = gerenciaData.ncDetalhes;
-  const debitoList = gerenciaData.debitoList || [];
   const inspsPeriodo = gerenciaData.inspsPeriodo || [];
 
   const { jsPDF } = window.jspdf;
@@ -9216,40 +9520,6 @@ async function gerarPDFGerencia(options = {}) {
     });
   }
 
-  y = novaPaginaComCabecalho('Razões dos Débitos', `${gerencia} · ${mesAnoAtual}`);
-  if (!debitoList.length) {
-    doc.setTextColor(22, 53, 159);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(11);
-    doc.text('Não há débitos por reincidência registrados no período selecionado.', margin, y);
-  } else {
-    debitoList.forEach((item, idx) => {
-      const titulo = `${idx + 1}. ${item.setorImpactado} · ${item.senso} · Critério ${item.criterioIndice} · Débito: -${item.pontos}`;
-      const detalhe = item.tipo === 'corresponsavel'
-        ? `Motivo: ${item.motivo} Origem da NC: ${item.origemSetor} - ${item.origemLocal}.`
-        : `Motivo: ${item.motivo}${item.destinoSetor ? ` Corresponsável indicado: ${item.destinoSetor}.` : ''}`;
-      const criterioLines = doc.splitTextToSize(`Critério: ${item.criterioTexto}`, W - margin * 2 - 8);
-      const detalheLines = doc.splitTextToSize(detalhe, W - margin * 2 - 8);
-      const h = 13 + (criterioLines.length + detalheLines.length) * 4.2;
-      if (y + h > H - 14) y = novaPaginaComCabecalho('Razões dos Débitos', `${gerencia} · ${mesAnoAtual}`);
-
-      doc.setFillColor(item.tipo === 'corresponsavel' ? 255 : 248, item.tipo === 'corresponsavel' ? 251 : 250, item.tipo === 'corresponsavel' ? 235 : 252);
-      doc.setDrawColor(item.tipo === 'corresponsavel' ? 245 : 226, item.tipo === 'corresponsavel' ? 158 : 232, item.tipo === 'corresponsavel' ? 11 : 240);
-      doc.roundedRect(margin, y, W - margin * 2, h, 2, 2, 'FD');
-      doc.setTextColor(22, 53, 159);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(9);
-      doc.text(titulo, margin + 3, y + 6);
-      let by = y + 11;
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      doc.text(criterioLines, margin + 3, by);
-      by += criterioLines.length * 4.2;
-      doc.text(detalheLines, margin + 3, by);
-      y += h + 4;
-    });
-  }
-
   const ncsOrdenadas = [...ncDetalhes].sort((a, b) => {
     const setorCmp = a.setor.localeCompare(b.setor, 'pt-BR');
     if (setorCmp !== 0) return setorCmp;
@@ -9412,7 +9682,7 @@ async function gerarPDFGerencia(options = {}) {
 function getLatestInspecoesBySetor(setor) {
   const latestMap = {};
   APP.inspecoes
-    .filter(i => i.setor === setor)
+    .filter(i => inspectionIsCurrentUnit(i) && i.setor === setor)
     .forEach(insp => {
       const key = localKey(insp);
       if (!latestMap[key] || new Date(insp.data) > new Date(latestMap[key].data)) {
@@ -9445,7 +9715,7 @@ async function gerarPDFSetorial(setor, options = {}) {
     const setorTxt = String(setor || '').toUpperCase();
     const periodoTxt = mesAnoAtual.toUpperCase();
     const inspRefCapa = [...APP.inspecoes]
-      .filter(i => i.setor === setor && (i.periodo || '') === periodoAtual)
+      .filter(i => inspectionIsCurrentUnit(i) && i.setor === setor && (i.periodo || '') === periodoAtual)
       .sort((a, b) => new Date(b.data) - new Date(a.data))[0] || null;
     const tecnicoTxt = String(inspRefCapa?.tecnico || 'Não informado');
     try {
@@ -9717,15 +9987,14 @@ async function gerarPDFSetorial(setor, options = {}) {
     totalNCRecebidas,
     totalResolvidas,
     melhorLocal,
-    piorLocal,
-    debitoList
+    piorLocal
   } = setorialData;
 
-  const setorCfg = SETORES.find(s => s.nome === setor);
+  const setorCfg = getSetorConfigAtivo(setor);
   const areasDoSetor = (setorCfg?.subareas || []).length
     ? setorCfg.subareas
     : [...new Set(APP.inspecoes
-      .filter(i => i.setor === setor)
+      .filter(i => inspectionIsCurrentUnit(i) && i.setor === setor)
       .map(i => i.subarea || 'Área geral do setor'))];
 
   // Capa (slide) antes do dashboard
@@ -9828,47 +10097,6 @@ async function gerarPDFSetorial(setor, options = {}) {
   const piorTxt = piorLocal ? `${piorLocal.label} (${piorLocal.media.toFixed(2)})` : 'Sem dados';
   doc.text(`Área melhor avaliada: ${melhorTxt}`, margin + 6, boxY + 16);
   doc.text(`Área com menor avaliação: ${piorTxt}`, margin + 6, boxY + 23);
-
-  addNewPage();
-  y = 18;
-  doc.setTextColor(22, 53, 159);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.text('Razões dos débitos', margin, y);
-  y += 8;
-
-  if (!debitoList.length) {
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(11);
-    doc.setTextColor(22, 53, 159);
-    doc.text('Não há débitos por reincidência registrados no mês atual para este setor.', margin, y + 4);
-  } else {
-    debitoList.forEach((item, idx) => {
-      const titulo = `${idx + 1}. ${item.senso} · Critério ${item.criterioIndice} · Débito: -${item.pontos}`;
-      const detalhe = item.tipo === 'corresponsavel'
-        ? `Motivo: ${item.motivo} Origem da NC: ${item.origemSetor} - ${item.origemLocal}.`
-        : `Motivo: ${item.motivo}${item.destinoSetor ? ` Corresponsável indicado: ${item.destinoSetor}.` : ''}`;
-      const criterioLines = doc.splitTextToSize(`Critério: ${item.criterioTexto}`, W - margin * 2 - 8);
-      const detalheLines = doc.splitTextToSize(detalhe, W - margin * 2 - 8);
-      const h = 13 + (criterioLines.length + detalheLines.length) * 4.2;
-      ensureY(h + 8);
-
-      doc.setFillColor(item.tipo === 'corresponsavel' ? 255 : 248, item.tipo === 'corresponsavel' ? 251 : 250, item.tipo === 'corresponsavel' ? 235 : 252);
-      doc.setDrawColor(item.tipo === 'corresponsavel' ? 245 : 226, item.tipo === 'corresponsavel' ? 158 : 232, item.tipo === 'corresponsavel' ? 11 : 240);
-      doc.roundedRect(margin, y, W - margin * 2, h, 2, 2, 'FD');
-      doc.setTextColor(22, 53, 159);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(9);
-      doc.text(titulo, margin + 3, y + 6);
-      let by = y + 11;
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      doc.text(criterioLines, margin + 3, by);
-      by += criterioLines.length * 4.2;
-      doc.text(detalheLines, margin + 3, by);
-      y += h + 4;
-    });
-  }
 
   addNewPage();
   y = 18;
@@ -9985,13 +10213,17 @@ async function gerarPDFSetorial(setor, options = {}) {
     }
   }
 
+  function drawResolvedSectionHeader() {
+    y = 18;
+    doc.setTextColor(22, 53, 159);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.text('Relatório de não conformidades resolvidas', margin, y);
+    y += 8;
+  }
+
   addNewPage();
-  y = 18;
-  doc.setTextColor(22, 53, 159);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.text('Relatório de não conformidades resolvidas', margin, y);
-  y += 8;
+  drawResolvedSectionHeader();
 
   if (!resolvidasList.length) {
     doc.setFont('helvetica', 'normal');
@@ -10013,14 +10245,17 @@ async function gerarPDFSetorial(setor, options = {}) {
         ? `Resolvida pelo corresponsável - Origem: ${item.origemSetor} · ${item.origemLocal} | Destino: ${item.destinoSetor}`
         : '';
       const correspLines = correspTxt ? doc.splitTextToSize(correspTxt, W - margin * 2 - 8) : [];
-      const comparativoH = 120;
+      const comparativoH = 108;
       const linhasBase = criterioLines.length + antesLines.length + agoraLines.length + sugLines.length + reincLines.length + correspLines.length;
       const lineH = 4.4;
       const blocos = [0];
 
       for (let part = 0; part < blocos.length; part++) {
         const h = 14 + (linhasBase * lineH) + comparativoH + 16;
-        ensureY(h + 10);
+        if (idx > 0 && y + h + 10 > H - 14) {
+          addNewPage();
+          drawResolvedSectionHeader();
+        }
 
         doc.setFillColor(240, 253, 244);
         doc.setDrawColor(187, 247, 208);
@@ -10063,7 +10298,7 @@ async function gerarPDFSetorial(setor, options = {}) {
         const compW = W - margin * 2 - 6;
         const gapComp = 4;
         const colW = (compW - gapComp) / 2;
-        const imgH = 94;
+        const imgH = 82;
         doc.setFillColor(236, 253, 245);
         doc.setDrawColor(167, 243, 208);
         doc.roundedRect(compX, by, compW, comparativoH - 4, 2, 2, 'FD');
@@ -10076,7 +10311,7 @@ async function gerarPDFSetorial(setor, options = {}) {
           const fy = by + 8;
           doc.setFillColor(255, 255, 255);
           doc.setDrawColor(220, 230, 242);
-          doc.roundedRect(fx, fy, colW - 3, 101, 1.5, 1.5, 'FD');
+          doc.roundedRect(fx, fy, colW - 3, 96, 1.5, 1.5, 'FD');
           doc.setTextColor(71, 85, 105);
           doc.setFontSize(7);
           doc.text(label, fx + 2, fy + 5);
