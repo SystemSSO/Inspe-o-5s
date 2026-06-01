@@ -978,6 +978,7 @@ body.light-mode .nc-compare-col {
 .login-card .form-group,
 .login-card .login-error,
 .login-card .btn-primary,
+.login-card .login-reset-password,
 .login-card .login-footer {
   transform: translateZ(18px);
 }
@@ -1013,6 +1014,63 @@ body.light-mode .nc-compare-col {
   font-size: 11px;
   color: var(--text2);
   text-align: center;
+}
+.login-reset-password {
+  margin-top: 12px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--orange);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+}
+.login-reset-password:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+.login-reset-password:focus-visible {
+  outline: 2px solid rgba(14, 165, 233, 0.45);
+  outline-offset: 4px;
+  border-radius: 8px;
+}
+.login-access-request {
+  margin-top: 8px;
+  color: var(--text2);
+}
+.login-access-request strong {
+  color: var(--orange);
+}
+.access-request-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  margin-top: 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.access-request-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+.access-request-name {
+  font-size: 14px;
+  font-weight: 700;
+}
+.access-request-meta,
+.access-request-reason {
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.35;
+}
+.access-request-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
 }
 body.light-mode .login-card {
   background:
@@ -2285,9 +2343,44 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
         <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 4l6 6-6 6"/><path d="M3 10h10"/></svg>
         Entrar
       </button>
+      <button class="login-reset-password" id="login-reset-password-btn" type="button" onclick="enviarRedefinicaoSenha()">
+        Esqueci minha senha
+      </button>
+      <button class="login-reset-password login-access-request" type="button" onclick="abrirSolicitacaoAcesso()">
+        Não tenho acesso. <strong>Solicitar liberação</strong>
+      </button>
       <div class="login-footer"></div>
     </form>
   </div>
+</div>
+<div class="modal-overlay" id="modal-solicitar-acesso">
+  <form class="modal-sheet" onsubmit="enviarSolicitacaoAcesso(event)">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Solicitar acesso</div>
+    <div class="form-group">
+      <label class="form-label" for="access-name">Nome completo</label>
+      <input type="text" class="form-input" id="access-name" autocomplete="name" required>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="access-email">E-mail corporativo</label>
+      <input type="email" class="form-input" id="access-email" autocomplete="email" placeholder="seu.email@angloamerican.com" required>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="access-area">Unidade</label>
+      <input type="text" class="form-input" id="access-area" placeholder="Ex.: Barro Alto, Codemin">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="access-reason">Justificativa</label>
+      <textarea class="form-textarea" id="access-reason" rows="4" placeholder="Informe por que precisa acessar o sistema" required></textarea>
+    </div>
+    <div class="login-error" id="access-request-error"></div>
+    <button class="btn-primary" id="access-request-submit" type="submit">
+      Enviar solicitação
+    </button>
+    <button class="btn-secondary" type="button" onclick="fecharSolicitacaoAcesso()" style="margin-top:8px">
+      Cancelar
+    </button>
+  </form>
 </div>
 <!-- 
      SCREEN: HOME -->
@@ -2539,6 +2632,14 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
       <div id="rel-gerencia-email-status" style="margin-top:8px;color:var(--text2);font-size:12px;line-height:1.35"></div>
     </div>
     <datalist id="email-history-list"></datalist>
+    <div class="section-title smartsheet-admin-only" style="display:none">Solicitações de acesso</div>
+    <div class="card smartsheet-admin-only" style="display:none">
+      <div id="access-requests-status" style="font-size:12px;color:var(--text2);margin-bottom:12px">Carregue as solicitações pendentes para análise. Após tratar manualmente no Firebase Authentication, feche a solicitação.</div>
+      <button class="btn-primary" onclick="carregarSolicitacoesAcesso()">
+        Atualizar solicitações
+      </button>
+      <div id="access-requests-list" style="margin-top:12px"></div>
+    </div>
     <div class="section-title smartsheet-admin-only" style="display:none">Integração Smartsheet</div>
     <div class="card smartsheet-admin-only" style="display:none">
       <div class="form-group">
@@ -3716,7 +3817,8 @@ function unlockSmartsheetAdmin() {
   sessionStorage.setItem(SMARTSHEET_ADMIN_UNLOCK_KEY, '1');
   renderSmartsheetAdminVisibility();
   renderSmartsheetSettings();
-  toast('Integração Smartsheet liberada.');
+  carregarSolicitacoesAcesso();
+  toast('Área administrativa liberada.');
 }
 
 // === Function: normalizeColumnTitle ===
@@ -5385,15 +5487,12 @@ async function syncPendingQueue() {
       persistLocalApp(APP);
     }
 
-    let smartsheetEnviadas = 0;
-    try {
-      smartsheetEnviadas = await syncPendingSmartsheetQueue();
-    } catch (smartsheetError) {
-      console.warn("Firebase sincronizado, mas o Smartsheet ficou pendente:", smartsheetError);
-      setSmartsheetStatus(`Smartsheet pendente: ${smartsheetError.message}`, true);
-    }
     persistLocalApp(APP);
-    setSyncStatus('synced', smartsheetEnviadas ? `Sincronizado (${smartsheetEnviadas} Smartsheet)` : 'Sincronizado');
+    const smartsheetPendentes = normalizeAppState(APP).smartsheetQueue.length;
+    if (smartsheetPendentes) {
+      setSmartsheetStatus(`${smartsheetPendentes} inspeção(ões) pendente(s) para envio manual ao Smartsheet.`);
+    }
+    setSyncStatus('synced', 'Sincronizado');
   } catch (e) {
     console.warn("Falha ao sincronizar agora. Tentaremos novamente ao reconectar.", e);
     setSyncStatus(navigator.onLine ? 'syncing' : 'offline', navigator.onLine ? 'Aguardando nova tentativa...' : 'Modo offline');
@@ -5750,7 +5849,7 @@ function getFirebaseAuthMessage(error) {
   const messages = {
     'auth/invalid-email': 'Digite um e-mail válido.',
     'auth/user-disabled': 'Este usuário está desativado no Firebase.',
-    'auth/user-not-found': 'Usuário não cadastrado no Firebase.',
+    'auth/user-not-found': 'E-mail não cadastrado. Procure o time de segurança da Codemin.',
     'auth/wrong-password': 'Senha incorreta.',
     'auth/invalid-credential': 'E-mail ou senha inválidos.',
     'auth/too-many-requests': 'Muitas tentativas. Aguarde alguns minutos e tente novamente.',
@@ -5758,6 +5857,241 @@ function getFirebaseAuthMessage(error) {
     'auth/operation-not-allowed': 'Ative o provedor E-mail/senha no Firebase Authentication.'
   };
   return messages[code] || 'Não foi possível entrar. Verifique e-mail e senha.';
+}
+
+// === Function: enviarRedefinicaoSenha ===
+async function enviarRedefinicaoSenha() {
+  const emailInput = document.getElementById('login-email');
+  const errorEl = document.getElementById('login-error');
+  const resetBtn = document.getElementById('login-reset-password-btn');
+  const email = (emailInput?.value || '').trim().toLowerCase();
+
+  if (!email) {
+    if (errorEl) errorEl.textContent = 'Informe seu e-mail para redefinir a senha.';
+    emailInput?.focus();
+    return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (errorEl) errorEl.textContent = 'Digite um e-mail válido para redefinir a senha.';
+    emailInput?.focus();
+    return;
+  }
+  if (!navigator.onLine) {
+    if (errorEl) errorEl.textContent = 'Conecte-se à internet para redefinir sua senha.';
+    return;
+  }
+
+  if (errorEl) errorEl.textContent = '';
+  if (resetBtn) {
+    resetBtn.disabled = true;
+    resetBtn.dataset.originalText = resetBtn.textContent || 'Esqueci minha senha';
+    resetBtn.textContent = 'Enviando...';
+  }
+
+  try {
+    await auth.sendPasswordResetEmail(email);
+    toast('Enviamos um link de redefinição para o e-mail informado.');
+  } catch (error) {
+    console.warn('Falha ao enviar redefinição de senha:', error);
+    const code = error?.code || '';
+    const messages = {
+      'auth/invalid-email': 'Digite um e-mail válido para redefinir a senha.',
+      'auth/user-not-found': 'E-mail não cadastrado. Procure o time de segurança da Codemin.',
+      'auth/too-many-requests': 'Muitas tentativas. Aguarde alguns minutos e tente novamente.',
+      'auth/network-request-failed': 'Falha de conexão com o Firebase.',
+      'auth/operation-not-allowed': 'Ative o provedor E-mail/senha no Firebase Authentication.'
+    };
+    if (errorEl) errorEl.textContent = messages[code] || 'Não foi possível enviar o e-mail de redefinição.';
+  } finally {
+    if (resetBtn) {
+      resetBtn.disabled = false;
+      resetBtn.textContent = resetBtn.dataset.originalText || 'Esqueci minha senha';
+    }
+  }
+}
+
+// === Function: abrirSolicitacaoAcesso ===
+function abrirSolicitacaoAcesso() {
+  const modal = document.getElementById('modal-solicitar-acesso');
+  const loginEmail = (document.getElementById('login-email')?.value || '').trim().toLowerCase();
+  const accessEmail = document.getElementById('access-email');
+  const errorEl = document.getElementById('access-request-error');
+  if (accessEmail && loginEmail && !accessEmail.value) accessEmail.value = loginEmail;
+  if (errorEl) errorEl.textContent = '';
+  modal?.classList.add('open');
+  setTimeout(() => document.getElementById('access-name')?.focus(), 80);
+}
+
+// === Function: fecharSolicitacaoAcesso ===
+function fecharSolicitacaoAcesso() {
+  document.getElementById('modal-solicitar-acesso')?.classList.remove('open');
+}
+
+// === Function: carregarSolicitacoesAcessoFirestore ===
+async function carregarSolicitacoesAcessoFirestore() {
+  const snapshot = await db.collection('solicitacoes_acesso')
+    .where('status', '==', 'pendente')
+    .limit(50)
+    .get();
+  const items = [];
+  snapshot.forEach(doc => {
+    const data = doc.data() || {};
+    items.push({
+      id: doc.id,
+      nome: data.nome || '',
+      email: data.email || '',
+      unidade: data.unidade || data.area || '',
+      justificativa: data.justificativa || '',
+      status: data.status || 'pendente',
+      requestedAt: data.requestedAt?.toDate?.()?.toISOString?.() || data.requestedAt || '',
+      updatedAt: data.updatedAt?.toDate?.()?.toISOString?.() || data.updatedAt || ''
+    });
+  });
+  return items.sort((a, b) => new Date(b.requestedAt || 0) - new Date(a.requestedAt || 0));
+}
+
+// === Function: salvarSolicitacaoAcesso ===
+async function salvarSolicitacaoAcesso(request) {
+  if (!hasFirebaseConfig()) throw new Error('Firebase não configurado.');
+  const doc = await db.collection('solicitacoes_acesso').add({
+    ...request,
+    status: 'pendente',
+    requestedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  return { id: doc.id };
+}
+
+// === Function: enviarSolicitacaoAcesso ===
+async function enviarSolicitacaoAcesso(event) {
+  if (event) event.preventDefault();
+  const nameInput = document.getElementById('access-name');
+  const emailInput = document.getElementById('access-email');
+  const areaInput = document.getElementById('access-area');
+  const reasonInput = document.getElementById('access-reason');
+  const errorEl = document.getElementById('access-request-error');
+  const submitBtn = document.getElementById('access-request-submit');
+
+  const request = {
+    nome: (nameInput?.value || '').trim(),
+    email: (emailInput?.value || '').trim().toLowerCase(),
+    unidade: (areaInput?.value || '').trim(),
+    justificativa: (reasonInput?.value || '').trim(),
+    origem: 'login',
+    requestedAt: new Date().toISOString()
+  };
+
+  if (!request.nome || !request.email || !request.justificativa) {
+    if (errorEl) errorEl.textContent = 'Preencha nome, e-mail e justificativa.';
+    return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(request.email)) {
+    if (errorEl) errorEl.textContent = 'Digite um e-mail válido.';
+    emailInput?.focus();
+    return;
+  }
+  if (!navigator.onLine) {
+    if (errorEl) errorEl.textContent = 'Conecte-se à internet para enviar a solicitação.';
+    return;
+  }
+
+  if (errorEl) errorEl.textContent = '';
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.dataset.originalText = submitBtn.textContent || 'Enviar solicitação';
+    submitBtn.textContent = 'Enviando...';
+  }
+
+  try {
+    await salvarSolicitacaoAcesso(request);
+    toast('Solicitação enviada para análise.');
+    fecharSolicitacaoAcesso();
+    nameInput.value = '';
+    areaInput.value = '';
+    reasonInput.value = '';
+    const loginEmailInput = document.getElementById('login-email');
+    if (loginEmailInput && !loginEmailInput.value) loginEmailInput.value = request.email;
+  } catch (error) {
+    console.error('Erro ao enviar solicitação de acesso:', error);
+    if (errorEl) errorEl.textContent = `Não foi possível enviar a solicitação: ${error.message}`;
+    toast('Falha ao enviar solicitação de acesso.');
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = submitBtn.dataset.originalText || 'Enviar solicitação';
+    }
+  }
+}
+
+// === Function: setAccessRequestsStatus ===
+function setAccessRequestsStatus(text, isError = false) {
+  const el = document.getElementById('access-requests-status');
+  if (!el) return;
+  el.textContent = text;
+  el.style.color = isError ? 'var(--red)' : 'var(--text2)';
+}
+
+// === Function: renderSolicitacoesAcesso ===
+function renderSolicitacoesAcesso(items = []) {
+  const list = document.getElementById('access-requests-list');
+  if (!list) return;
+  if (!items.length) {
+    list.innerHTML = '<div class="access-request-meta">Nenhuma solicitação pendente.</div>';
+    return;
+  }
+  list.innerHTML = items.map(item => `
+    <div class="access-request-card">
+      <div class="access-request-head">
+        <div>
+          <div class="access-request-name">${escapeHtml(item.nome || 'Sem nome')}</div>
+          <div class="access-request-meta">${escapeHtml(item.email || '')}</div>
+        </div>
+        ${statusBadgeHTML(item.status || 'pendente', item.status === 'aprovado' ? 'ok' : item.status === 'reprovado' ? 'bad' : 'warn')}
+      </div>
+      <div class="access-request-meta">Unidade: ${escapeHtml(item.unidade || 'Não informado')}</div>
+      <div class="access-request-meta">Solicitado em: ${item.requestedAt ? new Date(item.requestedAt).toLocaleString('pt-BR') : 'sem data'}</div>
+      <div class="access-request-reason" style="margin-top:8px">${escapeHtml(item.justificativa || '')}</div>
+      <div class="access-request-actions">
+        <button class="btn-secondary" type="button" onclick="fecharSolicitacaoAcessoAdmin('${escapeHtml(item.id)}')" style="width:auto;padding:9px 14px">Fechar solicitação</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// === Function: carregarSolicitacoesAcesso ===
+async function carregarSolicitacoesAcesso() {
+  if (!isSmartsheetAdminUnlocked()) {
+    toast('Libere o modo Admin primeiro.');
+    return;
+  }
+  setAccessRequestsStatus('Carregando solicitações...');
+  try {
+    const items = await carregarSolicitacoesAcessoFirestore();
+    renderSolicitacoesAcesso(Array.isArray(items) ? items : []);
+    setAccessRequestsStatus(`${Array.isArray(items) ? items.length : 0} solicitação(ões) pendente(s).`);
+  } catch (error) {
+    console.error('Erro ao carregar solicitações:', error);
+    setAccessRequestsStatus(`Falha ao carregar solicitações: ${error.message}`, true);
+  }
+}
+
+// === Function: fecharSolicitacaoAcessoAdmin ===
+async function fecharSolicitacaoAcessoAdmin(id) {
+  if (!isSmartsheetAdminUnlocked()) return;
+  if (!confirm('Deseja fechar esta solicitação? Faça isso apenas depois de tratar o acesso manualmente no Firebase Authentication.')) return;
+  setAccessRequestsStatus('Atualizando solicitação...');
+  try {
+    await db.collection('solicitacoes_acesso').doc(id).set({
+      status: 'fechada',
+      decidedBy: currentUserEmail || currentTec || 'admin',
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    toast('Solicitação fechada.');
+    await carregarSolicitacoesAcesso();
+  } catch (error) {
+    console.error('Erro ao atualizar solicitação:', error);
+    setAccessRequestsStatus(`Falha ao atualizar solicitação: ${error.message}`, true);
+  }
 }
 
 // === Function: bytesToHex ===
