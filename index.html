@@ -2503,7 +2503,6 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
  
 <div class="screen" id="screen-historico">
   <div class="app-header">
-    <div class="logo">5S</div>
     <div>
       <div style="font-family:var(--font-display);font-size:17px;font-weight:700">Histórico</div>
       <div style="font-size:10px;color:var(--text2)">Todas as inspeções</div>
@@ -2546,7 +2545,6 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
 
 <div class="screen" id="screen-pendencias">
   <div class="app-header">
-    <div class="logo">5S</div>
     <div>
       <div style="font-family:var(--font-display);font-size:17px;font-weight:700">Pendências</div>
       <div style="font-size:10px;color:var(--text2)">Acompanhamento de não conformidades</div>
@@ -2580,7 +2578,6 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
  
 <div class="screen" id="screen-relatorios">
   <div class="app-header">
-    <div class="logo">5S</div>
     <div>
       <div style="font-family:var(--font-display);font-size:17px;font-weight:700">Relatórios</div>
       <div style="font-size:10px;color:var(--text2)">Gerar e comparar</div>
@@ -2594,6 +2591,10 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
         <select class="form-select" id="rel-insp-select">
           <option value="">— Escolha um setor —</option>
         </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Período do relatório</label>
+        <input type="month" class="form-input" id="rel-periodo-setorial">
       </div>
       <div class="form-group">
         <label class="form-label">Destinatário do e-mail</label>
@@ -2616,6 +2617,10 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
         <select class="form-select" id="rel-gerencia-select">
           <option value="">— Escolha uma gerência —</option>
         </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Período do relatório</label>
+        <input type="month" class="form-input" id="rel-periodo-gerencia">
       </div>
       <div class="form-group">
         <label class="form-label">Destinatário do e-mail</label>
@@ -4262,14 +4267,34 @@ function getGerenciaReportEmailTo() {
   return normalizeLegacyEmailRecipientValue(value || localStorage.getItem(EMAIL_AUTO_TO_KEY)) || EMAIL_AUTO_DEFAULT_TO;
 }
 
-// === Function: getSetorialReportPeriod ===
-function getSetorialReportPeriod() {
+// === Function: getCurrentReportPeriodCode ===
+function getCurrentReportPeriodCode() {
   const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+// === Function: getReportPeriodInputValue ===
+function getReportPeriodInputValue(inputId) {
+  return document.getElementById(inputId)?.value || '';
+}
+
+// === Function: getSetorialReportPeriod ===
+function getSetorialReportPeriod(periodoCodigo = '') {
+  const periodoTxt = String(periodoCodigo || '').trim();
+  const match = periodoTxt.match(/^(\d{4})-(\d{2})$/);
+  const mesValido = match ? Number(match[2]) : 0;
+  const codigo = match && mesValido >= 1 && mesValido <= 12
+    ? periodoTxt
+    : getCurrentReportPeriodCode();
+  const [anoTxt, mesTxt] = codigo.split('-');
+  const ano = Number(anoTxt);
+  const mesNumero = Number(mesTxt);
+  const dataPeriodo = new Date(ano, mesNumero - 1, 1);
   return {
-    ano: now.getFullYear(),
-    mesNumero: now.getMonth() + 1,
-    periodoCodigo: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`,
-    mesNome: now.toLocaleDateString('pt-BR', { month: 'long' })
+    ano,
+    mesNumero,
+    periodoCodigo: codigo,
+    mesNome: dataPeriodo.toLocaleDateString('pt-BR', { month: 'long' })
   };
 }
 
@@ -4288,17 +4313,15 @@ function getInspectionsForReportPeriod(periodo = getSetorialReportPeriod()) {
 }
 
 // === Function: getSetorialReportInspections ===
-function getSetorialReportInspections(setor) {
-  const periodo = getSetorialReportPeriod();
+function getSetorialReportInspections(setor, periodo = getSetorialReportPeriod(getReportPeriodInputValue('rel-periodo-setorial'))) {
   return getInspectionsForReportPeriod(periodo)
     .filter(i => (i.setor || '') === setor)
     .sort((a, b) => String(a.subarea || '').localeCompare(String(b.subarea || ''), 'pt-BR'));
 }
 
 // === Function: getGerenciaReportInspections ===
-function getGerenciaReportInspections(gerencia) {
+function getGerenciaReportInspections(gerencia, periodo = getSetorialReportPeriod(getReportPeriodInputValue('rel-periodo-gerencia'))) {
   const setores = getGerenciaSetoresAtivos(gerencia);
-  const periodo = getSetorialReportPeriod();
   return getInspectionsForReportPeriod(periodo)
     .filter(i => setores.includes(i.setor))
     .sort((a, b) =>
@@ -4308,8 +4331,7 @@ function getGerenciaReportInspections(gerencia) {
 }
 
 // === Function: getSetorialReportDashboardData ===
-function getSetorialReportDashboardData(setor) {
-  const periodo = getSetorialReportPeriod();
+function getSetorialReportDashboardData(setor, periodo = getSetorialReportPeriod(getReportPeriodInputValue('rel-periodo-setorial'))) {
   const periodoTitulo = `${periodo.mesNome.charAt(0).toUpperCase()}${periodo.mesNome.slice(1)} de ${periodo.ano}`;
   const inspsPeriodo = getInspectionsForReportPeriod(periodo);
   const inspsSetor = inspsPeriodo.filter(i => i.setor === setor);
@@ -4516,11 +4538,10 @@ function getSetorialReportDashboardData(setor) {
 }
 
 // === Function: getGerenciaReportDashboardData ===
-function getGerenciaReportDashboardData(gerencia) {
-  const periodo = getSetorialReportPeriod();
+function getGerenciaReportDashboardData(gerencia, periodo = getSetorialReportPeriod(getReportPeriodInputValue('rel-periodo-gerencia'))) {
   const periodoTitulo = `${periodo.mesNome.charAt(0).toUpperCase()}${periodo.mesNome.slice(1)} de ${periodo.ano}`;
   const setores = getGerenciaSetoresAtivos(gerencia);
-  const inspsPeriodo = getGerenciaReportInspections(gerencia);
+  const inspsPeriodo = getGerenciaReportInspections(gerencia, periodo);
   const ncDetalhes = [];
   const resolucoesIncompletas = [];
   const debitoList = uniqueDebitoRazoes(inspsPeriodo.flatMap(getDebitoRazoesInspecao));
@@ -4616,8 +4637,8 @@ function getGerenciaReportDashboardData(gerencia) {
 }
 
 // === Function: buildSetorialReportEmailPayload ===
-function buildSetorialReportEmailPayload(setor, attachment) {
-  const resumo = getSetorialReportDashboardData(setor);
+function buildSetorialReportEmailPayload(setor, attachment, periodo = getSetorialReportPeriod(getReportPeriodInputValue('rel-periodo-setorial'))) {
+  const resumo = getSetorialReportDashboardData(setor, periodo);
   const periodoTitulo = resumo.periodoTitulo;
   const resumoBase = resumo.inspsSetor;
   const unidade = resumoBase[0] ? (UNIDADE_LABELS[getInspectionUnidade(resumoBase[0])] || getInspectionUnidade(resumoBase[0])) : (UNIDADE_LABELS[currentUnidade] || currentUnidade);
@@ -4653,8 +4674,8 @@ function buildSetorialReportEmailPayload(setor, attachment) {
 }
 
 // === Function: buildGerenciaReportEmailPayload ===
-function buildGerenciaReportEmailPayload(gerencia, attachment, to) {
-  const resumo = getGerenciaReportDashboardData(gerencia);
+function buildGerenciaReportEmailPayload(gerencia, attachment, to, periodo = getSetorialReportPeriod(getReportPeriodInputValue('rel-periodo-gerencia'))) {
+  const resumo = getGerenciaReportDashboardData(gerencia, periodo);
   const periodoTitulo = resumo.periodoTitulo;
   const linhas = [
     'Prezados,',
@@ -4703,7 +4724,31 @@ function sanitizePdfText(value) {
   if (value === null || value === undefined) return value;
   return String(value)
     .normalize('NFC')
+    .replace(/c\u0327/g, 'ç')
+    .replace(/C\u0327/g, 'Ç')
+    .replace(/a\u0301/g, 'á')
+    .replace(/A\u0301/g, 'Á')
+    .replace(/a\u0300/g, 'à')
+    .replace(/A\u0300/g, 'À')
+    .replace(/a\u0303/g, 'ã')
+    .replace(/A\u0303/g, 'Ã')
+    .replace(/e\u0301/g, 'é')
+    .replace(/E\u0301/g, 'É')
+    .replace(/i\u0301/g, 'í')
+    .replace(/I\u0301/g, 'Í')
+    .replace(/o\u0301/g, 'ó')
+    .replace(/O\u0301/g, 'Ó')
+    .replace(/o\u0303/g, 'õ')
+    .replace(/O\u0303/g, 'Õ')
+    .replace(/u\u0301/g, 'ú')
+    .replace(/U\u0301/g, 'Ú')
     .replace(/✓/g, 'OK')
+    .replace(/[•●▪◦]/g, '-')
+    .replace(/[·∙]/g, ' - ')
+    .replace(/[–—]/g, '-')
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/…/g, '...')
     .replace(/�/g, '')
     .replace(/[\u200B-\u200D\uFEFF]/g, '')
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
@@ -8809,12 +8854,17 @@ function renderRelatorios() {
   const setorOpts = '<option value="">— Escolha um setor —</option>' +
     getAllSetorNames().map(setor => `<option value="${setor}">${setor}</option>`).join('');
   document.getElementById('rel-insp-select').innerHTML = setorOpts;
+  const periodoAtual = getCurrentReportPeriodCode();
+  const periodoSetorial = document.getElementById('rel-periodo-setorial');
+  if (periodoSetorial && !periodoSetorial.value) periodoSetorial.value = periodoAtual;
 
   const gerencias = Object.keys(getGerenciasMap()).sort((a, b) => a.localeCompare(b, 'pt-BR'));
   const gerOpts = '<option value="">— Escolha uma gerência —</option>' +
     gerencias.map(g => `<option value="${g}">${g}</option>`).join('');
   const gerSel = document.getElementById('rel-gerencia-select');
   if (gerSel) gerSel.innerHTML = gerOpts;
+  const periodoGerencia = document.getElementById('rel-periodo-gerencia');
+  if (periodoGerencia && !periodoGerencia.value) periodoGerencia.value = periodoAtual;
   const relEmail = document.getElementById('rel-email-destino');
   if (relEmail && !relEmail.value) relEmail.value = normalizeLegacyEmailRecipientValue(localStorage.getItem(EMAIL_AUTO_TO_KEY)) || EMAIL_AUTO_DEFAULT_TO;
   const relGerenciaEmail = document.getElementById('rel-gerencia-email-destino');
@@ -8945,7 +8995,8 @@ function compararInspecoes() {
 function gerarPDF() {
   const setor = document.getElementById('rel-insp-select').value;
   if (!setor) { toast('Selecione um setor'); return; }
-  gerarPDFSetorial(setor);
+  const periodo = getSetorialReportPeriod(getReportPeriodInputValue('rel-periodo-setorial'));
+  gerarPDFSetorial(setor, { periodo });
 }
 
 // === Function: enviarRelatorioSetorialEmail ===
@@ -8963,9 +9014,9 @@ async function enviarRelatorioSetorialEmail() {
     return;
   }
   const status = document.getElementById('rel-email-status');
-  const periodo = getSetorialReportPeriod();
+  const periodo = getSetorialReportPeriod(getReportPeriodInputValue('rel-periodo-setorial'));
   const periodoTitulo = `${periodo.mesNome.charAt(0).toUpperCase()}${periodo.mesNome.slice(1)} de ${periodo.ano}`;
-  const inspecoesRelatorio = getSetorialReportInspections(setor);
+  const inspecoesRelatorio = getSetorialReportInspections(setor, periodo);
   const destinatarios = parseEmailRecipients(to);
   const jaEnviadas = inspecoesRelatorio.filter(isInspectionEmailSent).length;
   const confirmar = confirm([
@@ -8988,18 +9039,18 @@ async function enviarRelatorioSetorialEmail() {
   try {
     toast('Gerando relatório para envio...');
     if (status) status.textContent = 'Gerando PDF para anexo...';
-    const report = await gerarPDFSetorial(setor, { save: false, showToast: false });
+    const report = await gerarPDFSetorial(setor, { save: false, showToast: false, periodo });
     const contentBytes = pdfDocToBase64(report.doc);
     if (!contentBytes) throw new Error('Não foi possível gerar o anexo PDF.');
     const attachment = buildPowerAutomateAttachment(report.fileName, contentBytes);
-    const payload = buildSetorialReportEmailPayload(setor, attachment);
+    const payload = buildSetorialReportEmailPayload(setor, attachment, periodo);
     payload.to = to;
     localStorage.setItem(EMAIL_AUTO_TO_KEY, to);
     const pdfKb = Math.round((contentBytes.length * 3 / 4) / 1024);
     if (status) status.textContent = `PDF gerado: ${report.fileName} (${pdfKb} KB). Enviando ao Power Automate...`;
     toast('Enviando relatório por e-mail...');
     await sendPowerAutomateEmailPayload(payload);
-    const sentCount = markInspectionsAsEmailSent(getSetorialReportInspections(setor).map(item => item.id), to, 'relatorio_setorial');
+    const sentCount = markInspectionsAsEmailSent(getSetorialReportInspections(setor, periodo).map(item => item.id), to, 'relatorio_setorial');
     await saveData(APP);
     if (status) status.textContent = `E-mail enviado. PDF enviado ao fluxo: ${report.fileName} (${pdfKb} KB).`;
     toast(`Relatório enviado por e-mail. ${sentCount} inspeção(ões) bloqueada(s) para remoção.`);
@@ -9026,10 +9077,10 @@ async function enviarRelatorioGerenciaEmail() {
   }
 
   const status = document.getElementById('rel-gerencia-email-status');
-  const periodo = getSetorialReportPeriod();
+  const periodo = getSetorialReportPeriod(getReportPeriodInputValue('rel-periodo-gerencia'));
   const periodoTitulo = `${periodo.mesNome.charAt(0).toUpperCase()}${periodo.mesNome.slice(1)} de ${periodo.ano}`;
   const setores = getGerenciaSetoresAtivos(gerencia);
-  const inspecoesRelatorio = getGerenciaReportInspections(gerencia);
+  const inspecoesRelatorio = getGerenciaReportInspections(gerencia, periodo);
   const destinatarios = parseEmailRecipients(to);
   const jaEnviadas = inspecoesRelatorio.filter(isInspectionEmailSent).length;
   const confirmar = confirm([
@@ -9053,12 +9104,12 @@ async function enviarRelatorioGerenciaEmail() {
   try {
     toast('Gerando relatório gerencial para envio...');
     if (status) status.textContent = 'Gerando PDF da gerência para anexo...';
-    const report = await gerarPDFGerencia({ save: false, showToast: false });
+    const report = await gerarPDFGerencia({ save: false, showToast: false, periodo });
     if (!report?.doc) throw new Error('Não foi possível gerar o PDF da gerência.');
     const contentBytes = pdfDocToBase64(report.doc);
     if (!contentBytes) throw new Error('Não foi possível gerar o anexo PDF da gerência.');
     const attachment = buildPowerAutomateAttachment(report.fileName, contentBytes);
-    const payload = buildGerenciaReportEmailPayload(gerencia, attachment, to);
+    const payload = buildGerenciaReportEmailPayload(gerencia, attachment, to, periodo);
     localStorage.setItem(EMAIL_AUTO_TO_KEY, to);
     const pdfKb = Math.round((contentBytes.length * 3 / 4) / 1024);
     if (status) status.textContent = `PDF gerado: ${report.fileName} (${pdfKb} KB). Enviando ao Power Automate...`;
@@ -9574,7 +9625,8 @@ async function gerarPDFGerencia(options = {}) {
   const setores = getGerenciaSetoresAtivos(gerencia);
   if (!setores.length) { toast('Nenhum setor mapeado para esta gerência'); return; }
 
-  const gerenciaData = getGerenciaReportDashboardData(gerencia);
+  const periodoSelecionado = options.periodo || getSetorialReportPeriod(getReportPeriodInputValue('rel-periodo-gerencia'));
+  const gerenciaData = getGerenciaReportDashboardData(gerencia, periodoSelecionado);
   if (gerenciaData.resolucoesIncompletas?.length) {
     if (shouldToast) toast(getMensagemResolucaoIncompleta(gerenciaData.resolucoesIncompletas));
     return;
@@ -9675,6 +9727,112 @@ async function gerarPDFGerencia(options = {}) {
     return out;
   }
 
+  function renderGerenciaObjetivoPage() {
+    let yy = novaPaginaComCabecalho('Objetivo do Housekeeping', `${gerencia} · ${mesAnoAtual}`);
+    const objetivoTxt = `Este relatório apresenta a consolidação mensal de Housekeeping da gerência ${gerencia}, com análise integrada dos setores mapeados para apoiar a priorização de ações, melhoria contínua, segurança operacional, organização, limpeza e tomada de decisão.`;
+    const escopoTxt = `O Housekeeping avalia as condições das áreas inspecionadas por meio dos critérios 5S, registrando pontuação, não conformidades abertas, reincidências, encaminhamentos corresponsáveis e evidências de resolução no período selecionado.`;
+    const textoX = margin;
+    const textoW = W - margin * 2 - 18;
+
+    doc.setTextColor(22, 53, 159);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text('Objetivo', margin, yy);
+    yy += 8;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10.5);
+    const objetivoLines = doc.splitTextToSize(objetivoTxt, textoW);
+    doc.text(objetivoLines, textoX, yy);
+    yy += objetivoLines.length * 6 + 10;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text('Escopo da análise', margin, yy);
+    yy += 8;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10.5);
+    const escopoLines = doc.splitTextToSize(escopoTxt, textoW);
+    doc.text(escopoLines, textoX, yy);
+    yy += escopoLines.length * 6 + 12;
+    renderGerenciaAreasInspecionadasPage(yy);
+  }
+
+  function renderGerenciaAreasInspecionadasPage(startY = null) {
+    const rows = [...inspsPeriodo]
+      .sort((a, b) =>
+        String(a.setor || '').localeCompare(String(b.setor || ''), 'pt-BR') ||
+        String(a.subarea || '').localeCompare(String(b.subarea || ''), 'pt-BR') ||
+        new Date(a.data) - new Date(b.data)
+      )
+      .map(insp => ({
+        setor: insp.setor || '',
+        area: localLabel(insp),
+        data: formatDate(insp.data),
+        tecnico: insp.tecnico || 'Não informado',
+        nota: typeof insp.notaGeral === 'number' ? insp.notaGeral.toFixed(2) : '—'
+      }));
+
+    const integradaAoObjetivo = typeof startY === 'number';
+    let yy = integradaAoObjetivo ? startY : novaPaginaComCabecalho('Áreas Inspecionadas', `${gerencia} · ${mesAnoAtual}`);
+    if (integradaAoObjetivo) {
+      if (yy > H - 58) {
+        yy = novaPaginaComCabecalho('Áreas Inspecionadas', `${gerencia} · ${mesAnoAtual}`);
+      } else {
+        doc.setTextColor(22, 53, 159);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(12);
+        doc.text('Áreas inspecionadas', margin, yy);
+        yy += 8;
+      }
+    }
+    doc.setTextColor(22, 53, 159);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.text(`${rows.length} inspeção(ões) considerada(s) no período selecionado.`, margin, yy);
+    yy += 9;
+
+    if (!rows.length) {
+      doc.text('Nenhuma área inspecionada encontrada para este período.', margin, yy);
+      return;
+    }
+
+    function drawHeader() {
+      doc.setFillColor(248, 250, 252);
+      doc.setDrawColor(226, 232, 240);
+      doc.roundedRect(margin, yy, W - margin * 2, 9, 2, 2, 'FD');
+      doc.setTextColor(22, 53, 159);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8.5);
+      doc.text('Setor', margin + 4, yy + 6);
+      doc.text('Área', margin + 82, yy + 6);
+      doc.text('Data', margin + 168, yy + 6);
+      doc.text('Técnico(a)', margin + 202, yy + 6);
+      doc.text('Nota', W - margin - 4, yy + 6, { align: 'right' });
+      yy += 12;
+    }
+
+    drawHeader();
+    rows.forEach((row, idx) => {
+      if (yy > H - 16) {
+        yy = novaPaginaComCabecalho('Áreas Inspecionadas', `${gerencia} · ${mesAnoAtual}`);
+        drawHeader();
+      }
+      if (idx % 2 === 0) {
+        doc.setFillColor(250, 252, 255);
+        doc.rect(margin, yy - 5.5, W - margin * 2, 8, 'F');
+      }
+      doc.setTextColor(22, 53, 159);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.text(doc.splitTextToSize(row.setor, 72), margin + 4, yy);
+      doc.text(doc.splitTextToSize(row.area, 80), margin + 82, yy);
+      doc.text(row.data, margin + 168, yy);
+      doc.text(doc.splitTextToSize(row.tecnico, 50), margin + 202, yy);
+      doc.text(row.nota, W - margin - 4, yy, { align: 'right' });
+      yy += 8;
+    });
+  }
+
   const inspRefCapaGerencial = [...inspsPeriodo]
     .filter(i => i.tecnico)
     .sort((a, b) => new Date(b.data) - new Date(a.data))[0] || null;
@@ -9739,60 +9897,6 @@ async function gerarPDFGerencia(options = {}) {
     doc.roundedRect(cardX, 18, cardW, 176, 8, 8);
     doc.setFillColor(22, 53, 159);
     doc.rect(cardX, 34, 3, 128, 'F');
-
-    // Logo Anglo American (opcional)
-    try {
-      const loadLogoDataUrl = async (src) => {
-        return await new Promise((resolve, reject) => {
-          const img = new Image();
-          img.onload = () => {
-            try {
-              if (!(img.naturalWidth > 10 && img.naturalHeight > 10)) throw new Error('Imagem inválida');
-              const canvas = document.createElement('canvas');
-              canvas.width = img.naturalWidth || img.width;
-              canvas.height = img.naturalHeight || img.height;
-              const ctx = canvas.getContext('2d');
-              ctx.drawImage(img, 0, 0);
-              resolve(canvas.toDataURL('image/png'));
-            } catch (e) {
-              reject(e);
-            }
-          };
-          img.onerror = reject;
-          img.src = src;
-        });
-      };
-      const logoCandidates = [
-        'anglo_american_logo.png',
-        './anglo_american_logo.png',
-        new URL('anglo_american_logo.png', window.location.href).href,
-        'logo_anglo_american.png',
-        './logo_anglo_american.png',
-        'anglo_logo',
-        './anglo_logo',
-        'anglo_logo.png',
-        './anglo_logo.png',
-        'anglo_logo.png.png',
-        './anglo_logo.png.png',
-        'file:///C:/Users/gilly/OneDrive/Softwares/Inspe%C3%A7%C3%A3o%205S/anglo_logo.png',
-        'file:///C:/Users/gilly/OneDrive/Softwares/Inspe%C3%A7%C3%A3o%205S/anglo_logo.png.png',
-        'file:///C:/Users/gilly/OneDrive/Softwares/Inspe%C3%A7%C3%A3o%205S/anglo_logo'
-      ];
-      let logoDataUrl = null;
-      for (const src of logoCandidates) {
-        try {
-          logoDataUrl = await loadLogoDataUrl(src);
-          if (logoDataUrl) break;
-        } catch {}
-      }
-      if (logoDataUrl) {
-        const logoW = 52;
-        const logoH = 16;
-        doc.setFillColor(255, 255, 255);
-        doc.roundedRect(W - margin - logoW - 2, 12, logoW + 4, logoH + 4, 2, 2, 'F');
-        doc.addImage(String(logoDataUrl), 'PNG', W - margin - logoW, 14, logoW, logoH, undefined, 'FAST');
-      }
-    } catch {}
 
     doc.setFillColor(22, 53, 159);
     doc.roundedRect(cardX, 18, cardW, 16, 8, 8, 'F');
@@ -9885,8 +9989,9 @@ async function gerarPDFGerencia(options = {}) {
     return { label: 'Crítico', color: [244, 63, 94] };
   }
 
-  // Capa + resumo executivo
+  // Capa + páginas introdutórias + resumo executivo
   await renderGerenciaCover();
+  renderGerenciaObjetivoPage();
   doc.addPage();
   doc.setFillColor(255, 255, 255);
   doc.rect(0, 0, W, H, 'F');
@@ -10272,9 +10377,10 @@ async function gerarPDFSetorial(setor, options = {}) {
   patchPdfTextEncoding(doc);
   const W = 297, H = 210, margin = 20;
   const now = new Date();
-  const mesAtual = now.toLocaleDateString('pt-BR', { month: 'long' });
-  const anoAtual = now.getFullYear();
-  const periodoAtual = `${anoAtual}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const periodoSelecionado = options.periodo || getSetorialReportPeriod(getReportPeriodInputValue('rel-periodo-setorial'));
+  const mesAtual = periodoSelecionado.mesNome;
+  const anoAtual = periodoSelecionado.ano;
+  const periodoAtual = periodoSelecionado.periodoCodigo;
   const mesAnoAtual = `${mesAtual.charAt(0).toUpperCase() + mesAtual.slice(1)} de ${anoAtual}`;
   let y = 0;
 
@@ -10283,7 +10389,7 @@ async function gerarPDFSetorial(setor, options = {}) {
     const setorTxt = String(setor || '').toUpperCase();
     const periodoTxt = mesAnoAtual.toUpperCase();
     const inspRefCapa = [...APP.inspecoes]
-      .filter(i => inspectionIsCurrentUnit(i) && i.setor === setor && (i.periodo || '') === periodoAtual)
+      .filter(i => inspectionIsCurrentUnit(i) && i.setor === setor && inspectionBelongsToReportPeriod(i, periodoSelecionado))
       .sort((a, b) => new Date(b.data) - new Date(a.data))[0] || null;
     const tecnicoTxt = String(inspRefCapa?.tecnico || 'Não informado');
     try {
@@ -10338,7 +10444,6 @@ async function gerarPDFSetorial(setor, options = {}) {
     const cardX = (W - cardW) / 2;
     const cardCenter = cardX + cardW / 2;
 
-    // Overlay de leitura para destacar o texto sobre qualquer fundo
     doc.setFillColor(255, 255, 255);
     if (doc.GState && doc.setGState) doc.setGState(new doc.GState({ opacity: 0.82 }));
     doc.roundedRect(cardX, 18, cardW, 176, 8, 8, 'F');
@@ -10349,61 +10454,6 @@ async function gerarPDFSetorial(setor, options = {}) {
     doc.setFillColor(22, 53, 159);
     doc.rect(cardX, 34, 3, 128, 'F');
 
-    // Logo Anglo American (opcional)
-    try {
-      const loadLogoDataUrl = async (src) => {
-        return await new Promise((resolve, reject) => {
-          const img = new Image();
-          img.onload = () => {
-            try {
-              if (!(img.naturalWidth > 10 && img.naturalHeight > 10)) throw new Error('Imagem inválida');
-              const canvas = document.createElement('canvas');
-              canvas.width = img.naturalWidth || img.width;
-              canvas.height = img.naturalHeight || img.height;
-              const ctx = canvas.getContext('2d');
-              ctx.drawImage(img, 0, 0);
-              resolve(canvas.toDataURL('image/png'));
-            } catch (e) {
-              reject(e);
-            }
-          };
-          img.onerror = reject;
-          img.src = src;
-        });
-      };
-      const logoCandidates = [
-        'anglo_american_logo.png',
-        './anglo_american_logo.png',
-        new URL('anglo_american_logo.png', window.location.href).href,
-        'logo_anglo_american.png',
-        './logo_anglo_american.png',
-        'anglo_logo',
-        './anglo_logo',
-        'anglo_logo.png',
-        './anglo_logo.png',
-        'anglo_logo.png.png',
-        './anglo_logo.png.png',
-        'file:///C:/Users/gilly/OneDrive/Softwares/Inspe%C3%A7%C3%A3o%205S/anglo_logo.png',
-        'file:///C:/Users/gilly/OneDrive/Softwares/Inspe%C3%A7%C3%A3o%205S/anglo_logo.png.png',
-        'file:///C:/Users/gilly/OneDrive/Softwares/Inspe%C3%A7%C3%A3o%205S/anglo_logo'
-      ];
-      let logoDataUrl = null;
-      for (const src of logoCandidates) {
-        try {
-          logoDataUrl = await loadLogoDataUrl(src);
-          if (logoDataUrl) break;
-        } catch {}
-      }
-      if (logoDataUrl) {
-        const logoW = 52;
-        const logoH = 16;
-        doc.setFillColor(255, 255, 255);
-        doc.roundedRect(W - margin - logoW - 2, 12, logoW + 4, logoH + 4, 2, 2, 'F');
-        doc.addImage(String(logoDataUrl), 'PNG', W - margin - logoW, 14, logoW, logoH, undefined, 'FAST');
-      }
-    } catch {}
-
-    // Faixa de marca
     doc.setFillColor(22, 53, 159);
     doc.roundedRect(cardX, 18, cardW, 16, 8, 8, 'F');
     doc.setTextColor(255, 255, 255);
@@ -10411,7 +10461,6 @@ async function gerarPDFSetorial(setor, options = {}) {
     doc.setFontSize(9);
     doc.text('RELATÓRIO SETORIAL', cardCenter, 28, { align: 'center' });
 
-    // Título principal
     doc.setTextColor(22, 53, 159);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(23);
@@ -10421,7 +10470,6 @@ async function gerarPDFSetorial(setor, options = {}) {
     doc.setTextColor(71, 85, 105);
     doc.text('Segurança do Trabalho', cardCenter, 60, { align: 'center' });
 
-    // Blocos de informação
     doc.setFillColor(248, 250, 252);
     doc.roundedRect(cardX + 10, 72, cardW - 20, 30, 4, 4, 'F');
     doc.setDrawColor(226, 232, 240);
@@ -10463,7 +10511,6 @@ async function gerarPDFSetorial(setor, options = {}) {
     doc.setFontSize(10.5);
     doc.text(periodoTxt, cardX + 55, 149);
 
-    // Rodapé de assinatura visual
     doc.setDrawColor(22, 53, 159);
     doc.setLineWidth(0.7);
     doc.line(cardX + 10, 170, cardX + cardW - 10, 170);
@@ -10544,12 +10591,13 @@ async function gerarPDFSetorial(setor, options = {}) {
     }
   }
 
-  const setorialData = getSetorialReportDashboardData(setor);
+  const setorialData = getSetorialReportDashboardData(setor, periodoSelecionado);
   if (setorialData.resolucoesIncompletas?.length) {
     if (shouldToast) toast(getMensagemResolucaoIncompleta(setorialData.resolucoesIncompletas));
     return;
   }
   const {
+    inspsSetor,
     ncList,
     resolvidasList,
     totalInspecoes,
@@ -10561,9 +10609,159 @@ async function gerarPDFSetorial(setor, options = {}) {
     piorLocal
   } = setorialData;
 
-  // Capa + resumo executivo
+  function renderSetorialObjetivoPage() {
+    doc.setFillColor(255, 255, 255);
+    doc.rect(0, 0, W, H, 'F');
+    doc.setFillColor(22, 53, 159);
+    doc.rect(0, 0, W, 22, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.text('Objetivo do Housekeeping', margin, 14);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    doc.text(`${setor} · ${mesAnoAtual}`, margin, 19);
+
+    let yy = 34;
+    const objetivoTxt = `Este relatório tem como objetivo apresentar as informações do Housekeeping realizado no setor ${setor} durante ${mesAnoAtual}, identificando oportunidades de melhoria, condições inseguras, desvios de organização e limpeza, reincidências e ações concluídas.`;
+    const escopoTxt = 'A análise consolida as áreas inspecionadas no período selecionado, as pontuações por critérios 5S, as não conformidades abertas, as não conformidades resolvidas com evidência e os encaminhamentos corresponsáveis.';
+    const textoX = margin;
+    const textoW = W - margin * 2 - 18;
+
+    doc.setTextColor(22, 53, 159);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text('Objetivo', margin, yy);
+    yy += 8;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10.5);
+    const objetivoLines = doc.splitTextToSize(objetivoTxt, textoW);
+    doc.text(objetivoLines, textoX, yy);
+    yy += objetivoLines.length * 6 + 10;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text('Escopo da análise', margin, yy);
+    yy += 8;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10.5);
+    const escopoLines = doc.splitTextToSize(escopoTxt, textoW);
+    doc.text(escopoLines, textoX, yy);
+    yy += escopoLines.length * 6 + 12;
+    renderSetorialAreasInspecionadasPage(yy);
+  }
+
+  function renderSetorialAreasInspecionadasPage(startY = null) {
+    const rows = [...inspsSetor]
+      .sort((a, b) =>
+        String(a.subarea || '').localeCompare(String(b.subarea || ''), 'pt-BR') ||
+        new Date(a.data) - new Date(b.data)
+      )
+      .map(insp => ({
+        area: localLabel(insp),
+        data: formatDate(insp.data),
+        tecnico: insp.tecnico || 'Não informado',
+        nota: typeof insp.notaGeral === 'number' ? insp.notaGeral.toFixed(2) : '—',
+        nc: getInspectionNcTotals(insp)
+      }));
+
+    const integradaAoObjetivo = typeof startY === 'number';
+    let yy = integradaAoObjetivo ? startY : 34;
+    if (!integradaAoObjetivo) {
+      doc.addPage();
+      doc.setFillColor(255, 255, 255);
+      doc.rect(0, 0, W, H, 'F');
+      doc.setFillColor(22, 53, 159);
+      doc.rect(0, 0, W, 22, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13);
+      doc.text('Áreas Inspecionadas', margin, 14);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
+      doc.text(`${setor} · ${mesAnoAtual}`, margin, 19);
+    } else if (yy > H - 58) {
+      doc.addPage();
+      doc.setFillColor(255, 255, 255);
+      doc.rect(0, 0, W, H, 'F');
+      doc.setFillColor(22, 53, 159);
+      doc.rect(0, 0, W, 22, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13);
+      doc.text('Áreas Inspecionadas', margin, 14);
+      yy = 34;
+    } else {
+      doc.setTextColor(22, 53, 159);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.text('Áreas inspecionadas', margin, yy);
+      yy += 8;
+    }
+    doc.setTextColor(22, 53, 159);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.text(`${rows.length} inspeção(ões) considerada(s) no período selecionado.`, margin, yy);
+    yy += 9;
+
+    if (!rows.length) {
+      doc.text('Nenhuma área inspecionada encontrada para este período.', margin, yy);
+      return;
+    }
+
+    function drawHeader() {
+      doc.setFillColor(248, 250, 252);
+      doc.setDrawColor(226, 232, 240);
+      doc.roundedRect(margin, yy, W - margin * 2, 9, 2, 2, 'FD');
+      doc.setTextColor(22, 53, 159);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8.5);
+      doc.text('Área', margin + 4, yy + 6);
+      doc.text('Data', margin + 112, yy + 6);
+      doc.text('Técnico(a)', margin + 148, yy + 6);
+      doc.text('NC abertas', margin + 222, yy + 6, { align: 'right' });
+      doc.text('Nota', W - margin - 4, yy + 6, { align: 'right' });
+      yy += 12;
+    }
+
+    drawHeader();
+    rows.forEach((row, idx) => {
+      if (yy > H - 16) {
+        doc.addPage();
+        doc.setFillColor(255, 255, 255);
+        doc.rect(0, 0, W, H, 'F');
+        doc.setFillColor(22, 53, 159);
+        doc.rect(0, 0, W, 22, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(13);
+        doc.text('Áreas Inspecionadas', margin, 14);
+        yy = 34;
+        drawHeader();
+      }
+      if (idx % 2 === 0) {
+        doc.setFillColor(250, 252, 255);
+        doc.rect(margin, yy - 5.5, W - margin * 2, 8, 'F');
+      }
+      doc.setTextColor(22, 53, 159);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.text(doc.splitTextToSize(row.area, 102), margin + 4, yy);
+      doc.text(row.data, margin + 112, yy);
+      doc.text(doc.splitTextToSize(row.tecnico, 68), margin + 148, yy);
+      doc.text(String(row.nc.abertas), margin + 222, yy, { align: 'right' });
+      doc.text(row.nota, W - margin - 4, yy, { align: 'right' });
+      yy += 8;
+    });
+  }
+
+  // Capa + páginas introdutórias + resumo executivo
   const capaAplicada = await renderSetorialCover();
-  if (capaAplicada) addNewPage();
+  if (capaAplicada) {
+    addNewPage();
+    renderSetorialObjetivoPage();
+    addNewPage();
+  }
 
   doc.setFillColor(255, 255, 255);
   doc.rect(0, 0, W, H, 'F');
