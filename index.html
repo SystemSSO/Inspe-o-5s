@@ -289,13 +289,23 @@ html, body {
 }
 .foto-area:active { border-color: var(--orange); }
 .foto-area svg { width: 16px; height: 16px; }
-.foto-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
-.foto-thumb { aspect-ratio: 1; border-radius: 6px; overflow: hidden; position: relative; }
+.foto-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
+.foto-item { min-width: 0; }
+.foto-thumb { aspect-ratio: 1; border-radius: 6px; overflow: hidden; position: relative; border: 1px solid var(--border); }
 .foto-thumb img { width: 100%; height: 100%; object-fit: cover; }
 .foto-thumb .rm-foto {
   position: absolute; top: 3px; right: 3px; width: 18px; height: 18px;
   background: rgba(0,0,0,0.7); border-radius: 50%; border: none; color: white;
   font-size: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.foto-caption-input {
+  margin-top: 5px;
+  min-height: 34px;
+  resize: vertical;
+  font-size: 11px;
+  line-height: 1.25;
+  padding: 7px;
+  border-radius: 6px;
 }
 
 /* PROGRESSO */
@@ -343,6 +353,33 @@ html, body {
 .s-score-mini { font-size: 18px; font-weight: 800; }
 .s-body { padding: 0 12px 12px; display: none; }
 .s-body.open { display: block; }
+
+.checklist-unico {
+  padding: 0 16px;
+}
+.senso-list-marker {
+  margin: 4px 0 10px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--senso-color, var(--orange2));
+  background: linear-gradient(180deg, var(--senso-soft, rgba(255,255,255,0.04)), transparent), var(--card);
+  box-shadow: var(--shadow);
+}
+.senso-list-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.senso-list-text {
+  min-width: 0;
+  flex: 1;
+}
+.senso-list-meta {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text2);
+}
 
 /* ITEM CRITERIO */
 .criterio-item {
@@ -444,6 +481,12 @@ body.light-mode .s-debito-corresp {
 body.light-mode .s-desc {
   background: rgba(15,23,42,0.03);
   border-color: rgba(15,23,42,0.18);
+}
+body.light-mode .senso-list-marker {
+  background: linear-gradient(180deg, var(--senso-soft, rgba(15,23,42,0.03)), transparent), #ffffff;
+  border-color: rgba(15, 23, 42, 0.1);
+  border-left-color: var(--senso-color, var(--orange2));
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
 }
 body.light-mode .criterio-item {
   background: #ffffff;
@@ -1597,6 +1640,56 @@ body.light-mode .insp-card-open {
 /* COMPARACAO */
 .comp-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); }
 .comp-row:last-child { border-bottom: none; }
+.comp-context {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 8px;
+  align-items: stretch;
+  margin: 10px 0 8px;
+}
+.comp-period-box {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  background: rgba(255,255,255,0.03);
+  min-width: 0;
+}
+.comp-period-label {
+  color: var(--text2);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.comp-period-value {
+  margin-top: 3px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.comp-context-arrow {
+  color: var(--gold);
+  font-size: 18px;
+  font-weight: 800;
+  align-self: center;
+  width: 18px;
+  text-align: center;
+}
+.comp-columns-head {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 0 0 6px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text2);
+  font-size: 10px;
+  font-weight: 800;
+}
+.comp-col-title {
+  width: 36px;
+  text-align: center;
+  line-height: 1.1;
+}
 .comp-s-name { flex: 1; font-size: 13px; }
 .comp-nota { font-family: var(--font-display); font-size: 16px; font-weight: 700; width: 36px; text-align: center; }
 .comp-arrow { font-size: 16px; width: 24px; text-align: center; }
@@ -2483,7 +2576,7 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
       <div class="progress-fill" id="insp-progress" style="width:0%"></div>
     </div>
     <div style="display:flex;justify-content:space-between;margin-top:4px">
-      <span style="font-size:11px;color:var(--text2)" id="insp-progress-txt">0 de 5 sensos avaliados</span>
+      <span style="font-size:11px;color:var(--text2)" id="insp-progress-txt">0 critérios avaliados</span>
       <span style="font-size:11px;color:var(--text2)" id="insp-date-txt"></span>
     </div>
   </div>
@@ -2594,7 +2687,7 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
       </div>
       <div class="form-group">
         <label class="form-label">Período do relatório</label>
-        <input type="month" class="form-input" id="rel-periodo-setorial">
+        <select class="form-select" id="rel-periodo-setorial"></select>
       </div>
       <div class="form-group">
         <label class="form-label">Destinatário do e-mail</label>
@@ -2620,7 +2713,7 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
       </div>
       <div class="form-group">
         <label class="form-label">Período do relatório</label>
-        <input type="month" class="form-input" id="rel-periodo-gerencia">
+        <select class="form-select" id="rel-periodo-gerencia"></select>
       </div>
       <div class="form-group">
         <label class="form-label">Destinatário do e-mail</label>
@@ -3753,6 +3846,29 @@ function enqueueDeleteInspection(inspId) {
   persistLocalApp(APP);
 }
 
+// === Function: deleteInspectionFromFirebaseNow ===
+async function deleteInspectionFromFirebaseNow(inspId) {
+  if (!inspId || !navigator.onLine || !hasFirebaseConfig() || !auth.currentUser) return false;
+  const deletedPayload = {
+    id: inspId,
+    deleted: true,
+    deletedAt: new Date().toISOString(),
+    deletedBy: currentUserEmail || auth.currentUser.email || ''
+  };
+  try {
+    await db.collection("inspecoes").doc(inspId).delete();
+  } catch (e) {
+    console.warn('Exclusão física bloqueada; marcando inspeção como excluída no Firebase.', e);
+    await db.collection("inspecoes").doc(inspId).set(deletedPayload, { merge: true });
+  }
+  await db.collection("inspecoes_fotos").doc(inspId).delete().catch(() => {});
+  APP.deleteQueue = APP.deleteQueue.filter(id => id !== inspId);
+  APP.syncQueue = APP.syncQueue.filter(id => id !== inspId);
+  APP.smartsheetQueue = APP.smartsheetQueue.filter(id => id !== inspId);
+  persistLocalApp(APP);
+  return true;
+}
+
 // === Function: normalizeSmartsheetConfig ===
 function normalizeSmartsheetConfig(cfg = {}) {
   return {
@@ -3880,6 +3996,31 @@ function formatPeriodoTitulo(periodo, dataIso = '') {
     return `${mesNome.charAt(0).toUpperCase()}${mesNome.slice(1)} de ${ano}`;
   }
   return formatPeriodoOriginal(periodo, dataIso) || '';
+}
+
+// === Function: getInspectionIdentitySummary ===
+function getInspectionIdentitySummary(insp) {
+  if (!insp) return [];
+  return [
+    `Unidade: ${getInspectionUnidade(insp) || '—'}`,
+    `Setor: ${insp.setor || '—'}`,
+    `Área/Subárea: ${insp.subarea || 'Área geral'}`,
+    `Período: ${formatPeriodoTitulo(insp.periodo, insp.data) || insp.periodo || '—'}`,
+    `Data de criação: ${insp.data ? new Date(insp.data).toLocaleString('pt-BR') : '—'}`,
+    `Técnico: ${insp.tecnico || '—'}`,
+    `Nota geral: ${typeof insp.notaGeral === 'number' ? insp.notaGeral.toFixed(2) : '—'}`,
+    `ID: ${insp.id || '—'}`
+  ];
+}
+
+// === Function: getInspectionIdentityHtml ===
+function getInspectionIdentityHtml(insp) {
+  return getInspectionIdentitySummary(insp)
+    .map(line => {
+      const [label, ...rest] = line.split(': ');
+      return `<div><strong>${escapeHtml(label)}:</strong> ${escapeHtml(rest.join(': ') || '—')}</div>`;
+    })
+    .join('');
 }
 
 // === Function: formatDurationMs ===
@@ -4273,6 +4414,76 @@ function getCurrentReportPeriodCode() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
 
+const MESES_PT_BR = [
+  'Janeiro',
+  'Fevereiro',
+  'Março',
+  'Abril',
+  'Maio',
+  'Junho',
+  'Julho',
+  'Agosto',
+  'Setembro',
+  'Outubro',
+  'Novembro',
+  'Dezembro'
+];
+
+// === Function: getReportPeriodLabel ===
+function getReportPeriodLabel(periodoCodigo = '') {
+  const match = String(periodoCodigo || '').match(/^(\d{4})-(\d{2})$/);
+  const mes = match ? Number(match[2]) : 0;
+  if (!match || mes < 1 || mes > 12) return String(periodoCodigo || '');
+  return `${MESES_PT_BR[mes - 1]} de ${match[1]}`;
+}
+
+// === Function: getAvailableReportPeriodCodes ===
+function getAvailableReportPeriodCodes(selectedValue = '') {
+  const current = getCurrentReportPeriodCode();
+  const firstReportYear = 2026;
+  const years = new Set();
+  const addYearFromPeriod = (periodo) => {
+    const match = String(periodo || '').match(/^(\d{4})-(\d{2})$/);
+    const year = match ? Number(match[1]) : 0;
+    if (year >= firstReportYear) years.add(year);
+  };
+
+  addYearFromPeriod(current);
+  addYearFromPeriod(selectedValue);
+  APP.inspecoes
+    .filter(inspectionIsCurrentUnit)
+    .forEach(insp => addYearFromPeriod(insp.periodo));
+
+  const nowYear = Number(current.slice(0, 4));
+  const minYear = Math.max(firstReportYear, Math.min(nowYear, ...years));
+  const maxYear = Math.max(nowYear + 1, firstReportYear, ...years);
+  const periods = [];
+
+  for (let year = maxYear; year >= minYear; year--) {
+    for (let month = 12; month >= 1; month--) {
+      periods.push(`${year}-${String(month).padStart(2, '0')}`);
+    }
+  }
+
+  return periods;
+}
+
+// === Function: renderReportPeriodSelect ===
+function renderReportPeriodSelect(inputId, fallbackValue = getCurrentReportPeriodCode()) {
+  const select = document.getElementById(inputId);
+  if (!select) return;
+
+  const selected = select.value || fallbackValue || getCurrentReportPeriodCode();
+  select.innerHTML = getAvailableReportPeriodCodes(selected)
+    .map(periodo => `<option value="${periodo}">${getReportPeriodLabel(periodo)}</option>`)
+    .join('');
+  select.value = selected;
+
+  if (select.value !== selected) {
+    select.value = getCurrentReportPeriodCode();
+  }
+}
+
 // === Function: getReportPeriodInputValue ===
 function getReportPeriodInputValue(inputId) {
   return document.getElementById(inputId)?.value || '';
@@ -4363,6 +4574,7 @@ function getSetorialReportDashboardData(setor, periodo = getSetorialReportPeriod
       obs: cr.obs || 'Sem observação.',
       sugestao: cr.sugestao || 'Não informada.',
       fotos: getFotosNCAbertaComFallback(insp, s.id, ci, cr),
+      fotoLegendas: getFotosComLegendasNCAbertaComFallback(insp, s.id, ci, cr).map(item => item.legenda),
       origemTipo: 'propria',
       origemSetor: insp.setor,
       origemLocal: localLabel(insp),
@@ -4397,6 +4609,7 @@ function getSetorialReportDashboardData(setor, periodo = getSetorialReportPeriod
       obs: cr.obs || 'Sem observação.',
       sugestao: cr.sugestao || 'Não informada.',
       fotos: getFotosNCAbertaComFallback(insp, s.id, ci, cr),
+      fotoLegendas: getFotosComLegendasNCAbertaComFallback(insp, s.id, ci, cr).map(item => item.legenda),
       origemTipo: 'encaminhada',
       origemSetor: insp.setor,
       origemLocal: localLabel(insp),
@@ -4440,6 +4653,7 @@ function getSetorialReportDashboardData(setor, periodo = getSetorialReportPeriod
           sugestaoAtual: crAtual?.sugestao || 'Não informada.',
           fotosAnterior: getFotosNCAbertaComFallback(inspAnterior, s.id, ci, crAnterior),
           fotosResolucao: getFotosValidasCriterio(crAtual),
+          fotoLegendasResolucao: getFotosComLegendasCriterio(crAtual).map(item => item.legenda),
           ocorrenciasNC: reinc.ocorrenciasNC,
           reincidencias: reinc.reincidencias,
           origemSetor: insp.setor,
@@ -4487,6 +4701,7 @@ function getSetorialReportDashboardData(setor, periodo = getSetorialReportPeriod
           sugestaoAtual: crAtual?.sugestao || 'Não informada.',
           fotosAnterior: getFotosNCAbertaComFallback(inspAnteriorOrigem, s.id, ci, crAnterior),
           fotosResolucao: getFotosValidasCriterio(crAtual),
+          fotoLegendasResolucao: getFotosComLegendasCriterio(crAtual).map(item => item.legenda),
           ocorrenciasNC: reinc.ocorrenciasNC,
           reincidencias: reinc.reincidencias,
           origemSetor: inspOrigem.setor,
@@ -4579,7 +4794,8 @@ function getGerenciaReportDashboardData(gerencia, periodo = getSetorialReportPer
         obs: cr?.obs || 'Sem observação.',
         sugestao: cr?.sugestao || 'Não informada.',
         nota: cr?.nota ?? null,
-        fotos: getFotosNCAbertaComFallback(insp, s.id, ci, cr)
+        fotos: getFotosNCAbertaComFallback(insp, s.id, ci, cr),
+        fotoLegendas: getFotosComLegendasNCAbertaComFallback(insp, s.id, ci, cr).map(item => item.legenda)
       });
     });
 
@@ -4613,8 +4829,10 @@ function getGerenciaReportDashboardData(gerencia, periodo = getSetorialReportPer
               sugestao: cr?.sugestao || 'Não informada.',
               nota: cr?.nota ?? null,
               fotos: getFotosValidasCriterio(cr),
+              fotoLegendas: getFotosComLegendasCriterio(cr).map(item => item.legenda),
               fotosAnterior: getFotosNCAbertaComFallback(anterior, s.id, ci, crAnt),
-              fotosResolucao: getFotosValidasCriterio(cr)
+              fotosResolucao: getFotosValidasCriterio(cr),
+              fotoLegendasResolucao: getFotosComLegendasCriterio(cr).map(item => item.legenda)
             });
           }
         });
@@ -5494,11 +5712,25 @@ async function syncPendingQueue() {
 
     const deletados = [...APP.deleteQueue];
     for (const inspId of deletados) {
-      await db.collection("inspecoes").doc(inspId).delete().catch(() => {});
+      let deleteSynced = false;
+      await db.collection("inspecoes").doc(inspId).delete()
+        .then(() => { deleteSynced = true; })
+        .catch(async (e) => {
+          console.warn('Exclusão física bloqueada durante sync; marcando inspeção como excluída.', e);
+          await db.collection("inspecoes").doc(inspId).set({
+            id: inspId,
+            deleted: true,
+            deletedAt: new Date().toISOString(),
+            deletedBy: currentUserEmail || auth.currentUser?.email || ''
+          }, { merge: true });
+          deleteSynced = true;
+        });
       await db.collection("inspecoes_fotos").doc(inspId).delete().catch(() => {});
-      APP.deleteQueue = APP.deleteQueue.filter(id => id !== inspId);
-      APP.syncQueue = APP.syncQueue.filter(id => id !== inspId);
-      persistLocalApp(APP);
+      if (deleteSynced) {
+        APP.deleteQueue = APP.deleteQueue.filter(id => id !== inspId);
+        APP.syncQueue = APP.syncQueue.filter(id => id !== inspId);
+        persistLocalApp(APP);
+      }
     }
 
     const pendentes = [...APP.syncQueue];
@@ -5575,7 +5807,10 @@ async function syncFromCloud() {
       if (lastDoc) query = query.startAfter(lastDoc);
       const snapshot = await query.get();
       if (snapshot.empty) break;
-      snapshot.forEach(doc => cloudInsps.push(doc.data()));
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        if (!data?.deleted && !data?.deletedAt) cloudInsps.push(data);
+      });
       if (snapshot.size < pageSize) break;
       lastDoc = snapshot.docs[snapshot.docs.length - 1];
     }
@@ -7479,7 +7714,7 @@ function iniciarInspecao() {
     updatedAt: new Date().toISOString()
   };
   SENSOS.forEach(s => {
-    currentInsp.sensos[s.id] = s.criterios.map(() => ({ nota: null, obs: '', sugestao: '', fotos: [], encaminharSetor: '', ncResolvida: false, ncAberta: false, autoReincidenciaFrom: null, autoReincidenciaTo: null }));
+    currentInsp.sensos[s.id] = s.criterios.map(() => ({ nota: null, obs: '', sugestao: '', fotos: [], fotoLegendas: [], encaminharSetor: '', ncResolvida: false, ncAberta: false, autoReincidenciaFrom: null, autoReincidenciaTo: null }));
   });
   if (ultimaMesmoLocal && sameLocal(currentInsp, ultimaMesmoLocal)) {
     aplicarRegraReincidencia(ultimaMesmoLocal);
@@ -7526,25 +7761,30 @@ function renderInspecaoForm() {
     </div>`;
   };
 
-  const body = document.getElementById('insp-form-body');
-  body.innerHTML = SENSOS.map((s, si) => `
-    <div class="s-section-card" style="--senso-color:${s.cor};--senso-soft:${s.cor}1c">
-      <div class="s-section-header" onclick="toggleS('s-body-${si}')">
-        <div class="s-num orange" style="background:rgba(0,0,0,0.15);border-color:${s.cor}33;color:${s.cor}">${si+1}</div>
-        <div>
+  const renderSensoListMarker = (s, si) => `
+    <div class="senso-list-marker" style="--senso-color:${s.cor};--senso-soft:${s.cor}1c">
+      <div class="senso-list-head">
+        <div class="s-num orange" style="background:rgba(0,0,0,0.15);border-color:${s.cor}33;color:${s.cor}">${si + 1}</div>
+        <div class="senso-list-text">
           <div class="s-title">${s.nome}</div>
           <div class="s-desc">${SENSO_DESCRICOES[s.id] || 'Avalie os critérios deste senso com atenção e registre evidências objetivas.'}</div>
-          ${base ? `<div style="font-size:11px;color:var(--text2)">Nota anterior: ${calcMediaSFinal(base, s.id).toFixed(2)}</div>` : ''}
+          ${base ? `<div class="senso-list-meta">Nota anterior: ${calcMediaSFinal(base, s.id).toFixed(2)}</div>` : ''}
           ${renderDebitoCorresponsavelHint(s.id)}
         </div>
-	        <div class="s-score-mini" id="score-mini-${s.id}" style="color:var(--text2)">—</div>
-        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="var(--text2)" stroke-width="2" style="flex-shrink:0"><path d="M5 8l5 5 5-5"/></svg>
+        <div class="s-score-mini" id="score-mini-${s.id}" style="color:var(--text2)">—</div>
       </div>
-      <div class="s-body" id="s-body-${si}" ${si===0?'style="display:block"':''}>
-	        ${s.criterios.map((cr, ci) => criterioHTML(s, si, cr, ci, base)).join('')}
-	      </div>
-	    </div>
-	  `).join('');
+    </div>
+  `;
+
+  const body = document.getElementById('insp-form-body');
+  body.innerHTML = `
+    <div class="checklist-unico">
+      ${SENSOS.map((s, si) => `
+        ${renderSensoListMarker(s, si)}
+        ${s.criterios.map((cr, ci) => criterioHTML(s, si, cr, ci, base)).join('')}
+      `).join('')}
+    </div>
+  `;
 
   SENSOS.forEach(s => updateScoreMini(s.id));
   SENSOS.forEach(s => currentInsp.sensos[s.id].forEach((_, ci) => renderFotoGrid(s.id, ci)));
@@ -7683,6 +7923,20 @@ function getFotosValidasCriterio(criterio) {
   return criterio.fotos.filter(f => typeof f === 'string' && f && f !== '__ref__');
 }
 
+// === Function: getFotoLegendasCriterio ===
+function getFotoLegendasCriterio(criterio) {
+  return Array.isArray(criterio?.fotoLegendas) ? criterio.fotoLegendas : [];
+}
+
+// === Function: getFotosComLegendasCriterio ===
+function getFotosComLegendasCriterio(criterio) {
+  if (!criterio || !Array.isArray(criterio.fotos)) return [];
+  const legendas = getFotoLegendasCriterio(criterio);
+  return criterio.fotos
+    .map((foto, index) => ({ foto, legenda: String(legendas[index] || '').trim() }))
+    .filter(item => typeof item.foto === 'string' && item.foto && item.foto !== '__ref__');
+}
+
 // === Function: getFotosNCAbertaComFallback ===
 function getFotosNCAbertaComFallback(insp, sId, ci, crAtual = null) {
   const fotosDiretas = getFotosValidasCriterio(crAtual || insp?.sensos?.[sId]?.[ci]);
@@ -7696,6 +7950,24 @@ function getFotosNCAbertaComFallback(insp, sId, ci, crAtual = null) {
     const crHist = h?.sensos?.[sId]?.[ci] || null;
     if (!criterioTemNCAberta(crHist)) continue;
     const fotosHist = getFotosValidasCriterio(crHist);
+    if (fotosHist.length) return fotosHist;
+  }
+  return [];
+}
+
+// === Function: getFotosComLegendasNCAbertaComFallback ===
+function getFotosComLegendasNCAbertaComFallback(insp, sId, ci, crAtual = null) {
+  const fotosDiretas = getFotosComLegendasCriterio(crAtual || insp?.sensos?.[sId]?.[ci]);
+  if (fotosDiretas.length) return fotosDiretas;
+  if (!insp) return [];
+  const dataLimite = new Date(insp.data).getTime();
+  const historico = APP.inspecoes
+    .filter(i => sameLocal(i, insp) && getInspectionUnidade(i) === getInspectionUnidade(insp) && new Date(i.data).getTime() <= dataLimite)
+    .sort((a, b) => new Date(b.data) - new Date(a.data));
+  for (const h of historico) {
+    const crHist = h?.sensos?.[sId]?.[ci] || null;
+    if (!criterioTemNCAberta(crHist)) continue;
+    const fotosHist = getFotosComLegendasCriterio(crHist);
     if (fotosHist.length) return fotosHist;
   }
   return [];
@@ -7828,7 +8100,7 @@ function criterioHTML(s, si, cr, ci, base) {
 
   return `<div class="criterio-item" id="cr-${s.id}-${ci}" style="--senso-color:${s.cor}">
     <div class="criterio-head">
-      <span class="criterio-badge">Critério ${ci + 1}/${totalCriterios}</span>
+      <span class="criterio-badge">${s.nome} · Critério ${ci + 1}/${totalCriterios}</span>
       ${correspAtual ? `<span class="nc-resolved-badge" style="border-color:rgba(245,158,11,0.4);background:rgba(245,158,11,0.14);color:var(--gold)">Corresponsável: ${correspAtual}</span>` : ''}
       ${isResolved && hasNCAnterior ? `<span class="nc-resolved-badge"><svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>Resolvido</span>` : ''}
     </div>
@@ -7888,6 +8160,7 @@ function criterioHTML(s, si, cr, ci, base) {
 // === Function: toggleS ===
 function toggleS(id) {
   const el = document.getElementById(id);
+  if (!el) return;
   el.style.display = el.style.display === 'block' ? 'none' : 'block';
   touchDraftContext({ openSensoBodyId: el.style.display === 'block' ? id : getOpenSensoBodyId(), lastAction: 'toggle_senso' });
   scheduleDraftSave();
@@ -8081,7 +8354,11 @@ async function addFotos(sId, ci, inp) {
     try {
       toast('Processando foto...');
       const fotoSrc = await comprimirImagem(file);
-      currentInsp.sensos[sId][ci].fotos.push(fotoSrc);
+      const criterio = currentInsp.sensos[sId][ci];
+      if (!Array.isArray(criterio.fotos)) criterio.fotos = [];
+      if (!Array.isArray(criterio.fotoLegendas)) criterio.fotoLegendas = [];
+      criterio.fotos.push(fotoSrc);
+      criterio.fotoLegendas.push('');
       const fotoArea = document.getElementById(`foto-area-${sId}-${ci}`);
       if (fotoArea) fotoArea.style.borderColor = '';
       renderFotoGrid(sId, ci);
@@ -8097,19 +8374,36 @@ async function addFotos(sId, ci, inp) {
 
 // === Function: renderFotoGrid ===
 function renderFotoGrid(sId, ci) {
-  const fotos = currentInsp.sensos[sId][ci].fotos;
+  const criterio = currentInsp.sensos[sId][ci];
+  const fotos = Array.isArray(criterio.fotos) ? criterio.fotos : [];
+  if (!Array.isArray(criterio.fotoLegendas)) criterio.fotoLegendas = [];
   const grid = document.getElementById(`foto-grid-${sId}-${ci}`);
   grid.innerHTML = fotos.map((f, fi) => `
-    <div class="foto-thumb">
-      <img src="${f}" alt="foto">
-      <button class="rm-foto" onclick="removeFoto('${sId}',${ci},${fi})">×</button>
+    <div class="foto-item">
+      <div class="foto-thumb">
+        <img src="${f}" alt="foto">
+        <button class="rm-foto" onclick="removeFoto('${sId}',${ci},${fi})">×</button>
+      </div>
+      <textarea class="form-input foto-caption-input" maxlength="180" placeholder="Legenda da foto ${fi + 1}" oninput="setFotoLegenda('${sId}',${ci},${fi},this.value)">${escapeHtml(criterio.fotoLegendas[fi] || '')}</textarea>
     </div>`).join('');
+}
+
+// === Function: setFotoLegenda ===
+function setFotoLegenda(sId, ci, fi, val) {
+  const criterio = currentInsp?.sensos?.[sId]?.[ci];
+  if (!criterio) return;
+  if (!Array.isArray(criterio.fotoLegendas)) criterio.fotoLegendas = [];
+  criterio.fotoLegendas[fi] = val;
+  touchDraftContext({ lastSensoId: sId, lastCriterioIndex: ci, lastAction: 'foto_legenda', lastFieldId: `foto-grid-${sId}-${ci}` });
+  scheduleDraftSave();
 }
 
 // === Function: removeFoto ===
 function removeFoto(sId, ci, fi) {
   touchDraftContext({ lastSensoId: sId, lastCriterioIndex: ci, lastAction: 'foto_remove', lastFieldId: `foto-grid-${sId}-${ci}` });
-  currentInsp.sensos[sId][ci].fotos.splice(fi, 1);
+  const criterio = currentInsp.sensos[sId][ci];
+  criterio.fotos.splice(fi, 1);
+  if (Array.isArray(criterio.fotoLegendas)) criterio.fotoLegendas.splice(fi, 1);
   renderFotoGrid(sId, ci);
   scheduleDraftSave();
 }
@@ -8316,13 +8610,17 @@ function updateNotaGeral() {
 // === Function: updateProgresso ===
 function updateProgresso() {
   let avaliados = 0;
+  let total = 0;
   SENSOS.forEach(s => {
-    const todasDadas = currentInsp.sensos[s.id].every(c => c.nota !== null);
-    if (todasDadas) avaliados++;
+    const criterios = currentInsp.sensos[s.id] || [];
+    total += criterios.length;
+    criterios.forEach(c => {
+      if (c.nota !== null) avaliados++;
+    });
   });
-  const pct = (avaliados / SENSOS.length) * 100;
+  const pct = total ? (avaliados / total) * 100 : 0;
   document.getElementById('insp-progress').style.width = pct + '%';
-  document.getElementById('insp-progress-txt').textContent = `${avaliados} de ${SENSOS.length} sensos avaliados`;
+  document.getElementById('insp-progress-txt').textContent = `${avaliados} de ${total} critérios avaliados`;
 }
 
 // === Function: setSalvarButtonState ===
@@ -8564,15 +8862,35 @@ function openDetalhe(id) {
       ${notaBadge(insp.notaGeral)}
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 2px">${getInspectionStatusBadges(insp)}</div>
+    <div style="border:1px solid var(--border);border-radius:8px;padding:10px;margin:10px 0 2px;background:rgba(255,255,255,.03);font-size:12px;color:var(--text2);line-height:1.45">
+      ${getInspectionIdentityHtml(insp)}
+    </div>
     <div class="divider" style="margin:14px 0"></div>`;
 
   // comparação por senso
   if (base) {
-    html += `<div style="font-size:12px;color:var(--gold);margin-bottom:10px;display:flex;gap:6px;align-items:center">
-      <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10h12M14 6l4 4-4 4"/></svg>
-      Comparado com: ${formatDate(base.data)} (nota ${base.notaGeral?.toFixed(2) || '?'})
+    const periodoRelatorio = formatPeriodoTitulo(insp.periodo, insp.data) || formatDate(insp.data);
+    const periodoBase = formatPeriodoTitulo(base.periodo, base.data) || formatDate(base.data);
+    html += `<div class="comp-context">
+      <div class="comp-period-box">
+        <div class="comp-period-label">Relatório anterior</div>
+        <div class="comp-period-value">${periodoBase}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:3px">Nota ${base.notaGeral?.toFixed(2) || '?'}</div>
+      </div>
+      <div class="comp-context-arrow">→</div>
+      <div class="comp-period-box">
+        <div class="comp-period-label">Relatório atual</div>
+        <div class="comp-period-value">${periodoRelatorio}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:3px">Nota ${insp.notaGeral?.toFixed(2) || '?'}</div>
+      </div>
     </div>`;
     html += `<div style="margin-bottom:16px">`;
+    html += `<div class="comp-columns-head">
+      <div class="comp-s-name">Senso</div>
+      <div class="comp-col-title">Anterior</div>
+      <div class="comp-arrow"></div>
+      <div class="comp-col-title">Atual</div>
+    </div>`;
     SENSOS.forEach(s => {
       const novaMedia = calcMediaSFinal(insp, s.id);
       const baseMedia = calcMediaSFinal(base, s.id);
@@ -8650,7 +8968,7 @@ function openDetalhe(id) {
   } else {
     html += `<button class="btn-secondary" onclick="removerInspecao('${insp.id}')" style="width:100%;border-color:rgba(239,68,68,.35);color:#ef4444">
       <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h14"/><path d="M8 5V3h4v2"/><path d="M6 5l1 12h6l1-12"/></svg>
-      Remover inspeção
+      Remover esta inspeção
     </button>`;
   }
   html += `</div>`;
@@ -8708,7 +9026,7 @@ function iniciarNovaComBase(baseId) {
     updatedAt: new Date().toISOString()
   };
   SENSOS.forEach(s => {
-    currentInsp.sensos[s.id] = s.criterios.map(() => ({ nota: null, obs: '', sugestao: '', fotos: [], encaminharSetor: '', ncResolvida: false, ncAberta: false, autoReincidenciaFrom: null, autoReincidenciaTo: null }));
+    currentInsp.sensos[s.id] = s.criterios.map(() => ({ nota: null, obs: '', sugestao: '', fotos: [], fotoLegendas: [], encaminharSetor: '', ncResolvida: false, ncAberta: false, autoReincidenciaFrom: null, autoReincidenciaTo: null }));
   });
   if (sameLocal(currentInsp, base)) {
     aplicarRegraReincidencia(base);
@@ -8855,16 +9173,14 @@ function renderRelatorios() {
     getAllSetorNames().map(setor => `<option value="${setor}">${setor}</option>`).join('');
   document.getElementById('rel-insp-select').innerHTML = setorOpts;
   const periodoAtual = getCurrentReportPeriodCode();
-  const periodoSetorial = document.getElementById('rel-periodo-setorial');
-  if (periodoSetorial && !periodoSetorial.value) periodoSetorial.value = periodoAtual;
+  renderReportPeriodSelect('rel-periodo-setorial', periodoAtual);
 
   const gerencias = Object.keys(getGerenciasMap()).sort((a, b) => a.localeCompare(b, 'pt-BR'));
   const gerOpts = '<option value="">— Escolha uma gerência —</option>' +
     gerencias.map(g => `<option value="${g}">${g}</option>`).join('');
   const gerSel = document.getElementById('rel-gerencia-select');
   if (gerSel) gerSel.innerHTML = gerOpts;
-  const periodoGerencia = document.getElementById('rel-periodo-gerencia');
-  if (periodoGerencia && !periodoGerencia.value) periodoGerencia.value = periodoAtual;
+  renderReportPeriodSelect('rel-periodo-gerencia', periodoAtual);
   const relEmail = document.getElementById('rel-email-destino');
   if (relEmail && !relEmail.value) relEmail.value = normalizeLegacyEmailRecipientValue(localStorage.getItem(EMAIL_AUTO_TO_KEY)) || EMAIL_AUTO_DEFAULT_TO;
   const relGerenciaEmail = document.getElementById('rel-gerencia-email-destino');
@@ -8966,12 +9282,32 @@ function compararInspecoes() {
     return;
   }
 
-  let html = `<div style="font-family:var(--font-display);font-size:14px;font-weight:600;margin-bottom:10px">
-    Nota geral: <span style="color:${notaCor(a.notaGeral)}">${a.notaGeral?.toFixed(2)||'?'}</span>
-    → <span style="color:${notaCor(b.notaGeral)}">${b.notaGeral?.toFixed(2)||'?'}</span>
+  const periodoA = formatPeriodoTitulo(a.periodo, a.data) || formatDate(a.data);
+  const periodoB = formatPeriodoTitulo(b.periodo, b.data) || formatDate(b.data);
+  let html = `<div class="comp-context">
+    <div class="comp-period-box">
+      <div class="comp-period-label">Relatório anterior</div>
+      <div class="comp-period-value">${periodoA}</div>
+      <div style="font-size:11px;color:var(--text2);margin-top:3px">Nota ${a.notaGeral?.toFixed(2) || '?'}</div>
+    </div>
+    <div class="comp-context-arrow">→</div>
+    <div class="comp-period-box">
+      <div class="comp-period-label">Relatório atual</div>
+      <div class="comp-period-value">${periodoB}</div>
+      <div style="font-size:11px;color:var(--text2);margin-top:3px">Nota ${b.notaGeral?.toFixed(2) || '?'}</div>
+    </div>
+  </div>
+  <div style="font-family:var(--font-display);font-size:14px;font-weight:600;margin-bottom:10px">
+    Variação da nota geral:
     <span style="color:${b.notaGeral > a.notaGeral ? 'var(--green)' : 'var(--red)'}">
-      (${b.notaGeral > a.notaGeral ? '↑' : '↓'} ${Math.abs(b.notaGeral - a.notaGeral).toFixed(2)})
+      ${b.notaGeral > a.notaGeral ? '↑' : '↓'} ${Math.abs(b.notaGeral - a.notaGeral).toFixed(2)}
     </span>
+  </div>
+  <div class="comp-columns-head">
+    <div class="comp-s-name">Senso</div>
+    <div class="comp-col-title">Anterior</div>
+    <div class="comp-arrow"></div>
+    <div class="comp-col-title">Atual</div>
   </div>`;
 
   SENSOS.forEach(s => {
@@ -9162,24 +9498,28 @@ async function removerInspecao(id) {
     toast('Esta inspeção já foi enviada por e-mail e não pode ser removida.');
     return;
   }
-  const resumo = `${insp.setor}${insp.subarea ? ' - ' + insp.subarea : ''} (${formatDate(insp.data)})`;
-  const ok = confirm(`Deseja remover esta inspeção?\n\n${resumo}\n\nEssa ação não pode ser desfeita.`);
+  const resumo = getInspectionIdentitySummary(insp).join('\n');
+  const ok = confirm(`Deseja remover esta inspeção específica?\n\n${resumo}\n\nConfira principalmente período, data de criação e técnico.\n\nEssa ação não pode ser desfeita.`);
   if (!ok) return;
   APP.inspecoes = APP.inspecoes.filter(i => i.id !== id);
   enqueueDeleteInspection(id);
   try {
     await saveData(APP);
+    const apagouNoFirebase = await deleteInspectionFromFirebaseNow(id);
     document.getElementById('modal-detalhe').classList.remove('open');
     renderHome();
     renderHistorico();
     renderPendencias();
     renderRelatorios();
     if (document.getElementById('screen-dashboard')?.classList.contains('active')) renderDashboard();
-    toast('Inspeção removida com sucesso.');
-    scheduleSyncQueue(0);
+    toast(apagouNoFirebase
+      ? 'Inspeção removida do app e da nuvem.'
+      : 'Inspeção removida do app. A exclusão no Firebase ficará pendente até sincronizar.');
+    if (!apagouNoFirebase) scheduleSyncQueue(0);
   } catch (e) {
     console.error('Erro ao remover inspeção:', e);
-    toast('Erro ao remover inspeção.');
+    toast('Inspeção removida localmente. Não foi possível apagar no Firebase agora; tentaremos sincronizar novamente.');
+    scheduleSyncQueue(0);
   }
 }
 
@@ -10197,6 +10537,7 @@ async function gerarPDFGerencia(options = {}) {
         [['ANTES', fotoAntesDataUrl], ['DEPOIS', fotoDepoisDataUrl]].forEach(([label, dataUrl], col) => {
           const fx = compX + 3 + col * (colW + gapComp);
           const fy = by + 8;
+          const legendaFoto = label === 'DEPOIS' ? String((item.fotoLegendasResolucao || [])[0] || '').trim() : '';
           doc.setFillColor(255, 255, 255);
           doc.setDrawColor(220, 230, 242);
           doc.roundedRect(fx, fy, colW - 3, 96, 1.5, 1.5, 'FD');
@@ -10211,6 +10552,14 @@ async function gerarPDFGerencia(options = {}) {
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(7.5);
             doc.text(label === 'ANTES' ? 'Sem foto anterior' : 'Sem foto da resolução', fx + 2, fy + 50);
+          }
+          if (legendaFoto) {
+            doc.setFillColor(255, 255, 255);
+            doc.rect(fx + 2, fy + 84, colW - 7, 11, 'F');
+            doc.setTextColor(22, 53, 159);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(6.5);
+            doc.text(doc.splitTextToSize(legendaFoto, colW - 10).slice(0, 2), fx + 4, fy + 88.5);
           }
         });
 
@@ -10285,6 +10634,8 @@ async function gerarPDFGerencia(options = {}) {
 
           for (let fi = 0; fi < chunk.length; fi++) {
             const dataUrl = chunk[fi];
+            const fotoIndex = (chunkIdx * fotosPorPagina) + fi;
+            const legendaFoto = String((item.fotoLegendas || [])[fotoIndex] || '').trim();
             const col = fi % fotosPorLinha;
             const row = Math.floor(fi / fotosPorLinha);
             const fx = margin + 3 + col * (fotoW + gapFoto);
@@ -10310,6 +10661,14 @@ async function gerarPDFGerencia(options = {}) {
               doc.setTextColor(22, 53, 159);
               doc.setFontSize(7);
               doc.text('Foto indisponível', fx + fotoW / 2, fy + fotoH / 2, { align: 'center' });
+            }
+            if (legendaFoto) {
+              doc.setFillColor(255, 255, 255);
+              doc.rect(fx + 1, fy + fotoH - 13, fotoW - 2, 12, 'F');
+              doc.setTextColor(22, 53, 159);
+              doc.setFont('helvetica', 'normal');
+              doc.setFontSize(6.5);
+              doc.text(doc.splitTextToSize(legendaFoto, fotoW - 6).slice(0, 2), fx + 3, fy + fotoH - 8.5);
             }
           }
 
@@ -10909,6 +11268,8 @@ async function gerarPDFSetorial(setor, options = {}) {
         if (fotosParte.length) {
           for (let fi = 0; fi < fotosParte.length; fi++) {
             const dataUrl = fotosParte[fi];
+            const fotoIndex = (part * fotosPorPagina) + fi;
+            const legendaFoto = String((nc.fotoLegendas || [])[fotoIndex] || '').trim();
             const col = fi % fotosPorLinha;
             const row = Math.floor(fi / fotosPorLinha);
             const fx = margin + 3 + col * (fotoW + gapFoto);
@@ -10928,6 +11289,14 @@ async function gerarPDFSetorial(setor, options = {}) {
               doc.setTextColor(22, 53, 159);
               doc.setFontSize(7);
               doc.text('Foto indisponível', fx + fotoW / 2, fy + fotoH / 2, { align: 'center' });
+            }
+            if (legendaFoto) {
+              doc.setFillColor(255, 255, 255);
+              doc.rect(fx + 1, fy + fotoH - 13, fotoW - 2, 12, 'F');
+              doc.setTextColor(22, 53, 159);
+              doc.setFont('helvetica', 'normal');
+              doc.setFontSize(6.5);
+              doc.text(doc.splitTextToSize(legendaFoto, fotoW - 6).slice(0, 2), fx + 3, fy + fotoH - 8.5);
             }
           }
         } else {
@@ -11032,6 +11401,7 @@ async function gerarPDFSetorial(setor, options = {}) {
         [['ANTES', fotoAntesDataUrl], ['DEPOIS', fotoDepoisDataUrl]].forEach(([label, dataUrl], col) => {
           const fx = compX + 3 + col * (colW + gapComp);
           const fy = by + 8;
+          const legendaFoto = label === 'DEPOIS' ? String((item.fotoLegendasResolucao || [])[0] || '').trim() : '';
           doc.setFillColor(255, 255, 255);
           doc.setDrawColor(220, 230, 242);
           doc.roundedRect(fx, fy, colW - 3, 96, 1.5, 1.5, 'FD');
@@ -11043,6 +11413,14 @@ async function gerarPDFSetorial(setor, options = {}) {
             doc.setTextColor(100, 116, 139);
             doc.setFont('helvetica','normal');
             doc.text(label === 'ANTES' ? 'Sem foto anterior' : 'Sem foto da resolução', fx + 2, fy + 50);
+          }
+          if (legendaFoto) {
+            doc.setFillColor(255, 255, 255);
+            doc.rect(fx + 2, fy + 84, colW - 7, 11, 'F');
+            doc.setTextColor(22, 53, 159);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(6.5);
+            doc.text(doc.splitTextToSize(legendaFoto, colW - 10).slice(0, 2), fx + 4, fy + 88.5);
           }
         });
 
@@ -11533,7 +11911,8 @@ async function gerarPDFInsp(id, options = {}) {
         obs: cr.obs || 'Sem observação.',
         sugestao: cr.sugestao || 'Sem sugestão.',
         reincidencia: getReincidenciaCount(insp, s.id, ci),
-        fotos
+        fotos,
+        fotoLegendas: getFotosComLegendasCriterio(cr).map(item => item.legenda)
       });
     });
   });
@@ -11572,7 +11951,7 @@ async function gerarPDFInsp(id, options = {}) {
 
     // === Function: drawPhotoCard ===
     async function drawPhotoCard(opts) {
-      const { x, yTop, wCard, hCard, imgIndex, totalFotos, fotoUrl, isNC } = opts;
+      const { x, yTop, wCard, hCard, imgIndex, totalFotos, fotoUrl, legenda, isNC } = opts;
       const badgeTxt = `Imagem ${imgIndex}`;
       const statusTxt = isNC ? 'Não\nConforme' : 'Conforme';
       const statusCol = isNC ? RED : GREEN;
@@ -11615,6 +11994,15 @@ async function gerarPDFInsp(id, options = {}) {
         doc.setTextColor(22, 53, 159);
         doc.setFontSize(8);
         doc.text('Foto indisponível', x + wCard / 2, yTop + imgAreaH / 2, { align: 'center' });
+      }
+
+      if (String(legenda || '').trim()) {
+        doc.setFillColor(255, 255, 255);
+        doc.rect(x + 2, yTop + imgAreaH - 16, wCard - 4, 14, 'F');
+        doc.setTextColor(...BLUE);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6.8);
+        doc.text(doc.splitTextToSize(String(legenda).trim(), wCard - 8).slice(0, 2), x + 4, yTop + imgAreaH - 10.5);
       }
 
       doc.setTextColor(...statusCol);
@@ -11709,6 +12097,7 @@ async function gerarPDFInsp(id, options = {}) {
             imgIndex: (chunkIdx * 2) + 1,
             totalFotos: reg.fotos.length,
             fotoUrl: fotosChunk[0],
+            legenda: reg.fotoLegendas[(chunkIdx * 2)] || '',
             isNC
           });
         } else {
@@ -11720,6 +12109,7 @@ async function gerarPDFInsp(id, options = {}) {
             imgIndex: (chunkIdx * 2) + 1,
             totalFotos: reg.fotos.length,
             fotoUrl: fotosChunk[0],
+            legenda: reg.fotoLegendas[(chunkIdx * 2)] || '',
             isNC
           });
           await drawPhotoCard({
@@ -11730,6 +12120,7 @@ async function gerarPDFInsp(id, options = {}) {
             imgIndex: (chunkIdx * 2) + 2,
             totalFotos: reg.fotos.length,
             fotoUrl: fotosChunk[1],
+            legenda: reg.fotoLegendas[(chunkIdx * 2) + 1] || '',
             isNC
           });
         }
