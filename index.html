@@ -2736,7 +2736,7 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
     <datalist id="email-history-list"></datalist>
     <div class="section-title smartsheet-admin-only" style="display:none">Solicitações de acesso</div>
     <div class="card smartsheet-admin-only" style="display:none">
-      <div id="access-requests-status" style="font-size:12px;color:var(--text2);margin-bottom:12px">Carregue as solicitações pendentes para análise. Após tratar manualmente no Firebase Authentication, feche a solicitação.</div>
+      <div id="access-requests-status" style="font-size:12px;color:var(--text2);margin-bottom:12px">Carregue as solicitações pendentes para análise. Ao aprovar, o Firebase cria o usuário e envia o link para criação de senha.</div>
       <button class="btn-primary" onclick="carregarSolicitacoesAcesso()">
         Atualizar solicitações
       </button>
@@ -3527,12 +3527,81 @@ const UNIDADE_LABELS = {
   JC: 'Morro do Jacaré',
   MSB: 'Morro Sem Boné'
 };
+const DEFAULT_USER_UNITS = ['CD'];
+const USER_UNIT_ACCESS_COLLECTION = 'usuarios_acesso';
+const USER_UNIT_ACCESS_BY_EMAIL = {
+  // Preencha aqui quando quiser travar pelo código:
+  // 'usuario.cd@angloamerican.com': ['CD'],
+  // 'usuario.ba@angloamerican.com': ['BA'],
+  'naiara.santos_sesi@angloamerican.com': ['CD'],
+  'paulo.lopo_sesi@angloamerican.com': ['CD'],
+  'leandro.castro@angloamerican.com': ['CD'],
+  'ronaldo.maia@angloamerican.com': ['CD'],
+  'josenilto.souza@angloamerican.com': ['CD'],
+  'fellipe.ramos@angloamerican.com': ['CD'],
+  'soraya.andrade@angloamerican.com': ['CD'],
+  'silvio.souza@angloamerican.com': ['CD'],
+  'jardel.ferreira-externo@angloamerican.com': ['CD'],
+  'leticia.lopes-externo@angloamerican.com': ['CD'],
+  'walace.a.silva@angloamerican.com': ['BA'],
+  'henrique.rodrigues-externo@angloamerican.com': ['BA'],
+  'mariacarolina.paiva@angloamerican.com': ['BA'],
+  'paula.cruz@angloamerican.com': ['BA'],
+  'gillyard.soares-externo@angloamerican.com': ['CD', 'BA', 'JC', 'MSB']
+};
 
 // === Function: normalizeUnidadeCode ===
 function normalizeUnidadeCode(code, fallback = 'CD') {
   const normalized = String(code || '').trim().toUpperCase();
   if (normalized === 'HAR' || normalized === 'REF') return 'CD';
   return UNIDADES.includes(normalized) ? normalized : fallback;
+}
+
+function normalizeUnitList(unidades = []) {
+  return [...new Set((Array.isArray(unidades) ? unidades : [unidades])
+    .map(unit => normalizeUnidadeCode(unit, ''))
+    .filter(unit => UNIDADES.includes(unit)))];
+}
+
+function getLocalAllowedUnitsForEmail(email = currentUserEmail) {
+  const cleanEmail = String(email || '').trim().toLowerCase();
+  const configured = USER_UNIT_ACCESS_BY_EMAIL[cleanEmail] || USER_UNIT_ACCESS_BY_EMAIL['*'];
+  const units = normalizeUnitList(configured || DEFAULT_USER_UNITS);
+  return units.length ? units : [...DEFAULT_USER_UNITS];
+}
+
+function getAllowedUnitsFromProfile(profile = null) {
+  const cleanEmail = String(profile?.email || currentUserEmail || '').trim().toLowerCase();
+  const lockedUnits = cleanEmail ? normalizeUnitList(USER_UNIT_ACCESS_BY_EMAIL[cleanEmail]) : [];
+  if (lockedUnits.length) return lockedUnits;
+
+  const units = normalizeUnitList(
+    profile?.allowedUnits ||
+    profile?.unidades ||
+    profile?.units ||
+    profile?.unidade ||
+    profile?.unit
+  );
+  return units.length ? units : getLocalAllowedUnitsForEmail(cleanEmail);
+}
+
+function getCurrentAllowedUnits() {
+  const session = typeof getAuthSession === 'function' ? getAuthSession() : null;
+  return getAllowedUnitsFromProfile(session || { email: currentUserEmail });
+}
+
+function isUnitAllowed(unidade, allowedUnits = getCurrentAllowedUnits()) {
+  return normalizeUnitList(allowedUnits).includes(normalizeUnidadeCode(unidade, ''));
+}
+
+function applyUnitAccess(allowedUnits = getCurrentAllowedUnits()) {
+  const units = normalizeUnitList(allowedUnits);
+  const safeUnits = units.length ? units : [...DEFAULT_USER_UNITS];
+  if (!isUnitAllowed(currentUnidade, safeUnits)) currentUnidade = safeUnits[0];
+  pendingUnidade = currentUnidade;
+  localStorage.setItem('aa5s_unit', currentUnidade);
+  const unitName = document.getElementById('home-unit-name');
+  if (unitName) unitName.textContent = currentUnidade;
 }
 
 // === Function: getInspectionUnidade ===
@@ -3587,6 +3656,7 @@ const EMAIL_ALLOWED_DOMAIN = 'angloamerican.com';
 const EMAIL_AUTO_DEFAULT_TO = 'niquel_incidentes@angloamerican.com';
 const POWER_AUTOMATE_EMAIL_URL_KEY = 'aa5s_power_automate_email_url';
 const POWER_AUTOMATE_DEFAULT_EMAIL_URL = 'https://default2864f69d77c34fbebbc09750205239.1a.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/87cbc033e57d41b5a7e83bc4909120c0/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=QyQX5C9nbmkYh3wwSMpV5Mizh9EU0ZyMe5_Qvm_uZCI';
+const ACCESS_APPROVAL_FUNCTION_URL = 'https://us-central1-inspecao-5s.cloudfunctions.net/approveAccessRequest';
 const HOUSEKEEPING_DASHBOARD_URL = 'https://app.powerbi.com/groups/me/apps/f448c5c3-a40f-4a08-9a8a-16fb5e2a2887/reports/9a53374f-51f4-43fb-bd64-e3f8f7da18a7/ReportSection?ctid=2864f69d-77c3-4fbe-bbc0-97502052391a&experience=power-bi';
 const SMARTSHEET_DEFAULT_SHEET_URL = 'https://app.smartsheet.com/sheets/6CVRf4FH3j4chhm2Jx2pHfMCXV';
 const SMARTSHEET_DEFAULT_SHEET_ID = '991954921803652';
@@ -4971,6 +5041,13 @@ function escapeHtml(value) {
     .replace(/'/g, '&#039;');
 }
 
+function escapeJsString(value) {
+  return String(value ?? '')
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/\r?\n/g, '\\n');
+}
+
 // === Function: sanitizePdfText ===
 function sanitizePdfText(value) {
   if (Array.isArray(value)) return value.map(sanitizePdfText);
@@ -5775,6 +5852,7 @@ async function syncPendingQueue() {
         APP.syncQueue = APP.syncQueue.filter(id => id !== inspId);
         continue;
       }
+      if (!isUnitAllowed(getInspectionUnidade(insp))) continue;
 
       // Separa os dados: inspeção sem fotos + fotos em doc separado (evita limite 1MB)
       const inspSemFotos = JSON.parse(JSON.stringify(insp));
@@ -5844,7 +5922,7 @@ async function syncFromCloud() {
       if (snapshot.empty) break;
       snapshot.forEach(doc => {
         const data = doc.data();
-        if (!data?.deleted && !data?.deletedAt) cloudInsps.push(data);
+        if (!data?.deleted && !data?.deletedAt && isUnitAllowed(getInspectionUnidade(data))) cloudInsps.push(data);
       });
       if (snapshot.size < pageSize) break;
       lastDoc = snapshot.docs[snapshot.docs.length - 1];
@@ -5885,6 +5963,7 @@ async function syncFromCloud() {
     // Mantém local apenas inspeções pendentes de envio (fila offline).
     APP.inspecoes.forEach(i => {
       if (!i?.id) return;
+      if (!isUnitAllowed(getInspectionUnidade(i))) return;
       if (deletadosLocais.has(i.id)) return;
       if (APP.syncQueue.includes(i.id)) merged[i.id] = i;
     });
@@ -5930,6 +6009,7 @@ let appStarted = false;
 let pendingOfflineAuth = null;
 pendingOfflineAuth = getPendingOfflineAuth();
 let pendingUnidade = currentUnidade;
+let accessRequestsCache = [];
 let currentInsp = null; // inspeÃ§Ã£o em andamento
 let isSavingInspecao = false;
 let dashboardRefreshTimer = null;
@@ -5993,9 +6073,11 @@ function setAuthSession(profile, mode = 'online') {
   const email = (profile?.email || '').trim().toLowerCase();
   const tecnico = (profile?.tecnico || profile?.displayName || formatTecnicoNameFromEmail(email) || email).trim();
   if (!email) return null;
+  const allowedUnits = getAllowedUnitsFromProfile({ ...profile, email });
   const session = {
     email,
     tecnico,
+    allowedUnits,
     mode,
     loggedAt: new Date().toISOString()
   };
@@ -6046,6 +6128,7 @@ function isOfflineAuthSession() {
 function applyAuthProfileAsTecnico(profile) {
   currentUserEmail = (profile?.email || '').trim().toLowerCase();
   currentTec = (profile?.tecnico || profile?.displayName || formatTecnicoNameFromEmail(currentUserEmail) || currentUserEmail).trim();
+  applyUnitAccess(getAllowedUnitsFromProfile({ ...profile, email: currentUserEmail }));
   if (currentTec) {
     localStorage.setItem('aa5s_tec', currentTec);
     ensureCurrentTecInList();
@@ -6062,9 +6145,31 @@ function applyFirebaseUserAsTecnico(user) {
   });
 }
 
+function getUserAccessDocId(email) {
+  return String(email || '').trim().toLowerCase().replace(/\//g, '_');
+}
+
+async function loadUserAccessProfile(email) {
+  const cleanEmail = String(email || '').trim().toLowerCase();
+  if (!cleanEmail || !hasFirebaseConfig() || !navigator.onLine) return null;
+  try {
+    const snap = await db.collection(USER_UNIT_ACCESS_COLLECTION).doc(getUserAccessDocId(cleanEmail)).get();
+    if (!snap.exists) return null;
+    const data = snap.data() || {};
+    return {
+      email: cleanEmail,
+      allowedUnits: normalizeUnitList(data.allowedUnits || data.unidades || data.units || data.unidade || data.unit)
+    };
+  } catch (error) {
+    console.warn('Não foi possível carregar perfil de acesso por unidade:', error);
+    return null;
+  }
+}
+
 if (currentUnidade === 'HAR' || currentUnidade === 'REF') currentUnidade = 'CD';
 currentUnidade = normalizeUnidadeCode(currentUnidade, 'CD');
 localStorage.setItem('aa5s_unit', currentUnidade);
+applyUnitAccess();
 
 // === Function: renderUnitGrid ===
 function renderUnitGrid() {
@@ -6072,10 +6177,13 @@ function renderUnitGrid() {
   const currentLabel = document.getElementById('unit-current-name');
   if (!grid) return;
 
-  const chosen = pendingUnidade || currentUnidade || 'CD';
+  const allowedUnits = getCurrentAllowedUnits();
+  const visibleUnits = allowedUnits.length ? allowedUnits : [...DEFAULT_USER_UNITS];
+  if (!isUnitAllowed(pendingUnidade, visibleUnits)) pendingUnidade = visibleUnits[0];
+  const chosen = pendingUnidade || currentUnidade || visibleUnits[0] || 'CD';
   if (currentLabel) currentLabel.textContent = chosen;
 
-  grid.innerHTML = UNIDADES.map((u) => `
+  grid.innerHTML = visibleUnits.map((u) => `
     <button type="button" class="unit-card ${u === chosen ? 'active' : ''}" onclick="selectUnidade('${u}')">
       <span class="unit-card-icon">
         <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
@@ -6095,6 +6203,10 @@ function renderUnitGrid() {
 // === Function: selectUnidade ===
 function selectUnidade(unidade) {
   if (!UNIDADES.includes(unidade)) return;
+  if (!isUnitAllowed(unidade)) {
+    toast('Seu usuário não possui acesso a esta unidade.');
+    return;
+  }
   pendingUnidade = unidade;
   renderUnitGrid();
 }
@@ -6109,6 +6221,12 @@ function openUnitModal() {
 // === Function: confirmarUnidade ===
 function confirmarUnidade() {
   const v = pendingUnidade || currentUnidade || 'CD';
+  if (!isUnitAllowed(v)) {
+    toast('Seu usuário não possui acesso a esta unidade.');
+    applyUnitAccess();
+    renderUnitGrid();
+    return;
+  }
   currentUnidade = normalizeUnidadeCode(v, 'CD');
   localStorage.setItem('aa5s_unit', currentUnidade);
   document.getElementById('modal-unit').classList.remove('open');
@@ -6138,6 +6256,7 @@ function showLoginScreen() {
 // === Function: startAppAfterLogin ===
 function startAppAfterLogin(profile = null) {
   if (appStarted) {
+    applyUnitAccess(getAllowedUnitsFromProfile(profile || getAuthSession()));
     navTo('home');
     if (auth.currentUser) {
       syncFromCloud().finally(() => scheduleSyncQueue(0));
@@ -6145,10 +6264,11 @@ function startAppAfterLogin(profile = null) {
     return;
   }
   appStarted = true;
-  if (auth.currentUser) {
+  const activeProfile = profile || getAuthSession();
+  if (activeProfile) {
+    applyAuthProfileAsTecnico(activeProfile);
+  } else if (auth.currentUser) {
     applyFirebaseUserAsTecnico(auth.currentUser);
-  } else if (profile || getAuthSession()) {
-    applyAuthProfileAsTecnico(profile || getAuthSession());
   }
   ensureCurrentTecInList();
   if (currentTec) document.getElementById('home-tec-name').textContent = currentTec;
@@ -6346,6 +6466,83 @@ function setAccessRequestsStatus(text, isError = false) {
   el.style.color = isError ? 'var(--red)' : 'var(--text2)';
 }
 
+function getAccessRequestDomId(id, prefix = 'access-unit') {
+  return `${prefix}-${String(id || '').replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+}
+
+function getSuggestedAccessUnit(item = {}) {
+  const text = String(`${item.unidade || ''} ${item.justificativa || ''}`)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase();
+  if (/\bBA\b|BARRO\s+ALTO/.test(text)) return 'BA';
+  if (/\bJC\b|JACARE/.test(text)) return 'JC';
+  if (/\bMSB\b|SEM\s+BONE/.test(text)) return 'MSB';
+  if (/\bCD\b|CODEMIN/.test(text)) return 'CD';
+  return 'CD';
+}
+
+function getAccessRequestById(id) {
+  return accessRequestsCache.find(item => item.id === id) || null;
+}
+
+function getAccessApprovalAppUrl() {
+  const origin = window.location.origin || '';
+  if (!/^https?:\/\//.test(origin)) return '';
+  return `${origin}${window.location.pathname || '/'}`;
+}
+
+async function approveAccessRequestInFirebase(requestId, allowedUnits) {
+  if (!auth.currentUser) {
+    throw new Error('Faça login novamente antes de aprovar acesso.');
+  }
+  const token = await auth.currentUser.getIdToken(true);
+  const res = await fetch(ACCESS_APPROVAL_FUNCTION_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      requestId,
+      allowedUnits,
+      appUrl: getAccessApprovalAppUrl()
+    })
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok || !data?.ok) {
+    throw new Error(data?.message || `Falha ao aprovar acesso. HTTP ${res.status}`);
+  }
+  return data;
+}
+
+async function aprovarSolicitacaoAcessoAdmin(id) {
+  if (!isSmartsheetAdminUnlocked()) return;
+  const item = getAccessRequestById(id);
+  if (!item) {
+    toast('Solicitação não encontrada na lista carregada.');
+    return;
+  }
+  const unitSelect = document.getElementById(getAccessRequestDomId(id));
+  const selectedUnit = normalizeUnidadeCode(unitSelect?.value || getSuggestedAccessUnit(item), '');
+  if (!selectedUnit) {
+    toast('Selecione uma unidade válida.');
+    return;
+  }
+  if (!confirm(`Aprovar acesso para ${item.email} somente na unidade ${selectedUnit}?`)) return;
+
+  setAccessRequestsStatus(`Aprovando acesso de ${item.email}...`);
+  try {
+    await approveAccessRequestInFirebase(id, [selectedUnit]);
+    toast('Acesso aprovado e e-mail enviado ao solicitante.');
+    await carregarSolicitacoesAcesso();
+  } catch (error) {
+    console.error('Erro ao aprovar acesso:', error);
+    setAccessRequestsStatus(`Falha ao aprovar acesso: ${error.message}`, true);
+    toast('Falha ao aprovar acesso.');
+  }
+}
+
 // === Function: renderSolicitacoesAcesso ===
 function renderSolicitacoesAcesso(items = []) {
   const list = document.getElementById('access-requests-list');
@@ -6354,7 +6551,13 @@ function renderSolicitacoesAcesso(items = []) {
     list.innerHTML = '<div class="access-request-meta">Nenhuma solicitação pendente.</div>';
     return;
   }
-  list.innerHTML = items.map(item => `
+  list.innerHTML = items.map(item => {
+    const unitSelectId = getAccessRequestDomId(item.id);
+    const selectedUnit = getSuggestedAccessUnit(item);
+    const unitOptions = UNIDADES.map(unit => `
+      <option value="${unit}" ${unit === selectedUnit ? 'selected' : ''}>${unit} - ${escapeHtml(UNIDADE_LABELS[unit] || unit)}</option>
+    `).join('');
+    return `
     <div class="access-request-card">
       <div class="access-request-head">
         <div>
@@ -6367,10 +6570,15 @@ function renderSolicitacoesAcesso(items = []) {
       <div class="access-request-meta">Solicitado em: ${item.requestedAt ? new Date(item.requestedAt).toLocaleString('pt-BR') : 'sem data'}</div>
       <div class="access-request-reason" style="margin-top:8px">${escapeHtml(item.justificativa || '')}</div>
       <div class="access-request-actions">
-        <button class="btn-secondary" type="button" onclick="fecharSolicitacaoAcessoAdmin('${escapeHtml(item.id)}')" style="width:auto;padding:9px 14px">Fechar solicitação</button>
+        <select class="form-input" id="${escapeHtml(unitSelectId)}" style="width:auto;min-width:190px;padding:9px 12px">
+          ${unitOptions}
+        </select>
+        <button class="btn-primary" type="button" onclick="aprovarSolicitacaoAcessoAdmin('${escapeJsString(item.id)}')" style="width:auto;padding:9px 14px">Aprovar acesso</button>
+        <button class="btn-secondary" type="button" onclick="fecharSolicitacaoAcessoAdmin('${escapeJsString(item.id)}')" style="width:auto;padding:9px 14px">Fechar sem aprovar</button>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
 
 // === Function: carregarSolicitacoesAcesso ===
@@ -6382,8 +6590,9 @@ async function carregarSolicitacoesAcesso() {
   setAccessRequestsStatus('Carregando solicitações...');
   try {
     const items = await carregarSolicitacoesAcessoFirestore();
-    renderSolicitacoesAcesso(Array.isArray(items) ? items : []);
-    setAccessRequestsStatus(`${Array.isArray(items) ? items.length : 0} solicitação(ões) pendente(s).`);
+    accessRequestsCache = Array.isArray(items) ? items : [];
+    renderSolicitacoesAcesso(accessRequestsCache);
+    setAccessRequestsStatus(`${accessRequestsCache.length} solicitação(ões) pendente(s).`);
   } catch (error) {
     console.error('Erro ao carregar solicitações:', error);
     setAccessRequestsStatus(`Falha ao carregar solicitações: ${error.message}`, true);
@@ -6393,7 +6602,7 @@ async function carregarSolicitacoesAcesso() {
 // === Function: fecharSolicitacaoAcessoAdmin ===
 async function fecharSolicitacaoAcessoAdmin(id) {
   if (!isSmartsheetAdminUnlocked()) return;
-  if (!confirm('Deseja fechar esta solicitação? Faça isso apenas depois de tratar o acesso manualmente no Firebase Authentication.')) return;
+  if (!confirm('Deseja fechar esta solicitação sem aprovar o acesso?')) return;
   setAccessRequestsStatus('Atualizando solicitação...');
   try {
     await db.collection('solicitacoes_acesso').doc(id).set({
@@ -6433,16 +6642,18 @@ async function hashOfflinePassword(email, senha, salt) {
 }
 
 // === Function: saveOfflineAuthCache ===
-async function saveOfflineAuthCache(email, senha, user) {
+async function saveOfflineAuthCache(email, senha, user, profile = null) {
   try {
     const cleanEmail = String(email || '').trim().toLowerCase();
     if (!cleanEmail || !senha) return;
     const tecnico = getTecnicoFromFirebaseUser(user);
+    const allowedUnits = getAllowedUnitsFromProfile({ ...profile, email: cleanEmail });
     const salt = makeAuthSalt();
     const passwordHash = await hashOfflinePassword(cleanEmail, senha, salt);
     localStorage.setItem(AUTH_CACHE_KEY, JSON.stringify({
       email: cleanEmail,
       tecnico,
+      allowedUnits,
       salt,
       passwordHash,
       updatedAt: new Date().toISOString()
@@ -6472,7 +6683,8 @@ async function tryOfflineLogin(email, senha) {
   if (passwordHash !== cache.passwordHash) return null;
   return setAuthSession({
     email: cache.email,
-    tecnico: cache.tecnico || formatTecnicoNameFromEmail(cache.email) || cache.email
+    tecnico: cache.tecnico || formatTecnicoNameFromEmail(cache.email) || cache.email,
+    allowedUnits: cache.allowedUnits
   }, 'offline');
 }
 
@@ -6506,16 +6718,19 @@ async function loginUsuario(event) {
   try {
     await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
     const result = await auth.signInWithEmailAndPassword(email, senha);
+    const accessProfile = await loadUserAccessProfile(email);
+    const profile = {
+      email: result.user?.email || email,
+      tecnico: getTecnicoFromFirebaseUser(result.user),
+      allowedUnits: accessProfile?.allowedUnits
+    };
     setPendingOfflineAuth(null);
-    applyFirebaseUserAsTecnico(result.user);
-    setAuthSession({
-      email: currentUserEmail,
-      tecnico: currentTec
-    }, 'online');
-    await saveOfflineAuthCache(email, senha, result.user);
+    applyAuthProfileAsTecnico(profile);
+    setAuthSession(profile, 'online');
+    await saveOfflineAuthCache(email, senha, result.user, profile);
     if (senhaInput) senhaInput.value = '';
     toast('Login realizado com sucesso.');
-    startAppAfterLogin();
+    startAppAfterLogin(profile);
   } catch (error) {
     const canTryOffline = !navigator.onLine || error?.code === 'auth/network-request-failed';
     if (canTryOffline) {
@@ -6577,12 +6792,15 @@ async function handleOnlineAuthRecheck() {
   try {
     await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
     const result = await auth.signInWithEmailAndPassword(pendingOfflineAuth.email, pendingOfflineAuth.senha);
-    applyFirebaseUserAsTecnico(result.user);
-    setAuthSession({
-      email: currentUserEmail,
-      tecnico: currentTec
-    }, 'online');
-    await saveOfflineAuthCache(pendingOfflineAuth.email, pendingOfflineAuth.senha, result.user);
+    const accessProfile = await loadUserAccessProfile(pendingOfflineAuth.email);
+    const profile = {
+      email: result.user?.email || pendingOfflineAuth.email,
+      tecnico: getTecnicoFromFirebaseUser(result.user),
+      allowedUnits: accessProfile?.allowedUnits
+    };
+    applyAuthProfileAsTecnico(profile);
+    setAuthSession(profile, 'online');
+    await saveOfflineAuthCache(pendingOfflineAuth.email, pendingOfflineAuth.senha, result.user, profile);
     setPendingOfflineAuth(null);
     toast('Login online validado. Sincronizando dados pendentes...');
     scheduleSyncQueue(0);
@@ -6707,6 +6925,7 @@ function confirmarTecnico() {
 
 // === Function: renderHome ===
 function renderHome() {
+  applyUnitAccess();
   document.getElementById('home-tec-name').textContent = currentTec || 'Selecionar técnico';
   document.getElementById('home-unit-name').textContent = currentUnidade;
 
@@ -10559,6 +10778,8 @@ async function gerarPDFGerencia(options = {}) {
       const tipoCol = item.tipo === 'resolvida' ? [22, 163, 74] : [220, 38, 38];
       const cardFill = item.tipo === 'resolvida' ? [240, 253, 244] : [254, 242, 242];
       const cardStroke = item.tipo === 'resolvida' ? [187, 247, 208] : [254, 202, 202];
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
       const criterioLines = doc.splitTextToSize(`Critério: ${item.criterio}`, W - margin * 2 - 8);
       const obsLines = doc.splitTextToSize(`Obs: ${item.obs}`, W - margin * 2 - 8);
       const sugLines = doc.splitTextToSize(`Sugestão: ${item.sugestao}`, W - margin * 2 - 8);
@@ -11289,6 +11510,8 @@ async function gerarPDFSetorial(setor, options = {}) {
       const fotosTodas = Array.isArray(nc.fotos) ? nc.fotos : [];
       const fotosDataUrl = (await Promise.all(fotosTodas.map(toDataUrl))).filter(Boolean);
       const titulo = `${idx + 1}. ${nc.senso} · ${nc.local} · ${formatDate(nc.data)}`;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
       const criterioLines = doc.splitTextToSize(`Critério: ${nc.criterio}`, W - margin * 2 - 8);
       const obsLines = doc.splitTextToSize(`Obs: ${nc.obs}`, W - margin * 2 - 8);
       const sugLines = doc.splitTextToSize(`Sugestão: ${nc.sugestao}`, W - margin * 2 - 8);
@@ -11413,6 +11636,8 @@ async function gerarPDFSetorial(setor, options = {}) {
       const fotoAntesDataUrl = (await toDataUrl((Array.isArray(item.fotosAnterior) ? item.fotosAnterior : [])[0])) || null;
       const fotoDepoisDataUrl = (await toDataUrl((Array.isArray(item.fotosResolucao) ? item.fotosResolucao : [])[0])) || null;
       const titulo = `${idx + 1}. ${item.senso} · ${item.local} · Resolvido em ${formatDate(item.dataResolucao)}`;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
       const criterioLines = doc.splitTextToSize(`Critério: ${item.criterio}`, W - margin * 2 - 8);
       const antesLines = doc.splitTextToSize(`Antes: ${item.obsAnterior}`, W - margin * 2 - 8);
       const agoraLines = doc.splitTextToSize(`Agora: ${item.obsAtual}`, W - margin * 2 - 8);
@@ -11818,6 +12043,8 @@ async function gerarPDFInsp(id, options = {}) {
     doc.text('PENDÊNCIAS RECEBIDAS DE OUTROS SETORES', margin, y+8); y += 22;
 
     for (const item of pendenciasRecebidas) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
       const origemLines = doc.splitTextToSize(`${item.origemSetor} · ${item.origemLocal}`, W - margin * 2 - 8);
       const correspLines = doc.splitTextToSize(`NC corresponsável - Origem: ${item.origemSetor} · ${item.origemLocal} | Destino: ${insp.setor}`, W - margin * 2 - 8);
       const critLines = doc.splitTextToSize(`${item.senso} · Critério ${item.criterioIndice} - ${item.criterioTexto}`, W - margin * 2 - 8);
@@ -11905,6 +12132,8 @@ async function gerarPDFInsp(id, options = {}) {
 
     for (const item of pendenciasResolvidas) {
       const titulo = `${item.senso} · Critério ${item.criterioIndice}`;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
       const critLines = doc.splitTextToSize(item.criterioTexto, W - margin * 2 - 8);
       const antLines = doc.splitTextToSize(`Antes (nota ${item.notaAnterior}): ${item.obsAnterior || 'Sem observação.'}`, W - margin * 2 - 8);
       const atualLines = doc.splitTextToSize(`Agora (nota ${item.notaAtual}): ${item.obsAtual || 'Sem observação.'}`, W - margin * 2 - 8);
@@ -12320,15 +12549,19 @@ window.addEventListener('load', () => {
   } else {
     showLoginScreen();
   }
-  auth.onAuthStateChanged(user => {
+  auth.onAuthStateChanged(async user => {
     if (user) {
-      applyFirebaseUserAsTecnico(user);
-      setAuthSession({
-        email: currentUserEmail,
-        tecnico: currentTec
-      }, 'online');
+      const userEmail = (user.email || '').trim().toLowerCase();
+      const accessProfile = await loadUserAccessProfile(userEmail);
+      const profile = {
+        email: userEmail,
+        tecnico: getTecnicoFromFirebaseUser(user),
+        allowedUnits: accessProfile?.allowedUnits
+      };
+      applyAuthProfileAsTecnico(profile);
+      setAuthSession(profile, 'online');
       setPendingOfflineAuth(null);
-      startAppAfterLogin();
+      startAppAfterLogin(profile);
       return;
     }
     if (hasActiveLocalAuthSession()) return;
