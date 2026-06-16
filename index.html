@@ -2579,6 +2579,10 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
       <span style="font-size:11px;color:var(--text2)" id="insp-progress-txt">0 critérios avaliados</span>
       <span style="font-size:11px;color:var(--text2)" id="insp-date-txt"></span>
     </div>
+    <div id="insp-periodo-edit-wrap" style="display:none;margin-top:10px;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card2)">
+      <label class="form-label" for="insp-periodo-edit" style="margin-bottom:6px">Período da inspeção</label>
+      <input type="month" class="form-input" id="insp-periodo-edit" onchange="setPeriodoInspecao(this.value)">
+    </div>
   </div>
 
   <div class="scroll-body" id="insp-form-body" style="padding:12px 0 20px">
@@ -3462,6 +3466,15 @@ const CORRESPONSAVEL_EXTRA_SETOR_NAMES = [
   'Manutenção Elétrica'
 ];
 
+function getCorresponsavelExtraSetorNames(unidade = currentUnidade) {
+  const unit = normalizeUnidadeCode(unidade, currentUnidade || 'CD');
+  return [...CORRESPONSAVEL_EXTRA_SETOR_NAMES];
+}
+
+function getInspectionUnidadeForForm(insp = currentInsp) {
+  return normalizeUnidadeCode(insp?.unidade || currentUnidade || 'CD', 'CD');
+}
+
 const GERENCIAS_BA = {
   'Mineração': [
     'Produção de Mina',
@@ -4000,6 +4013,24 @@ function formatPeriodoTitulo(periodo, dataIso = '') {
     return `${mesNome.charAt(0).toUpperCase()}${mesNome.slice(1)} de ${ano}`;
   }
   return formatPeriodoOriginal(periodo, dataIso) || '';
+}
+
+function getInspectionPeriodLabel(insp) {
+  return formatPeriodoTitulo(insp?.periodo, insp?.data) || formatDate(insp?.data) || '—';
+}
+
+function getInspectionPeriodSortValue(insp) {
+  const periodo = String(insp?.periodo || '');
+  if (/^\d{4}-\d{2}$/.test(periodo)) return Number(periodo.replace('-', ''));
+  const data = new Date(insp?.data || '');
+  if (!Number.isFinite(data.getTime())) return 0;
+  return (data.getFullYear() * 100) + (data.getMonth() + 1);
+}
+
+function compareInspectionsByPeriodDesc(a, b) {
+  const periodoDiff = getInspectionPeriodSortValue(b) - getInspectionPeriodSortValue(a);
+  if (periodoDiff) return periodoDiff;
+  return new Date(b?.data || 0) - new Date(a?.data || 0);
 }
 
 // === Function: getInspectionIdentitySummary ===
@@ -7172,7 +7203,7 @@ function sectorCardListHTML() {
   return setoresOrdenados.map(setor => {
     const inspecoesSetor = APP.inspecoes
       .filter(i => inspectionIsCurrentUnit(i) && i.setor === setor)
-      .sort((a, b) => new Date(b.data) - new Date(a.data));
+      .sort(compareInspectionsByPeriodDesc);
     const areasMap = {};
     const setorCfg = getSetorConfigAtivo(setor);
     const areasEsperadas = (setorCfg?.subareas && setorCfg.subareas.length)
@@ -7193,7 +7224,7 @@ function sectorCardListHTML() {
     const areasFaltantes = areasEsperadas.filter(a => !areasInspecionadas.has(a));
     const faltamAreas = Math.max(0, areasEsperadas.length - [...areasInspecionadas].filter(a => areasEsperadas.includes(a)).length);
     const resumoSetor = areaKeys.length
-      ? `<span style="color:var(--green);font-weight:700">${areaKeys.length} área(s) com registro</span> · <span style="color:var(--red);font-weight:700">Faltam ${faltamAreas} área(s)</span>${ultimaSetor ? ` · <span style="color:var(--text2)">Última em ${formatDate(ultimaSetor.data)}</span>` : ''}`
+      ? `<span style="color:var(--green);font-weight:700">${areaKeys.length} área(s) com registro</span> · <span style="color:var(--red);font-weight:700">Faltam ${faltamAreas} área(s)</span>${ultimaSetor ? ` · <span style="color:var(--text2)">Último período: ${getInspectionPeriodLabel(ultimaSetor)}</span>` : ''}`
       : 'Nenhuma área com registro ainda';
 
     const renderAreaInspecionada = (areaKey) => {
@@ -7215,7 +7246,7 @@ function sectorCardListHTML() {
             <div class="sector-area-top">
               <div style="flex:1">
                 <div class="sector-area-name">${labelArea}</div>
-                <div class="sector-area-meta"><strong>${totalArea}</strong> inspeções · Última: ${formatDate(ultima.data)}</div>
+                <div class="sector-area-meta"><strong>${totalArea}</strong> inspeções · Período: ${getInspectionPeriodLabel(ultima)}</div>
               </div>
               <div style="font-family:var(--font-display); font-weight:700; color:${scoreColor}">${scoreTxt}</div>
             </div>
@@ -7320,7 +7351,7 @@ function inspCardHTML(insp, opts = {}) {
     <div class="insp-card-body">
       <div class="insp-meta-item">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        <span>${formatDate(insp.data)}</span>
+        <span>Período: ${getInspectionPeriodLabel(insp)}</span>
       </div>
       ${insp.subarea ? `
       <div class="insp-meta-item">
@@ -7417,18 +7448,35 @@ function sameLocal(a, b) {
 }
 
 // === Function: getAllSetorNames ===
-function getAllSetorNames() {
+function getAllSetorNames(unidade = currentUnidade) {
+  const unit = normalizeUnidadeCode(unidade, currentUnidade || 'CD');
   const nomes = new Set();
   const addNome = nome => {
     const clean = String(nome || '').trim();
     if (clean) nomes.add(clean);
   };
-  getSetoresAtivos().forEach(s => addNome(s.nome));
-  CORRESPONSAVEL_EXTRA_SETOR_NAMES.forEach(addNome);
+  getSetoresAtivos(unit).forEach(s => addNome(s.nome));
   APP.inspecoes
-    .filter(inspectionIsCurrentUnit)
+    .filter(insp => getInspectionUnidade(insp) === unit)
     .forEach(insp => {
       addNome(insp.setor);
+    });
+  return Array.from(nomes).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+}
+
+// === Function: getCorresponsavelSetorNames ===
+function getCorresponsavelSetorNames(unidade = currentUnidade) {
+  const unit = normalizeUnidadeCode(unidade, currentUnidade || 'CD');
+  const nomes = new Set();
+  const addNome = nome => {
+    const clean = String(nome || '').trim();
+    if (clean) nomes.add(clean);
+  };
+  getSetoresAtivos(unit).forEach(s => addNome(s.nome));
+  getCorresponsavelExtraSetorNames(unit).forEach(addNome);
+  APP.inspecoes
+    .filter(insp => getInspectionUnidade(insp) === unit)
+    .forEach(insp => {
       SENSOS.forEach(s => {
         (insp.sensos?.[s.id] || []).forEach(cr => addNome(cr?.encaminharSetor));
       });
@@ -7749,6 +7797,11 @@ function renderInspecaoForm() {
   document.getElementById('insp-header-setor').textContent = currentInsp.setor;
   document.getElementById('insp-header-sub').textContent = `${currentInsp.subarea ? currentInsp.subarea + ' · ' : ''}${currentInsp.periodo || ''}`;
   document.getElementById('insp-date-txt').textContent = new Date().toLocaleDateString('pt-BR');
+  const periodoEditWrap = document.getElementById('insp-periodo-edit-wrap');
+  const periodoEditInput = document.getElementById('insp-periodo-edit');
+  const isEditing = currentInsp.__isEditing === true;
+  if (periodoEditWrap) periodoEditWrap.style.display = isEditing ? 'block' : 'none';
+  if (periodoEditInput) periodoEditInput.value = /^\d{4}-\d{2}$/.test(currentInsp.periodo || '') ? currentInsp.periodo : '';
 
   // se tem base, carrega para mostrar notas anteriores
   const baseRef = currentInsp.baseId ? APP.inspecoes.find(i => i.id === currentInsp.baseId) : null;
@@ -8045,7 +8098,7 @@ function criterioHTML(s, si, cr, ci, base) {
   const correspAnterior = baseCr?.encaminharSetor && baseCr.encaminharSetor !== currentInsp.setor ? baseCr.encaminharSetor : '';
   const reincAtual = getReincidenciaFormulario(s.id, ci);
   const totalCriterios = s.criterios.length;
-  const setorOptions = getAllSetorNames()
+  const setorOptions = getCorresponsavelSetorNames(getInspectionUnidadeForForm(currentInsp))
     .filter(nome => nome !== currentInsp.setor)
     .map(nome => `<option value="${nome}" ${item.encaminharSetor === nome ? 'selected' : ''}>${nome}</option>`)
     .join('');
@@ -8259,6 +8312,23 @@ function setSugestao(sId, ci, val) {
 function setResponsavelSetor(sId, ci, val) {
   touchDraftContext({ lastSensoId: sId, lastCriterioIndex: ci, lastAction: 'encaminhamento', lastFieldId: `resp-${sId}-${ci}` });
   currentInsp.sensos[sId][ci].encaminharSetor = val;
+  scheduleDraftSave();
+}
+
+// === Function: setPeriodoInspecao ===
+function setPeriodoInspecao(val) {
+  if (!currentInsp?.__isEditing) return;
+  const periodo = String(val || '').trim();
+  const input = document.getElementById('insp-periodo-edit');
+  if (!/^\d{4}-\d{2}$/.test(periodo)) {
+    if (input) input.value = currentInsp.periodo || '';
+    toast('Informe um período válido para a inspeção.');
+    return;
+  }
+  currentInsp.periodo = periodo;
+  const headerSub = document.getElementById('insp-header-sub');
+  if (headerSub) headerSub.textContent = `${currentInsp.subarea ? currentInsp.subarea + ' · ' : ''}${currentInsp.periodo || ''}`;
+  touchDraftContext({ lastAction: 'periodo', lastFieldId: 'insp-periodo-edit' });
   scheduleDraftSave();
 }
 
@@ -8835,7 +8905,7 @@ function renderHistorico() {
   const groups = Array.from(groupsMap.entries())
     .map(([key, items]) => {
       const [setor, subarea] = key.split('||');
-      return { setor, subarea, items };
+      return { setor, subarea, items: [...items].sort(compareInspectionsByPeriodDesc) };
     })
     .sort((a, b) => b.items.length - a.items.length);
 
@@ -8846,7 +8916,7 @@ function renderHistorico() {
       <summary class="hist-group-summary">
         <div>
           <div class="hist-group-title">${titulo}</div>
-          <div class="hist-group-meta">Última: ${formatDate(ultima.data)} · ${ultima.tecnico || '—'}</div>
+          <div class="hist-group-meta">Último período: ${getInspectionPeriodLabel(ultima)} · ${ultima.tecnico || '—'}</div>
         </div>
         <div class="hist-group-count">${group.items.length} inspeção(ões)</div>
       </summary>
@@ -8872,7 +8942,7 @@ function openDetalhe(id) {
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
       <div>
         <div class="modal-title" style="margin-bottom:4px">${insp.setor}${insp.subarea ? ' - ' + insp.subarea : ''}</div>
-        <div style="font-size:12px;color:var(--text2)">${formatDate(insp.data)} · ${insp.tecnico}</div>
+        <div style="font-size:12px;color:var(--text2)">Período: ${getInspectionPeriodLabel(insp)} · Registro: ${formatDate(insp.data)} · ${insp.tecnico}</div>
       </div>
       ${notaBadge(insp.notaGeral)}
     </div>
