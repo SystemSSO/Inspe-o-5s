@@ -3458,6 +3458,10 @@ const SETORES_POR_UNIDADE = {
   BA: SETORES_BA
 };
 
+const CORRESPONSAVEL_EXTRA_SETOR_NAMES = [
+  'Manutenção Elétrica'
+];
+
 const GERENCIAS_BA = {
   'Mineração': [
     'Produção de Mina',
@@ -7414,10 +7418,21 @@ function sameLocal(a, b) {
 
 // === Function: getAllSetorNames ===
 function getAllSetorNames() {
-  const nomes = new Set(getSetoresAtivos().map(s => s.nome));
+  const nomes = new Set();
+  const addNome = nome => {
+    const clean = String(nome || '').trim();
+    if (clean) nomes.add(clean);
+  };
+  getSetoresAtivos().forEach(s => addNome(s.nome));
+  CORRESPONSAVEL_EXTRA_SETOR_NAMES.forEach(addNome);
   APP.inspecoes
     .filter(inspectionIsCurrentUnit)
-    .forEach(insp => nomes.add(insp.setor));
+    .forEach(insp => {
+      addNome(insp.setor);
+      SENSOS.forEach(s => {
+        (insp.sensos?.[s.id] || []).forEach(cr => addNome(cr?.encaminharSetor));
+      });
+    });
   return Array.from(nomes).sort((a, b) => a.localeCompare(b, 'pt-BR'));
 }
 
