@@ -3538,7 +3538,7 @@ const USER_UNIT_ACCESS_BY_EMAIL = {
   'leandro.castro@angloamerican.com': ['CD'],
   'ronaldo.maia@angloamerican.com': ['CD'],
   'josenilto.souza@angloamerican.com': ['CD'],
-  'fellipe.ramos@angloamerican.com': ['CD'],
+  'fellipe.ramos@angloamerican.com': ['CD', 'BA', 'JC', 'MSB'],
   'soraya.andrade@angloamerican.com': ['CD'],
   'silvio.souza@angloamerican.com': ['CD'],
   'jardel.ferreira-externo@angloamerican.com': ['CD'],
@@ -4651,6 +4651,7 @@ function getSetorialReportDashboardData(setor, periodo = getSetorialReportPeriod
   const periodoTitulo = `${periodo.mesNome.charAt(0).toUpperCase()}${periodo.mesNome.slice(1)} de ${periodo.ano}`;
   const inspsPeriodo = getInspectionsForReportPeriod(periodo);
   const inspsSetor = inspsPeriodo.filter(i => i.setor === setor);
+  const pontuacaoCorresponsavel = getSetorPontuacaoComparativo(setor, periodo);
   const debitoList = uniqueDebitoRazoes(inspsSetor.flatMap(getDebitoRazoesInspecao));
 
   const ncList = [];
@@ -4818,10 +4819,7 @@ function getSetorialReportDashboardData(setor, periodo = getSetorialReportPeriod
     });
   });
 
-  const notasValidas = inspsSetor.map(i => i.notaGeral).filter(n => typeof n === 'number');
-  const mediaGeral = notasValidas.length
-    ? (notasValidas.reduce((acc, n) => acc + n, 0) / notasValidas.length)
-    : null;
+  const mediaGeral = pontuacaoCorresponsavel.mediaComExternas;
   const rankingLocais = {};
   inspsSetor.forEach(insp => {
     if (typeof insp.notaGeral !== 'number') return;
@@ -4847,6 +4845,9 @@ function getSetorialReportDashboardData(setor, periodo = getSetorialReportPeriod
     totalInspecoes: inspsSetor.length,
     locaisUnicos: new Set(inspsSetor.map(i => localKey(i))).size,
     mediaGeral,
+    mediaSemNCExterna: pontuacaoCorresponsavel.mediaSemExternas,
+    impactoNCExterna: pontuacaoCorresponsavel.impactoExternas,
+    pontuacaoCorresponsavel,
     totalNCAbertas: ncList.length,
     totalNCRecebidas: ncList.filter(n => n.origemTipo === 'encaminhada').length,
     totalResolvidas: resolvidasList.length,
@@ -4868,8 +4869,8 @@ function getGerenciaReportDashboardData(gerencia, periodo = getSetorialReportPer
 
   const resumo = setores.map(setor => {
     const inspsSetor = inspsPeriodo.filter(i => i.setor === setor);
-    const notas = inspsSetor.map(i => i.notaGeral).filter(n => typeof n === 'number');
-    const media = notas.length ? (notas.reduce((a, b) => a + b, 0) / notas.length) : null;
+    const pontuacaoCorresponsavel = getSetorPontuacaoComparativo(setor, periodo);
+    const media = pontuacaoCorresponsavel.mediaComExternas;
     let ncAbertas = 0;
     let ncResolvidas = 0;
 
@@ -4944,7 +4945,17 @@ function getGerenciaReportDashboardData(gerencia, periodo = getSetorialReportPer
       });
     });
 
-    return { setor, inspecoes: inspsSetor.length, media, ncAbertas, ncResolvidas };
+    return {
+      setor,
+      inspecoes: inspsSetor.length,
+      media,
+      mediaSemNCExterna: pontuacaoCorresponsavel.mediaSemExternas,
+      impactoNCExterna: pontuacaoCorresponsavel.impactoExternas,
+      ncRecebidasComDebito: pontuacaoCorresponsavel.totalNCRecebidasComDebito,
+      pontuacaoCorresponsavel,
+      ncAbertas,
+      ncResolvidas
+    };
   }).sort((a, b) => (b.media ?? -1) - (a.media ?? -1));
 
   const totais = resumo.reduce((acc, r) => {
@@ -4956,7 +4967,31 @@ function getGerenciaReportDashboardData(gerencia, periodo = getSetorialReportPer
   }, { inspecoes: 0, ncAbertas: 0, ncResolvidas: 0, somaMedia: 0, countMedia: 0 });
 
   const mediaGerencia = totais.countMedia ? (totais.somaMedia / totais.countMedia) : null;
-  return { periodo, periodoTitulo, setores, inspsPeriodo, resumo, totais, mediaGerencia, ncDetalhes, resolucoesIncompletas, debitoList };
+  const setoresComNCExterna = resumo.filter(r => (r.impactoNCExterna || 0) > 0);
+  const mediasGerenciaSem = resumo
+    .map(r => r.mediaSemNCExterna)
+    .filter(n => typeof n === 'number');
+  const mediaGerenciaSemNCExterna = mediasGerenciaSem.length
+    ? (mediasGerenciaSem.reduce((a, b) => a + b, 0) / mediasGerenciaSem.length)
+    : null;
+  const impactoNCExternaGerencia = mediaGerenciaSemNCExterna !== null && mediaGerencia !== null
+    ? Math.max(0, mediaGerenciaSemNCExterna - mediaGerencia)
+    : 0;
+  return {
+    periodo,
+    periodoTitulo,
+    setores,
+    inspsPeriodo,
+    resumo,
+    totais,
+    mediaGerencia,
+    mediaGerenciaSemNCExterna,
+    impactoNCExternaGerencia,
+    setoresComNCExterna,
+    ncDetalhes,
+    resolucoesIncompletas,
+    debitoList
+  };
 }
 
 // === Function: buildSetorialReportEmailPayload ===
@@ -8027,7 +8062,7 @@ function renderInspecaoForm() {
   const base = sameLocal(currentInsp, baseRef) ? baseRef : null;
   const debitosCorresponsavelPorSenso = {};
   uniqueDebitoRazoes(getDebitoRazoesInspecao(currentInsp))
-    .filter(item => item.tipo === 'corresponsavel')
+    .filter(item => item.tipo === 'corresponsavel' || item.tipo === 'misto' || item.tipos?.includes('corresponsavel'))
     .forEach(item => {
       if (!debitosCorresponsavelPorSenso[item.sensoId]) debitosCorresponsavelPorSenso[item.sensoId] = [];
       debitosCorresponsavelPorSenso[item.sensoId].push(item);
@@ -8039,11 +8074,14 @@ function renderInspecaoForm() {
     const total = itens.reduce((acc, item) => acc + (Number(item.pontos) || 1), 0);
     const detalhe = itens
       .slice(0, 2)
-      .map(item => `${escapeHtml(item.origemSetor)} - ${escapeHtml(item.origemLocal)} · Critério ${item.criterioIndice}`)
+      .map(item => {
+        const origemCorresp = (item.origens || []).find(origem => origem.tipo === 'corresponsavel') || item;
+        return `${escapeHtml(origemCorresp.origemSetor)} - ${escapeHtml(origemCorresp.origemLocal)} · Critério ${item.criterioIndice}`;
+      })
       .join('<br>');
     const extra = itens.length > 2 ? `<br>+ ${itens.length - 2} outra(s) NC(s) reincidente(s)` : '';
     return `<div class="s-debito-corresp">
-      Débito de -${total.toFixed(0)} ponto(s) aplicado neste senso por NC reincidente de outra área sob corresponsabilidade deste setor.<br>
+      Impacto setorial em ${total.toFixed(0)} critério(s) deste senso, limitado a 1 ponto por critério, considerado na nota do setor nos relatórios.<br>
       Origem: ${detalhe}${extra}
     </div>`;
   };
@@ -8738,31 +8776,20 @@ function getInspecaoAnteriorMesmoLocal(insp) {
     .sort((a, b) => new Date(b.data) - new Date(a.data))[0] || null;
 }
 
-// === Function: getPenalidadeCorresponsavelS ===
-function getPenalidadeCorresponsavelS(insp, sId) {
-  if (!insp?.setor || !sId) return 0;
-  const limite = insp.data || new Date().toISOString();
-  let penalidade = 0;
+// === Function: getPenalidadeCriteriosS ===
+function getPenalidadeCriteriosS(insp, sId, inspAnterior = null) {
+  const criteriosDebitados = new Set();
+  const anterior = inspAnterior || getInspecaoAnteriorMesmoLocal(insp);
 
-  getLatestInspecoesByLocal(limite).forEach(inspOrigem => {
-    if (!inspOrigem || inspOrigem.id === insp.id) return;
-    if (inspOrigem.setor === insp.setor) return;
-    if (getInspectionUnidade(inspOrigem) !== getInspectionUnidade(insp)) return;
+  if (anterior?.sensos?.[sId] && insp?.sensos?.[sId]) {
+    for (let ci = 0; ci < insp.sensos[sId].length; ci++) {
+      const atualAberta = criterioTemNCAberta(insp.sensos[sId][ci]);
+      const anteriorAberta = criterioTemNCAberta(anterior.sensos[sId][ci]);
+      if (anteriorAberta && atualAberta) criteriosDebitados.add(ci);
+    }
+  }
 
-    const criteriosOrigem = inspOrigem.sensos?.[sId] || [];
-    criteriosOrigem.forEach((crAtual, ci) => {
-      if ((crAtual?.encaminharSetor || '') !== insp.setor) return;
-      if (!criterioTemNCAberta(crAtual)) return;
-
-      const inspAnteriorOrigem = getInspecaoAnteriorMesmoLocal(inspOrigem);
-      const crAnterior = inspAnteriorOrigem?.sensos?.[sId]?.[ci] || null;
-      if (!criterioTemNCAberta(crAnterior)) return;
-
-      penalidade += 1;
-    });
-  });
-
-  return penalidade;
+  return criteriosDebitados;
 }
 
 // === Function: getDebitoRazoesInspecao ===
@@ -8836,40 +8863,72 @@ function uniqueDebitoRazoes(razoes = []) {
   const map = new Map();
   razoes.forEach(item => {
     const key = [
-      item.tipo,
       item.setorImpactado,
-      item.origemSetor,
-      item.origemLocal,
-      item.destinoSetor,
+      item.localImpactado,
       item.sensoId,
       item.criterioIndice
     ].join('||');
-    if (!map.has(key)) map.set(key, item);
+    if (!map.has(key)) {
+      map.set(key, {
+        ...item,
+        pontos: 1,
+        tipos: [item.tipo].filter(Boolean),
+        motivos: [item.motivo].filter(Boolean),
+        origens: [{
+          tipo: item.tipo,
+          origemSetor: item.origemSetor,
+          origemLocal: item.origemLocal,
+          destinoSetor: item.destinoSetor
+        }]
+      });
+      return;
+    }
+
+    const atual = map.get(key);
+    if (item.tipo && !atual.tipos.includes(item.tipo)) atual.tipos.push(item.tipo);
+    if (item.motivo && !atual.motivos.includes(item.motivo)) atual.motivos.push(item.motivo);
+    atual.origens.push({
+      tipo: item.tipo,
+      origemSetor: item.origemSetor,
+      origemLocal: item.origemLocal,
+      destinoSetor: item.destinoSetor
+    });
+    if (atual.tipo !== item.tipo) atual.tipo = 'misto';
   });
   return Array.from(map.values());
 }
 
 // === Function: getPenalidadeS ===
 function getPenalidadeS(insp, sId, inspAnterior = null) {
-  const anterior = inspAnterior || getInspecaoAnteriorMesmoLocal(insp);
-  const penalidadeCorresponsavel = getPenalidadeCorresponsavelS(insp, sId);
-  if (!anterior || !anterior.sensos?.[sId] || !insp.sensos?.[sId]) return penalidadeCorresponsavel;
+  return getPenalidadeCriteriosS(insp, sId, inspAnterior).size;
+}
 
-  let penalidade = 0;
-  for (let ci = 0; ci < insp.sensos[sId].length; ci++) {
-    const atualAberta = criterioTemNCAberta(insp.sensos[sId][ci]);
-    const anteriorAberta = criterioTemNCAberta(anterior.sensos[sId][ci]);
-    if (anteriorAberta && atualAberta) penalidade += 1;
-  }
+// === Function: criterioJaTeveDebitoAplicado ===
+function criterioJaTeveDebitoAplicado(criterio) {
+  if (!criterio) return false;
+  const from = criterio.autoReincidenciaFrom;
+  const to = criterio.autoReincidenciaTo;
+  if (typeof from !== 'number' || typeof to !== 'number') return false;
+  return typeof criterio.nota === 'number' && criterio.nota === to && to === Math.max(0, from - 1);
+}
 
-  return penalidade + penalidadeCorresponsavel;
+// === Function: calcNotaCriterioFinal ===
+function calcNotaCriterioFinal(criterio, temDebito = false) {
+  if (typeof criterio?.nota !== 'number') return null;
+  if (!temDebito || criterioJaTeveDebitoAplicado(criterio)) return criterio.nota;
+  return Math.max(0, criterio.nota - 1);
 }
 
 // === Function: calcMediaSFinal ===
 function calcMediaSFinal(insp, sId, inspAnterior = null) {
-  const mediaBase = calcMediaS(insp?.sensos?.[sId]);
-  const penalidade = getPenalidadeS(insp, sId, inspAnterior);
-  return Math.max(0, mediaBase - penalidade);
+  const criterios = insp?.sensos?.[sId] || [];
+  if (!criterios.length) return 0;
+  const criteriosDebitados = getPenalidadeCriteriosS(insp, sId, inspAnterior);
+  const notas = criterios
+    .map((criterio, ci) => calcNotaCriterioFinal(criterio, criteriosDebitados.has(ci)))
+    .filter(nota => typeof nota === 'number');
+  if (!notas.length) return 0;
+  return notas.reduce((total, nota) => total + nota, 0) / notas.length;
 }
 
 // === Function: calcNotaGeralFinal ===
@@ -8884,6 +8943,119 @@ function calcNotaGeralFinal(insp, inspAnterior = null) {
   });
   if (!count) return null;
   return total / count;
+}
+
+function getImpactoCriterioNoSenso(insp, sId, ci) {
+  const criterios = insp?.sensos?.[sId] || [];
+  const criterio = criterios[ci];
+  const notas = criterios.filter(criterioTemNotaNumerica);
+  if (!notas.length || typeof criterio?.nota !== 'number') return 0;
+
+  let diferenca = 0;
+  if (criterioJaTeveDebitoAplicado(criterio)) {
+    diferenca = Math.max(0, criterio.autoReincidenciaFrom - criterio.autoReincidenciaTo);
+  } else {
+    diferenca = criterio.nota - Math.max(0, criterio.nota - 1);
+  }
+  return Math.max(0, diferenca) / notas.length;
+}
+
+function getImpactosCorresponsavelSetor(setorDestino, periodo = getSetorialReportPeriod()) {
+  const destino = String(setorDestino || '').trim();
+  if (!destino) return [];
+  const porCriterio = new Map();
+
+  getInspectionsForReportPeriod(periodo)
+    .filter(insp => insp && insp.setor !== destino)
+    .sort((a, b) => new Date(b.data) - new Date(a.data))
+    .forEach(inspOrigem => {
+      SENSOS.forEach(s => {
+        (inspOrigem.sensos?.[s.id] || []).forEach((crAtual, ci) => {
+          if ((crAtual?.encaminharSetor || '') !== destino) return;
+          if (!criterioTemNCAberta(crAtual)) return;
+
+          const inspAnteriorOrigem = getInspecaoAnteriorMesmoLocal(inspOrigem);
+          const crAnterior = inspAnteriorOrigem?.sensos?.[s.id]?.[ci] || null;
+          if (!criterioTemNCAberta(crAnterior)) return;
+
+          const key = `${destino}||${s.id}||${ci}`;
+          if (porCriterio.has(key)) return;
+          porCriterio.set(key, {
+            setorDestino: destino,
+            origemSetor: inspOrigem.setor || '',
+            origemLocal: localLabel(inspOrigem),
+            data: inspOrigem.data || '',
+            sensoId: s.id,
+            senso: s.nome,
+            criterioIndice: ci + 1,
+            criterioTexto: s.criterios[ci],
+            impacto: getImpactoCriterioNoSenso(inspOrigem, s.id, ci)
+          });
+        });
+      });
+    });
+
+  return Array.from(porCriterio.values()).filter(item => item.impacto > 0);
+}
+
+function getSetorPontuacaoComparativo(setor, periodo = getSetorialReportPeriod()) {
+  const inspsSetor = getInspectionsForReportPeriod(periodo).filter(i => i.setor === setor);
+  const impactos = getImpactosCorresponsavelSetor(setor, periodo);
+  const locaisComNota = {};
+  inspsSetor.forEach(insp => {
+    if (typeof insp.notaGeral !== 'number') return;
+    const key = localKey(insp);
+    if (!locaisComNota[key]) locaisComNota[key] = [];
+    locaisComNota[key].push(insp.notaGeral);
+  });
+  const mediasLocais = Object.values(locaisComNota)
+    .map(notas => notas.reduce((a, b) => a + b, 0) / notas.length);
+  const quantidadeLocais = Math.max(1, mediasLocais.length);
+  const sensosAvaliados = SENSOS.length;
+  const divisorImpactoSetorial = Math.max(1, sensosAvaliados * quantidadeLocais);
+  const impactosPorSenso = impactos.reduce((acc, item) => {
+    if (!acc[item.sensoId]) acc[item.sensoId] = [];
+    acc[item.sensoId].push(item);
+    return acc;
+  }, {});
+
+  const sensos = SENSOS.map(s => {
+    const notasSenso = inspsSetor
+      .filter(insp => (insp.sensos?.[s.id] || []).some(criterioTemNotaNumerica))
+      .map(insp => calcMediaSFinal(insp, s.id, getInspecaoAnteriorMesmoLocal(insp)))
+      .filter(nota => typeof nota === 'number' && Number.isFinite(nota));
+    const mediaSemExternas = notasSenso.length ? (notasSenso.reduce((a, b) => a + b, 0) / notasSenso.length) : null;
+    const itensImpacto = impactosPorSenso[s.id] || [];
+    const impactoBrutoSenso = itensImpacto.reduce((sum, item) => sum + item.impacto, 0);
+    const impactoExternas = impactoBrutoSenso / divisorImpactoSetorial;
+    const mediaComExternas = mediaSemExternas === null ? null : Math.max(0, mediaSemExternas - impactoExternas);
+    return {
+      sensoId: s.id,
+      senso: s.nome,
+      mediaSemExternas,
+      mediaComExternas,
+      impactoExternas,
+      impactoBrutoSenso,
+      impactos: itensImpacto
+    };
+  });
+
+  const mediaSemExternas = mediasLocais.length ? (mediasLocais.reduce((a, b) => a + b, 0) / mediasLocais.length) : null;
+  const impactoExternas = sensos.reduce((sum, item) => sum + item.impactoExternas, 0);
+  const mediaComExternas = mediaSemExternas === null ? null : Math.max(0, mediaSemExternas - impactoExternas);
+
+  return {
+    setor,
+    inspecoes: inspsSetor.length,
+    locaisAvaliados: mediasLocais.length,
+    sensosAvaliados,
+    mediaSemExternas,
+    mediaComExternas,
+    impactoExternas,
+    totalNCRecebidasComDebito: impactos.length,
+    sensos,
+    impactos
+  };
 }
 
 // === Function: updateScoreMini ===
@@ -10280,6 +10452,9 @@ async function gerarPDFGerencia(options = {}) {
   const resumo = gerenciaData.resumo;
   const totais = gerenciaData.totais;
   const mediaGerencia = gerenciaData.mediaGerencia;
+  const mediaGerenciaSemNCExterna = gerenciaData.mediaGerenciaSemNCExterna;
+  const impactoNCExternaGerencia = gerenciaData.impactoNCExternaGerencia;
+  const setoresComNCExterna = gerenciaData.setoresComNCExterna || [];
   const ncDetalhes = gerenciaData.ncDetalhes;
   const inspsPeriodo = gerenciaData.inspsPeriodo || [];
 
@@ -10626,6 +10801,56 @@ async function gerarPDFGerencia(options = {}) {
     doc.text(subtitle, x + 6, yPos + 23);
   }
 
+  function renderGerenciaImpactoNCExternaPage() {
+    if (!setoresComNCExterna.length) return;
+    let yy = novaPaginaComCabecalho('Impacto de NCs Recebidas de Outras Áreas', `${gerencia} · ${mesAnoAtual}`);
+
+    const gapLocal = 8;
+    const cardLocalW = (W - margin * 2 - gapLocal * 2) / 3;
+    drawDashCard(margin, yy, cardLocalW, 30, 'Gerência sem recebidas', mediaGerenciaSemNCExterna !== null ? mediaGerenciaSemNCExterna.toFixed(2) : '—', 'Média sem NC externa', [22, 53, 159]);
+    drawDashCard(margin + cardLocalW + gapLocal, yy, cardLocalW, 30, 'Impacto recebido', impactoNCExternaGerencia ? `-${impactoNCExternaGerencia.toFixed(2)}` : '—', 'Rateado por sensos e áreas', [245, 158, 11]);
+    drawDashCard(margin + (cardLocalW + gapLocal) * 2, yy, cardLocalW, 30, 'Gerência com recebidas', mediaGerencia !== null ? mediaGerencia.toFixed(2) : '—', 'Média considerada', [244, 63, 94]);
+    yy += 44;
+
+    doc.setTextColor(22, 53, 159);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text('Setores impactados', margin, yy);
+    yy += 6;
+
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(margin, yy, W - margin * 2, 10, 2, 2, 'FD');
+    doc.setTextColor(22, 53, 159);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.text('Setor', margin + 4, yy + 6.5);
+    doc.text('Sem recebidas', margin + 132, yy + 6.5, { align: 'right' });
+    doc.text('Impacto', margin + 176, yy + 6.5, { align: 'right' });
+    doc.text('Com recebidas', margin + 220, yy + 6.5, { align: 'right' });
+    doc.text('NCs recebidas', W - margin - 4, yy + 6.5, { align: 'right' });
+    yy += 14;
+
+    setoresComNCExterna.forEach((row, idx) => {
+      if (yy > H - 18) {
+        yy = novaPaginaComCabecalho('Impacto de NCs Recebidas de Outras Áreas', `${gerencia} · ${mesAnoAtual}`);
+      }
+      if (idx % 2 === 0) {
+        doc.setFillColor(250, 252, 255);
+        doc.rect(margin, yy - 5.5, W - margin * 2, 8, 'F');
+      }
+      doc.setTextColor(22, 53, 159);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.text(doc.splitTextToSize(row.setor, 118), margin + 4, yy);
+      doc.text(row.mediaSemNCExterna !== null ? row.mediaSemNCExterna.toFixed(2) : '—', margin + 132, yy, { align: 'right' });
+      doc.text(`-${(row.impactoNCExterna || 0).toFixed(2)}`, margin + 176, yy, { align: 'right' });
+      doc.text(row.media !== null ? row.media.toFixed(2) : '—', margin + 220, yy, { align: 'right' });
+      doc.text(String(row.ncRecebidasComDebito || 0), W - margin - 4, yy, { align: 'right' });
+      yy += 8;
+    });
+  }
+
   function getReportStatus(media, ncAbertas = 0) {
     if (typeof media !== 'number') return { label: 'Sem dados', color: [100, 116, 139] };
     if (media >= 3.5 && ncAbertas === 0) return { label: 'Bom', color: [16, 185, 129] };
@@ -10752,6 +10977,8 @@ async function gerarPDFGerencia(options = {}) {
       doc.text(r.media.toFixed(2), chartX + chartW - 2, yy, { align: 'right' });
     });
   }
+
+  renderGerenciaImpactoNCExternaPage();
 
   const ncsOrdenadas = [...ncDetalhes].sort((a, b) => {
     const setorCmp = a.setor.localeCompare(b.setor, 'pt-BR');
@@ -11267,6 +11494,9 @@ async function gerarPDFSetorial(setor, options = {}) {
     resolvidasList,
     totalInspecoes,
     mediaGeral,
+    mediaSemNCExterna,
+    impactoNCExterna,
+    pontuacaoCorresponsavel,
     totalNCAbertas,
     totalNCRecebidas,
     totalResolvidas,
@@ -11463,6 +11693,79 @@ async function gerarPDFSetorial(setor, options = {}) {
     doc.text(subtitle, x + 6, yPos + 23);
   }
 
+  function renderSetorialImpactoNCExternaPage() {
+    if (!pontuacaoCorresponsavel?.impactos?.length) return;
+    addNewPage();
+    doc.setFillColor(22, 53, 159);
+    doc.rect(0, 0, W, 24, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.text('Impacto de NCs Recebidas de Outras Áreas', margin, 14);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    doc.text(`${setor} · ${mesAnoAtual}`, margin, 20);
+
+    const gapLocal = 8;
+    const cardLocalW = (W - margin * 2 - gapLocal * 2) / 3;
+    drawDashCard(margin, 34, cardLocalW, 30, 'Sem NC externa', mediaSemNCExterna !== null ? mediaSemNCExterna.toFixed(2) : '—', 'Nota do setor sem recebidas', [22, 53, 159]);
+    drawDashCard(margin + cardLocalW + gapLocal, 34, cardLocalW, 30, 'Impacto recebido', impactoNCExterna ? `-${impactoNCExterna.toFixed(2)}` : '—', 'Rateado por sensos e áreas', [245, 158, 11]);
+    drawDashCard(margin + (cardLocalW + gapLocal) * 2, 34, cardLocalW, 30, 'Com NC externa', mediaGeral !== null ? mediaGeral.toFixed(2) : '—', 'Nota considerada no relatório', [244, 63, 94]);
+
+    let yy = 78;
+    doc.setTextColor(22, 53, 159);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text('Impacto por senso', margin, yy);
+    yy += 6;
+
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(margin, yy, W - margin * 2, 10, 2, 2, 'FD');
+    doc.setTextColor(22, 53, 159);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.text('Senso', margin + 4, yy + 6.5);
+    doc.text('Sem recebidas', margin + 125, yy + 6.5, { align: 'right' });
+    doc.text('Impacto', margin + 170, yy + 6.5, { align: 'right' });
+    doc.text('Com recebidas', margin + 215, yy + 6.5, { align: 'right' });
+    doc.text('Critérios recebidos', W - margin - 4, yy + 6.5, { align: 'right' });
+    yy += 14;
+
+    pontuacaoCorresponsavel.sensos
+      .filter(item => (item.impactoExternas || 0) > 0)
+      .forEach((item, idx) => {
+        if (idx % 2 === 0) {
+          doc.setFillColor(250, 252, 255);
+          doc.rect(margin, yy - 5.5, W - margin * 2, 8, 'F');
+        }
+        doc.setTextColor(22, 53, 159);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.5);
+        doc.text(item.senso, margin + 4, yy);
+        doc.text(item.mediaSemExternas !== null ? item.mediaSemExternas.toFixed(2) : '—', margin + 125, yy, { align: 'right' });
+        doc.text(`-${item.impactoExternas.toFixed(2)}`, margin + 170, yy, { align: 'right' });
+        doc.text(item.mediaComExternas !== null ? item.mediaComExternas.toFixed(2) : '—', margin + 215, yy, { align: 'right' });
+        doc.text(String(item.impactos.length), W - margin - 4, yy, { align: 'right' });
+        yy += 8;
+      });
+
+    yy += 8;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text('Origem das NCs recebidas com débito', margin, yy);
+    yy += 7;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    pontuacaoCorresponsavel.impactos.slice(0, 10).forEach((item, idx) => {
+      const linha = `${idx + 1}. ${item.senso} · Critério ${item.criterioIndice} · Origem: ${item.origemSetor} - ${item.origemLocal} · Impacto no senso de origem -${item.impacto.toFixed(2)}`;
+      const lines = doc.splitTextToSize(linha, W - margin * 2);
+      if (yy + lines.length * 4 > H - 14) return;
+      doc.text(lines, margin, yy);
+      yy += lines.length * 4 + 2;
+    });
+  }
+
   const gap = 8;
   const cardW = (W - margin * 2 - gap * 2) / 3;
   const cardH = 30;
@@ -11495,6 +11798,8 @@ async function gerarPDFSetorial(setor, options = {}) {
   const piorTxt = piorLocal ? `${piorLocal.label} (${piorLocal.media.toFixed(2)})` : 'Sem dados';
   doc.text(`Área melhor avaliada: ${melhorTxt}`, margin + 6, boxY + 16);
   doc.text(`Área com menor avaliação: ${piorTxt}`, margin + 6, boxY + 23);
+
+  renderSetorialImpactoNCExternaPage();
 
   if (ncList.length) {
     addNewPage();
