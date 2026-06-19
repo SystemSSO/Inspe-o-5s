@@ -4691,9 +4691,121 @@ function inspectionBelongsToReportPeriod(insp, periodo) {
   return data.getMonth() + 1 === periodo.mesNumero && data.getFullYear() === periodo.ano;
 }
 
+// === Function: getInspectionPeriodCodeForReport ===
+function getInspectionPeriodCodeForReport(insp) {
+  const periodo = String(insp?.periodo || '').trim();
+  if (/^\d{4}-\d{2}$/.test(periodo)) return periodo;
+  const data = new Date(insp?.data || '');
+  if (!Number.isFinite(data.getTime())) return '';
+  return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}`;
+}
+
+// === Function: getPeriodSortCode ===
+function getPeriodSortCode(periodoCodigo = '') {
+  const match = String(periodoCodigo || '').match(/^(\d{4})-(\d{2})$/);
+  if (!match) return 0;
+  return (Number(match[1]) * 100) + Number(match[2]);
+}
+
+// === Function: inspectionIsOnOrBeforeReportPeriod ===
+function inspectionIsOnOrBeforeReportPeriod(insp, periodo) {
+  const inspCode = getInspectionPeriodCodeForReport(insp);
+  const reportCode = String(periodo?.periodoCodigo || '');
+  return !!inspCode && !!reportCode && getPeriodSortCode(inspCode) <= getPeriodSortCode(reportCode);
+}
+
 // === Function: getInspectionsForReportPeriod ===
 function getInspectionsForReportPeriod(periodo = getSetorialReportPeriod()) {
   return APP.inspecoes.filter(i => inspectionIsCurrentUnit(i) && inspectionBelongsToReportPeriod(i, periodo));
+}
+
+// === Function: getInspectionsUntilReportPeriod ===
+function getInspectionsUntilReportPeriod(periodo = getSetorialReportPeriod()) {
+  return APP.inspecoes.filter(i => inspectionIsCurrentUnit(i) && inspectionIsOnOrBeforeReportPeriod(i, periodo));
+}
+
+// === Function: getLatestInspectionsByLocalUntilReportPeriod ===
+function getLatestInspectionsByLocalUntilReportPeriod(periodo = getSetorialReportPeriod()) {
+  const latestMap = {};
+  getInspectionsUntilReportPeriod(periodo).forEach(insp => {
+    const key = localKey(insp);
+    if (!latestMap[key] || compareInspectionsByPeriodDesc(insp, latestMap[key]) < 0) {
+      latestMap[key] = insp;
+    }
+  });
+  return Object.values(latestMap);
+}
+
+// === Function: getOpenDesvioItemsUntilReportPeriod ===
+function getOpenDesvioItemsUntilReportPeriod(periodo = getSetorialReportPeriod()) {
+  const openMap = new Map();
+  const makePrefix = (insp, sId, ci) => `${getInspectionUnidade(insp)}||${localKey(insp)}||${sId}||${ci}`;
+  const makeKey = (insp, sId, ci, desvioId) => `${makePrefix(insp, sId, ci)}||${desvioId || 'criterio'}`;
+  const clearCriterion = (insp, sId, ci) => {
+    const prefix = `${makePrefix(insp, sId, ci)}||`;
+    Array.from(openMap.keys()).forEach(key => {
+      if (key.startsWith(prefix)) openMap.delete(key);
+    });
+  };
+
+  const ordered = getInspectionsUntilReportPeriod(periodo)
+    .sort((a, b) => {
+      const periodDiff = getInspectionPeriodSortValue(a) - getInspectionPeriodSortValue(b);
+      if (periodDiff) return periodDiff;
+      return new Date(a?.data || 0) - new Date(b?.data || 0);
+    });
+
+  ordered.forEach(insp => {
+    SENSOS.forEach(s => {
+      (insp.sensos?.[s.id] || []).forEach((cr, ci) => {
+        const explicit = getCriterioDesvios(cr, { includeLegacy: false });
+        const nota = cr?.nota ?? null;
+        const criterioConforme = cr?.ncResolvida === true || (typeof nota === 'number' && nota >= 4);
+
+        if (criterioConforme) {
+          clearCriterion(insp, s.id, ci);
+          return;
+        }
+
+        if (explicit.length) {
+          explicit.forEach((desvio, desvioIndex) => {
+            const desvioId = desvio.origemId || desvio.id || `desvio-${desvioIndex + 1}`;
+            const key = makeKey(insp, s.id, ci, desvioId);
+            if (!desvioTemConteudo(desvio)) return;
+            if (!isDesvioAberto(desvio)) {
+              openMap.delete(key);
+              return;
+            }
+            openMap.set(key, { insp, s, ci, cr, desvio, desvioId });
+          });
+          return;
+        }
+
+        if (criterioTemNCAberta(cr)) {
+          const desvio = getLegacyDesvioFromCriterio(cr) || normalizeDesvio({
+            id: 'criterio',
+            descricao: cr?.obs || '',
+            sugestao: cr?.sugestao || '',
+            encaminharSetor: cr?.encaminharSetor || '',
+            fotos: getFotosAberturaCriterio(cr),
+            fotoLegendas: getFotoLegendasCriterio(cr),
+            status: 'aberto',
+            legacy: true
+          });
+          openMap.set(makeKey(insp, s.id, ci, desvio.id || 'criterio'), {
+            insp,
+            s,
+            ci,
+            cr,
+            desvio,
+            desvioId: desvio.id || 'criterio'
+          });
+        }
+      });
+    });
+  });
+
+  return Array.from(openMap.values());
 }
 
 // === Function: getSetorialReportInspections ===
@@ -4718,77 +4830,64 @@ function getGerenciaReportInspections(gerencia, periodo = getSetorialReportPerio
 function getSetorialReportDashboardData(setor, periodo = getSetorialReportPeriod(getReportPeriodInputValue('rel-periodo-setorial'))) {
   const periodoTitulo = `${periodo.mesNome.charAt(0).toUpperCase()}${periodo.mesNome.slice(1)} de ${periodo.ano}`;
   const inspsPeriodo = getInspectionsForReportPeriod(periodo);
+  const openDesviosAtePeriodo = getOpenDesvioItemsUntilReportPeriod(periodo);
   const inspsSetor = inspsPeriodo.filter(i => i.setor === setor);
   const pontuacaoCorresponsavel = getSetorPontuacaoComparativo(setor, periodo);
   const debitoList = uniqueDebitoRazoes(inspsSetor.flatMap(getDebitoRazoesInspecao));
 
   const ncList = [];
   const resolucoesIncompletas = [];
-  const latestOwnByCrit = {};
-  [...inspsSetor]
-    .sort((a, b) => new Date(b.data) - new Date(a.data))
-    .forEach(insp => {
-      SENSOS.forEach(s => {
-        (insp.sensos?.[s.id] || []).forEach((cr, ci) => {
-          const key = `${localKey(insp)}||${s.id}||${ci}`;
-          if (latestOwnByCrit[key]) return;
-          latestOwnByCrit[key] = { insp, s, ci, cr };
-        });
+
+  openDesviosAtePeriodo
+    .filter(({ insp }) => insp.setor === setor)
+    .forEach(({ insp, s, ci, cr, desvio, desvioId }) => {
+      const fotosDesvio = getFotosValidasArray(desvio.fotos);
+      const fotos = fotosDesvio.length ? fotosDesvio : getFotosNCAbertaComFallback(insp, s.id, ci, cr);
+      const fotoLegendas = (Array.isArray(desvio.fotoLegendas) && desvio.fotoLegendas.length)
+        ? desvio.fotoLegendas.map(legenda => String(legenda || '').trim())
+        : getFotosComLegendasNCAbertaComFallback(insp, s.id, ci, cr).map(item => item.legenda);
+      ncList.push({
+        data: insp.data,
+        local: localLabel(insp),
+        senso: s.nome,
+        criterio: s.criterios[ci],
+        reincidencia: getReincidenciaCount(insp, s.id, ci),
+        obs: desvio.descricao || cr.obs || 'Sem observação.',
+        sugestao: desvio.sugestao || cr.sugestao || 'Não informada.',
+        fotos,
+        fotoLegendas,
+        origemTipo: 'propria',
+        origemSetor: insp.setor,
+        origemLocal: localLabel(insp),
+        destinoSetor: desvio.encaminharSetor || getDestinoPrincipalCriterio(cr, insp.setor),
+        destinoLocal: localLabel(insp),
+        desvioId
       });
     });
 
-  Object.values(latestOwnByCrit).forEach(({ insp, s, ci, cr }) => {
-    if (!criterioTemNCAberta(cr)) return;
+  openDesviosAtePeriodo
+    .filter(({ insp, desvio }) => insp.setor !== setor && String(desvio.encaminharSetor || '').trim() === setor)
+    .forEach(({ insp, s, ci, cr, desvio, desvioId }) => {
+      const fotosEncaminhadas = getFotosValidasArray(desvio.fotos).length ? getFotosValidasArray(desvio.fotos) : getFotosNCAbertaComFallback(insp, s.id, ci, cr);
+      const legendasEncaminhadas = Array.isArray(desvio.fotoLegendas) && desvio.fotoLegendas.length
+        ? desvio.fotoLegendas.map(legenda => String(legenda || '').trim())
+        : getFotosComLegendasNCAbertaComFallback(insp, s.id, ci, cr).map(item => item.legenda);
     ncList.push({
       data: insp.data,
       local: localLabel(insp),
       senso: s.nome,
       criterio: s.criterios[ci],
       reincidencia: getReincidenciaCount(insp, s.id, ci),
-      obs: cr.obs || 'Sem observação.',
-      sugestao: cr.sugestao || 'Não informada.',
-      fotos: getFotosNCAbertaComFallback(insp, s.id, ci, cr),
-      fotoLegendas: getFotosComLegendasNCAbertaComFallback(insp, s.id, ci, cr).map(item => item.legenda),
-      origemTipo: 'propria',
-      origemSetor: insp.setor,
-      origemLocal: localLabel(insp),
-      destinoSetor: getDestinoPrincipalCriterio(cr, insp.setor),
-      destinoLocal: localLabel(insp)
-    });
-  });
-
-  const latestEncByCrit = {};
-  [...inspsPeriodo]
-    .filter(i => i.setor !== setor)
-    .sort((a, b) => new Date(b.data) - new Date(a.data))
-    .forEach(insp => {
-      SENSOS.forEach(s => {
-        (insp.sensos?.[s.id] || []).forEach((cr, ci) => {
-          const key = `${insp.setor}||${localKey(insp)}||${s.id}||${ci}`;
-          if (latestEncByCrit[key]) return;
-          latestEncByCrit[key] = { insp, s, ci, cr };
-        });
-      });
-    });
-
-  Object.values(latestEncByCrit).forEach(({ insp, s, ci, cr }) => {
-    if (!criterioTemNCAberta(cr)) return;
-    if (!criterioEncaminhadoPara(cr, setor)) return;
-    ncList.push({
-      data: insp.data,
-      local: localLabel(insp),
-      senso: s.nome,
-      criterio: s.criterios[ci],
-      reincidencia: getReincidenciaCount(insp, s.id, ci),
-      obs: cr.obs || 'Sem observação.',
-      sugestao: cr.sugestao || 'Não informada.',
-      fotos: getFotosNCAbertaComFallback(insp, s.id, ci, cr),
-      fotoLegendas: getFotosComLegendasNCAbertaComFallback(insp, s.id, ci, cr).map(item => item.legenda),
+      obs: desvio.descricao || cr.obs || 'Sem observação.',
+      sugestao: desvio.sugestao || cr.sugestao || 'Não informada.',
+      fotos: fotosEncaminhadas,
+      fotoLegendas: legendasEncaminhadas,
       origemTipo: 'encaminhada',
       origemSetor: insp.setor,
       origemLocal: localLabel(insp),
-      destinoSetor: setor,
-      destinoLocal: localLabel(insp)
+      destinoSetor: desvio.encaminharSetor || setor,
+      destinoLocal: localLabel(insp),
+      desvioId
     });
   });
 
@@ -4969,6 +5068,8 @@ function getGerenciaReportDashboardData(gerencia, periodo = getSetorialReportPer
   const periodoTitulo = `${periodo.mesNome.charAt(0).toUpperCase()}${periodo.mesNome.slice(1)} de ${periodo.ano}`;
   const setores = getGerenciaSetoresAtivos(gerencia);
   const inspsPeriodo = getGerenciaReportInspections(gerencia, periodo);
+  const openDesviosAtePeriodo = getOpenDesvioItemsUntilReportPeriod(periodo)
+    .filter(item => setores.includes(item.insp?.setor));
   const ncDetalhes = [];
   const resolucoesIncompletas = [];
   const debitoList = uniqueDebitoRazoes(inspsPeriodo.flatMap(getDebitoRazoesInspecao));
@@ -4980,36 +5081,30 @@ function getGerenciaReportDashboardData(gerencia, periodo = getSetorialReportPer
     let ncAbertas = 0;
     let ncResolvidas = 0;
 
-    const latestByCrit = {};
-    [...inspsSetor]
-      .sort((a, b) => new Date(b.data) - new Date(a.data))
-      .forEach(insp => {
-        SENSOS.forEach(s => {
-          (insp.sensos?.[s.id] || []).forEach((cr, ci) => {
-            const key = `${localKey(insp)}||${s.id}||${ci}`;
-            if (latestByCrit[key]) return;
-            latestByCrit[key] = { insp, s, ci, cr };
-          });
+    openDesviosAtePeriodo
+      .filter(({ insp }) => insp.setor === setor)
+      .forEach(({ insp, s, ci, cr, desvio, desvioId }) => {
+        const fotosDesvio = getFotosValidasArray(desvio.fotos);
+        const fotos = fotosDesvio.length ? fotosDesvio : getFotosNCAbertaComFallback(insp, s.id, ci, cr);
+        const fotoLegendas = (Array.isArray(desvio.fotoLegendas) && desvio.fotoLegendas.length)
+          ? desvio.fotoLegendas.map(legenda => String(legenda || '').trim())
+          : getFotosComLegendasNCAbertaComFallback(insp, s.id, ci, cr).map(item => item.legenda);
+        ncAbertas++;
+        ncDetalhes.push({
+          tipo: 'aberta',
+          setor,
+          local: localLabel(insp),
+          data: insp.data,
+          senso: s.nome,
+          criterio: s.criterios[ci],
+          obs: desvio.descricao || cr?.obs || 'Sem observação.',
+          sugestao: desvio.sugestao || cr?.sugestao || 'Não informada.',
+          nota: cr?.nota ?? null,
+          fotos,
+          fotoLegendas,
+          desvioId
         });
       });
-
-    Object.values(latestByCrit).forEach(({ insp, s, ci, cr }) => {
-      if (!criterioTemNCAberta(cr)) return;
-      ncAbertas++;
-      ncDetalhes.push({
-        tipo: 'aberta',
-        setor,
-        local: localLabel(insp),
-        data: insp.data,
-        senso: s.nome,
-        criterio: s.criterios[ci],
-        obs: cr?.obs || 'Sem observação.',
-        sugestao: cr?.sugestao || 'Não informada.',
-        nota: cr?.nota ?? null,
-        fotos: getFotosNCAbertaComFallback(insp, s.id, ci, cr),
-        fotoLegendas: getFotosComLegendasNCAbertaComFallback(insp, s.id, ci, cr).map(item => item.legenda)
-      });
-    });
 
     inspsSetor.forEach(insp => {
       const anterior = getInspecaoAnteriorMesmoLocal(insp);
@@ -8446,16 +8541,55 @@ function getDesviosResolvidosCriterio(criterio) {
   return getCriterioDesvios(criterio).filter(desvio => desvioTemConteudo(desvio) && !isDesvioAberto(desvio));
 }
 
+// === Function: getDesviosAbertosEncaminhadosCriterio ===
+function getDesviosAbertosEncaminhadosCriterio(criterio, setorDestino = '') {
+  const destinoFiltro = String(setorDestino || '').trim();
+  if (!criterio) return [];
+
+  const itens = getCriterioDesvios(criterio, { includeLegacy: false })
+    .filter(desvio => desvioTemConteudo(desvio) && isDesvioAberto(desvio))
+    .map((desvio, index) => {
+      const destinoSetor = String(desvio.encaminharSetor || '').trim();
+      return {
+        desvio,
+        desvioId: desvio.id || desvio.origemId || `desvio-${index + 1}`,
+        desvioIndice: index + 1,
+        destinoSetor,
+        obs: String(desvio.descricao || '').trim(),
+        sugestao: String(desvio.sugestao || '').trim(),
+        fotos: getFotosValidasArray(desvio.fotos),
+        fotoLegendas: (Array.isArray(desvio.fotoLegendas) ? desvio.fotoLegendas : [])
+          .map(legenda => String(legenda || '').trim())
+      };
+    })
+    .filter(item => item.destinoSetor && (!destinoFiltro || item.destinoSetor === destinoFiltro));
+
+  if (itens.length) return itens;
+
+  const destinoLegado = String(criterio.encaminharSetor || '').trim();
+  if (!destinoLegado || (destinoFiltro && destinoLegado !== destinoFiltro) || !criterioTemNCAberta(criterio)) {
+    return [];
+  }
+
+  return [{
+    desvio: null,
+    desvioId: 'criterio',
+    desvioIndice: null,
+    destinoSetor: destinoLegado,
+    obs: String(criterio.obs || '').trim(),
+    sugestao: String(criterio.sugestao || '').trim(),
+    fotos: getFotosAberturaCriterio(criterio),
+    fotoLegendas: getFotosComLegendasAberturaCriterio(criterio).map(item => item.legenda)
+  }];
+}
+
 // === Function: getDestinosCorresponsaveisCriterio ===
 function getDestinosCorresponsaveisCriterio(criterio) {
   if (!criterio) return [];
-  const destinosDesvios = getCriterioDesvios(criterio, { includeLegacy: false })
-    .filter(desvio => desvioTemConteudo(desvio) && isDesvioAberto(desvio))
-    .map(desvio => String(desvio.encaminharSetor || '').trim())
+  const destinosDesvios = getDesviosAbertosEncaminhadosCriterio(criterio)
+    .map(item => item.destinoSetor)
     .filter(Boolean);
-  if (destinosDesvios.length) return [...new Set(destinosDesvios)];
-  const destinoLegado = String(criterio.encaminharSetor || '').trim();
-  return destinoLegado && criterioTemNCAberta(criterio) ? [destinoLegado] : [];
+  return [...new Set(destinosDesvios)];
 }
 
 // === Function: criterioEncaminhadoPara ===
@@ -9445,6 +9579,7 @@ function getDebitoRazoesInspecao(insp) {
         senso: s.nome,
         criterioIndice: ci + 1,
         criterioTexto: s.criterios[ci],
+        desvioId: '',
         pontos: 1,
         motivo: `Desvio reincidente no setor de origem (${insp.setor} - ${localLabel(insp)}), no senso ${s.nome}.`
       });
@@ -9460,22 +9595,28 @@ function getDebitoRazoesInspecao(insp) {
     SENSOS.forEach(s => {
       const criteriosOrigem = inspOrigem.sensos?.[s.id] || [];
       criteriosOrigem.forEach((crAtual, ci) => {
-        if (!criterioEncaminhadoPara(crAtual, insp.setor)) return;
         if (!criterioTemNCAberta(crAtual)) return;
+        const desviosEncaminhados = getDesviosAbertosEncaminhadosCriterio(crAtual, insp.setor);
+        if (!desviosEncaminhados.length) return;
 
-        razoes.push({
-          tipo: 'corresponsavel',
-          setorImpactado: insp.setor,
-          localImpactado: localLabel(insp),
-          origemSetor: inspOrigem.setor,
-          origemLocal: localLabel(inspOrigem),
-          destinoSetor: insp.setor,
-          sensoId: s.id,
-          senso: s.nome,
-          criterioIndice: ci + 1,
-          criterioTexto: s.criterios[ci],
-          pontos: 1,
-          motivo: `Desvio encaminhado ao corresponsável ${insp.setor}; débito aplicado no senso ${s.nome}.`
+        desviosEncaminhados.forEach(enc => {
+          razoes.push({
+            tipo: 'corresponsavel',
+            setorImpactado: insp.setor,
+            localImpactado: localLabel(insp),
+            origemSetor: inspOrigem.setor,
+            origemLocal: localLabel(inspOrigem),
+            destinoSetor: enc.destinoSetor || insp.setor,
+            sensoId: s.id,
+            senso: s.nome,
+            criterioIndice: ci + 1,
+            criterioTexto: s.criterios[ci],
+            desvioId: enc.desvioId || '',
+            desvioIndice: enc.desvioIndice || null,
+            desvioObs: enc.obs || '',
+            pontos: 1,
+            motivo: `Desvio encaminhado ao corresponsável ${insp.setor}; débito aplicado no senso ${s.nome}.`
+          });
         });
       });
     });
@@ -9492,7 +9633,8 @@ function uniqueDebitoRazoes(razoes = []) {
       item.setorImpactado,
       item.localImpactado,
       item.sensoId,
-      item.criterioIndice
+      item.criterioIndice,
+      item.desvioId || ''
     ].join('||');
     if (!map.has(key)) {
       map.set(key, {
@@ -9504,7 +9646,9 @@ function uniqueDebitoRazoes(razoes = []) {
           tipo: item.tipo,
           origemSetor: item.origemSetor,
           origemLocal: item.origemLocal,
-          destinoSetor: item.destinoSetor
+          destinoSetor: item.destinoSetor,
+          desvioId: item.desvioId || '',
+          desvioObs: item.desvioObs || ''
         }]
       });
       return;
@@ -9517,7 +9661,9 @@ function uniqueDebitoRazoes(razoes = []) {
       tipo: item.tipo,
       origemSetor: item.origemSetor,
       origemLocal: item.origemLocal,
-      destinoSetor: item.destinoSetor
+      destinoSetor: item.destinoSetor,
+      desvioId: item.desvioId || '',
+      desvioObs: item.desvioObs || ''
     });
     if (atual.tipo !== item.tipo) atual.tipo = 'misto';
   });
@@ -9591,29 +9737,21 @@ function getImpactosCorresponsavelSetor(setorDestino, periodo = getSetorialRepor
   if (!destino) return [];
   const porCriterio = new Map();
 
-  getInspectionsForReportPeriod(periodo)
-    .filter(insp => insp && insp.setor !== destino)
-    .sort((a, b) => new Date(b.data) - new Date(a.data))
-    .forEach(inspOrigem => {
-      SENSOS.forEach(s => {
-        (inspOrigem.sensos?.[s.id] || []).forEach((crAtual, ci) => {
-          if (!criterioEncaminhadoPara(crAtual, destino)) return;
-          if (!criterioTemNCAberta(crAtual)) return;
-
-          const key = `${destino}||${s.id}||${ci}`;
-          if (porCriterio.has(key)) return;
-          porCriterio.set(key, {
-            setorDestino: destino,
-            origemSetor: inspOrigem.setor || '',
-            origemLocal: localLabel(inspOrigem),
-            data: inspOrigem.data || '',
-            sensoId: s.id,
-            senso: s.nome,
-            criterioIndice: ci + 1,
-            criterioTexto: s.criterios[ci],
-            impacto: getImpactoCriterioNoSenso(inspOrigem, s.id, ci)
-          });
-        });
+  getOpenDesvioItemsUntilReportPeriod(periodo)
+    .filter(({ insp, desvio }) => insp && insp.setor !== destino && String(desvio?.encaminharSetor || '').trim() === destino)
+    .forEach(({ insp: inspOrigem, s, ci, desvio, desvioId }) => {
+      const key = `${destino}||${inspOrigem.setor || ''}||${localKey(inspOrigem)}||${s.id}||${ci}||${desvioId || desvio?.id || ''}`;
+      if (porCriterio.has(key)) return;
+      porCriterio.set(key, {
+        setorDestino: desvio?.encaminharSetor || destino,
+        origemSetor: inspOrigem.setor || '',
+        origemLocal: localLabel(inspOrigem),
+        data: inspOrigem.data || '',
+        sensoId: s.id,
+        senso: s.nome,
+        criterioIndice: ci + 1,
+        criterioTexto: s.criterios[ci],
+        impacto: getImpactoCriterioNoSenso(inspOrigem, s.id, ci)
       });
     });
 
