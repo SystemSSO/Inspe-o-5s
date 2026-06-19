@@ -8087,7 +8087,7 @@ function renderInspecaoForm() {
         return `${escapeHtml(origemCorresp.origemSetor)} - ${escapeHtml(origemCorresp.origemLocal)} · Critério ${item.criterioIndice}`;
       })
       .join('<br>');
-    const extra = itens.length > 2 ? `<br>+ ${itens.length - 2} outra(s) NC(s) reincidente(s)` : '';
+    const extra = itens.length > 2 ? `<br>+ ${itens.length - 2} outra(s) NC(s) encaminhada(s)` : '';
     return `<div class="s-debito-corresp">
       Impacto setorial em ${total.toFixed(0)} critério(s) deste senso, limitado a 1 ponto por critério, considerado na nota do setor nos relatórios.<br>
       Origem: ${detalhe}${extra}
@@ -8841,10 +8841,6 @@ function getDebitoRazoesInspecao(insp) {
         if ((crAtual?.encaminharSetor || '') !== insp.setor) return;
         if (!criterioTemNCAberta(crAtual)) return;
 
-        const inspAnteriorOrigem = getInspecaoAnteriorMesmoLocal(inspOrigem);
-        const crAnterior = inspAnteriorOrigem?.sensos?.[s.id]?.[ci] || null;
-        if (!criterioTemNCAberta(crAnterior)) return;
-
         razoes.push({
           tipo: 'corresponsavel',
           setorImpactado: insp.setor,
@@ -8857,7 +8853,7 @@ function getDebitoRazoesInspecao(insp) {
           criterioIndice: ci + 1,
           criterioTexto: s.criterios[ci],
           pontos: 1,
-          motivo: `NC reincidente encaminhada ao corresponsável ${insp.setor}; débito aplicado no senso ${s.nome}.`
+          motivo: `NC encaminhada ao corresponsável ${insp.setor}; débito aplicado no senso ${s.nome}.`
         });
       });
     });
@@ -8981,10 +8977,6 @@ function getImpactosCorresponsavelSetor(setorDestino, periodo = getSetorialRepor
         (inspOrigem.sensos?.[s.id] || []).forEach((crAtual, ci) => {
           if ((crAtual?.encaminharSetor || '') !== destino) return;
           if (!criterioTemNCAberta(crAtual)) return;
-
-          const inspAnteriorOrigem = getInspecaoAnteriorMesmoLocal(inspOrigem);
-          const crAnterior = inspAnteriorOrigem?.sensos?.[s.id]?.[ci] || null;
-          if (!criterioTemNCAberta(crAnterior)) return;
 
           const key = `${destino}||${s.id}||${ci}`;
           if (porCriterio.has(key)) return;
