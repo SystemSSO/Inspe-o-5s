@@ -5068,8 +5068,7 @@ function getGerenciaReportDashboardData(gerencia, periodo = getSetorialReportPer
   const periodoTitulo = `${periodo.mesNome.charAt(0).toUpperCase()}${periodo.mesNome.slice(1)} de ${periodo.ano}`;
   const setores = getGerenciaSetoresAtivos(gerencia);
   const inspsPeriodo = getGerenciaReportInspections(gerencia, periodo);
-  const openDesviosAtePeriodo = getOpenDesvioItemsUntilReportPeriod(periodo)
-    .filter(item => setores.includes(item.insp?.setor));
+  const openDesviosAtePeriodo = getOpenDesvioItemsUntilReportPeriod(periodo);
   const ncDetalhes = [];
   const resolucoesIncompletas = [];
   const debitoList = uniqueDebitoRazoes(inspsPeriodo.flatMap(getDebitoRazoesInspecao));
@@ -5082,8 +5081,12 @@ function getGerenciaReportDashboardData(gerencia, periodo = getSetorialReportPer
     let ncResolvidas = 0;
 
     openDesviosAtePeriodo
-      .filter(({ insp }) => insp.setor === setor)
+      .filter(({ insp, desvio }) =>
+        insp.setor === setor ||
+        (insp.setor !== setor && String(desvio?.encaminharSetor || '').trim() === setor)
+      )
       .forEach(({ insp, s, ci, cr, desvio, desvioId }) => {
+        const origemTipo = insp.setor === setor ? 'propria' : 'encaminhada';
         const fotosDesvio = getFotosValidasArray(desvio.fotos);
         const fotos = fotosDesvio.length ? fotosDesvio : getFotosNCAbertaComFallback(insp, s.id, ci, cr);
         const fotoLegendas = (Array.isArray(desvio.fotoLegendas) && desvio.fotoLegendas.length)
@@ -5102,7 +5105,11 @@ function getGerenciaReportDashboardData(gerencia, periodo = getSetorialReportPer
           nota: cr?.nota ?? null,
           fotos,
           fotoLegendas,
-          desvioId
+          desvioId,
+          origemTipo,
+          origemSetor: insp.setor,
+          origemLocal: localLabel(insp),
+          destinoSetor: desvio.encaminharSetor || setor
         });
       });
 
@@ -11448,7 +11455,10 @@ async function gerarPDFGerencia(options = {}) {
     yy += 9;
 
     if (!rows.length) {
-      doc.text('Nenhuma área inspecionada encontrada para este período.', margin, yy);
+      const msg = totais.ncAbertas > 0
+        ? `Nenhuma inspeção realizada neste período. O relatório mantém ${totais.ncAbertas} desvio(s) aberto(s) acumulado(s) de períodos anteriores.`
+        : 'Nenhuma área inspecionada encontrada para este período.';
+      doc.text(doc.splitTextToSize(msg, W - margin * 2), margin, yy);
       return;
     }
 
@@ -11676,26 +11686,44 @@ async function gerarPDFGerencia(options = {}) {
     yy += 14;
 
     setoresComNCExterna.forEach((row, idx) => {
-      if (yy > H - 18) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      const setorLines = doc.splitTextToSize(row.setor, 118);
+      const rowH = Math.max(8, 4 * setorLines.length + 4);
+
+      if (yy + rowH > H - 14) {
         yy = novaPaginaComCabecalho('Impacto de Desvios Recebidos de Outras Áreas', `${gerencia} · ${mesAnoAtual}`);
+        doc.setFillColor(248, 250, 252);
+        doc.setDrawColor(226, 232, 240);
+        doc.roundedRect(margin, yy, W - margin * 2, 10, 2, 2, 'FD');
+        doc.setTextColor(22, 53, 159);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8.5);
+        doc.text('Setor', margin + 4, yy + 6.5);
+        doc.text('Sem recebidas', margin + 132, yy + 6.5, { align: 'right' });
+        doc.text('Impacto', margin + 176, yy + 6.5, { align: 'right' });
+        doc.text('Com recebidas', margin + 220, yy + 6.5, { align: 'right' });
+        doc.text('Desvios recebidos', W - margin - 4, yy + 6.5, { align: 'right' });
+        yy += 14;
       }
       if (idx % 2 === 0) {
         doc.setFillColor(250, 252, 255);
-        doc.rect(margin, yy - 5.5, W - margin * 2, 8, 'F');
+        doc.rect(margin, yy - 5.5, W - margin * 2, rowH, 'F');
       }
       doc.setTextColor(22, 53, 159);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8.5);
-      doc.text(doc.splitTextToSize(row.setor, 118), margin + 4, yy);
+      doc.text(setorLines, margin + 4, yy);
       doc.text(row.mediaSemNCExterna !== null ? row.mediaSemNCExterna.toFixed(2) : '—', margin + 132, yy, { align: 'right' });
       doc.text(formatImpactoRecebido(row.impactoNCExterna || 0), margin + 176, yy, { align: 'right' });
       doc.text(formatNotaComImpacto(row.media, row.mediaSemNCExterna), margin + 220, yy, { align: 'right' });
       doc.text(String(row.ncRecebidasComDebito || 0), W - margin - 4, yy, { align: 'right' });
-      yy += 8;
+      yy += rowH;
     });
   }
 
   function getReportStatus(media, ncAbertas = 0) {
+    if (typeof media !== 'number' && ncAbertas > 0) return { label: 'Pendências', color: [244, 63, 94] };
     if (typeof media !== 'number') return { label: 'Sem dados', color: [100, 116, 139] };
     if (media >= 3.5 && ncAbertas === 0) return { label: 'Bom', color: [16, 185, 129] };
     if (media >= 2.5) return { label: 'Atenção', color: [245, 158, 11] };
@@ -11728,7 +11756,7 @@ async function gerarPDFGerencia(options = {}) {
   drawDashCard(margin, row1Y, cardW, cardH, 'Inspeções', totais.inspecoes, 'No mês atual', [22, 53, 159]);
   drawDashCard(margin + cardW + gap, row1Y, cardW, cardH, 'Média Geral', mediaGerencia !== null ? mediaGerencia.toFixed(2) : '—', 'Nota média da gerência', [14, 165, 233]);
   drawDashCard(margin + (cardW + gap) * 2, row1Y, cardW, cardH, 'Taxa de Resolução', taxaResolucaoGerencia, 'Resolvidas sobre desvios do período', [16, 185, 129]);
-  drawDashCard(margin, row2Y, cardW, cardH, 'Desvios abertos', totais.ncAbertas, 'Pendências identificadas', [244, 63, 94]);
+  drawDashCard(margin, row2Y, cardW, cardH, 'Desvios abertos', totais.ncAbertas, 'Inclui períodos anteriores', [244, 63, 94]);
   drawDashCard(margin + cardW + gap, row2Y, cardW, cardH, 'Desvios resolvidos', totais.ncResolvidas, 'Concluídas no período', [16, 185, 129]);
   drawDashCard(margin + (cardW + gap) * 2, row2Y, cardW, cardH, 'Setores Totais', setores.length, 'Mapeados na gerência', [245, 158, 11]);
 
@@ -11765,15 +11793,33 @@ async function gerarPDFGerencia(options = {}) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   resumo.forEach((r, idx) => {
-    if (y > 196) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    const setorLines = doc.splitTextToSize(r.setor, resumoColX.status - resumoColX.setor - 8);
+    const rowH = Math.max(8, 4 * setorLines.length + 4);
+
+    if (y + rowH > H - 14) {
       y = novaPaginaComCabecalho('Resumo por Setor', `${gerencia} · ${mesAnoAtual}`);
+      doc.setDrawColor(226, 232, 240);
+      doc.setFillColor(248, 250, 252);
+      doc.roundedRect(margin, y, resumoTableW, 10, 2, 2, 'FD');
+      doc.setTextColor(22, 53, 159);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.5);
+      doc.text('Setor', resumoColX.setor, y + 6.5);
+      doc.text('Status', resumoColX.status, y + 6.5, { align: 'center' });
+      doc.text('Inspeções', resumoColX.inspecoes, y + 6.5, { align: 'right' });
+      doc.text('Média', resumoColX.media, y + 6.5, { align: 'right' });
+      doc.text('Desvios abertos', resumoColX.ncAbertas, y + 6.5, { align: 'right' });
+      doc.text('Desvios resolvidos', resumoColX.ncResolvidas, y + 6.5, { align: 'right' });
+      y += 14;
     }
     if (idx % 2 === 0) {
       doc.setFillColor(250, 252, 255);
-      doc.rect(margin, y - 5.5, resumoTableW, 8, 'F');
+      doc.rect(margin, y - 5.5, resumoTableW, rowH, 'F');
     }
     doc.setTextColor(22, 53, 159);
-    doc.text(r.setor, resumoColX.setor, y);
+    doc.text(setorLines, resumoColX.setor, y);
     const status = getReportStatus(r.media, r.ncAbertas);
     doc.setTextColor(...status.color);
     doc.setFont('helvetica', 'bold');
@@ -11784,7 +11830,7 @@ async function gerarPDFGerencia(options = {}) {
     doc.text(r.media !== null ? r.media.toFixed(2) : '—', resumoColX.media, y, { align: 'right' });
     doc.text(String(r.ncAbertas), resumoColX.ncAbertas, y, { align: 'right' });
     doc.text(String(r.ncResolvidas), resumoColX.ncResolvidas, y, { align: 'right' });
-    y += 8;
+    y += rowH;
   });
 
   // Página de ranking por setor (média)
@@ -11803,8 +11849,12 @@ async function gerarPDFGerencia(options = {}) {
     const chartW = W - margin * 2;
     const rowH = 9;
     const maxMedia = Math.max(...ranking.map(r => r.media), 0.1);
+    let currentChartY = chartY;
     ranking.forEach((r, i) => {
-      const yy = chartY + i * rowH;
+      if (currentChartY + rowH > H - 14) {
+        currentChartY = novaPaginaComCabecalho('Ranking por Setor', `${gerencia} · ${mesAnoAtual}`);
+      }
+      const yy = currentChartY;
       const barW = (Math.max(0, r.media) / maxMedia) * (chartW - 96);
       if (i % 2 === 0) {
         doc.setFillColor(248, 250, 252);
@@ -11819,6 +11869,7 @@ async function gerarPDFGerencia(options = {}) {
       doc.setTextColor(22, 53, 159);
       doc.setFont('helvetica', 'bold');
       doc.text(r.media.toFixed(2), chartX + chartW - 2, yy, { align: 'right' });
+      currentChartY += rowH;
     });
   }
 
@@ -11854,6 +11905,10 @@ async function gerarPDFGerencia(options = {}) {
       const criterioLines = doc.splitTextToSize(`Critério: ${item.criterio}`, W - margin * 2 - 8);
       const obsLines = doc.splitTextToSize(`Obs: ${item.obs}`, W - margin * 2 - 8);
       const sugLines = doc.splitTextToSize(`Sugestão: ${item.sugestao}`, W - margin * 2 - 8);
+      const correspTxt = item.origemTipo === 'encaminhada'
+        ? `Desvio corresponsável - Origem: ${item.origemSetor || item.setor} - ${item.origemLocal || item.local} | Destino: ${item.destinoSetor || item.setor}`
+        : '';
+      const correspLines = correspTxt ? doc.splitTextToSize(correspTxt, W - margin * 2 - 8) : [];
 
       if (item.tipo === 'resolvida') {
         const fotoAntesDataUrl = (await imageToDataUrl((Array.isArray(item.fotosAnterior) ? item.fotosAnterior : [])[0])) || null;
@@ -11948,14 +12003,20 @@ async function gerarPDFGerencia(options = {}) {
       const fotosDataUrl = (await Promise.all(fotos.map(imageToDataUrl))).filter(Boolean);
       const fotosPorLinha = 2;
       const fotoW = 118;
-      const fotoH = 78;
       const gapFoto = 8;
       const fotosPorPagina = fotosPorLinha;
       const chunks = splitArrayIntoChunks(fotosDataUrl, fotosPorPagina);
       const primeiroChunk = chunks.length ? chunks[0] : [];
       const linhasFotos = primeiroChunk.length ? Math.ceil(primeiroChunk.length / fotosPorLinha) : 0;
+      const hTexto = 12 + criterioLines.length * 4 + obsLines.length * 4 + sugLines.length * 4 + correspLines.length * 4 + 8;
+      let fotoH = 78;
+      if (linhasFotos) {
+        const maxCardH = H - 42;
+        const availableFotosH = maxCardH - hTexto - ((linhasFotos - 1) * gapFoto);
+        fotoH = Math.max(48, Math.min(78, Math.floor(availableFotosH / linhasFotos)));
+      }
       const hFotos = linhasFotos ? (linhasFotos * fotoH) + ((linhasFotos - 1) * gapFoto) : 0;
-      const h = 12 + criterioLines.length * 4 + obsLines.length * 4 + sugLines.length * 4 + hFotos + 8;
+      const h = hTexto + hFotos;
       if (y + h > 196) y = novaPaginaNCSemFaixa(tituloSecao);
 
       doc.setFillColor(...cardFill);
@@ -11978,7 +12039,16 @@ async function gerarPDFGerencia(options = {}) {
       doc.text(criterioLines, margin + 3, by); by += criterioLines.length * 4 + 1;
       doc.text(obsLines, margin + 3, by); by += obsLines.length * 4 + 1;
       doc.text(sugLines, margin + 3, by);
-      by += sugLines.length * 4 + 2;
+      by += sugLines.length * 4 + 1;
+      if (correspLines.length) {
+        doc.setTextColor(180, 83, 9);
+        doc.setFont('helvetica', 'bold');
+        doc.text(correspLines, margin + 3, by);
+        by += correspLines.length * 4 + 1;
+        doc.setTextColor(22, 53, 159);
+        doc.setFont('helvetica', 'normal');
+      }
+      by += 1;
 
       let yConsumidoManual = false;
       if (fotosDataUrl.length) {
@@ -11987,7 +12057,7 @@ async function gerarPDFGerencia(options = {}) {
           const chunk = chunks[chunkIdx];
           if (chunkIdx > 0) {
             y = novaPaginaNCSemFaixa(tituloSecao);
-            const hChunk = 12 + criterioLines.length * 4 + obsLines.length * 4 + sugLines.length * 4 + (Math.ceil(chunk.length / fotosPorLinha) * fotoH) + ((Math.ceil(chunk.length / fotosPorLinha) - 1) * gapFoto) + 8;
+            const hChunk = 12 + criterioLines.length * 4 + obsLines.length * 4 + sugLines.length * 4 + correspLines.length * 4 + (Math.ceil(chunk.length / fotosPorLinha) * fotoH) + ((Math.ceil(chunk.length / fotosPorLinha) - 1) * gapFoto) + 8;
             doc.setFillColor(...cardFill);
             doc.setDrawColor(...cardStroke);
             doc.roundedRect(margin, y, W - margin * 2, hChunk, 2, 2, 'FD');
@@ -12006,7 +12076,16 @@ async function gerarPDFGerencia(options = {}) {
             doc.setFontSize(8);
             doc.text(criterioLines, margin + 3, by); by += criterioLines.length * 4 + 1;
             doc.text(obsLines, margin + 3, by); by += obsLines.length * 4 + 1;
-            doc.text(sugLines, margin + 3, by); by += sugLines.length * 4 + 2;
+            doc.text(sugLines, margin + 3, by); by += sugLines.length * 4 + 1;
+            if (correspLines.length) {
+              doc.setTextColor(180, 83, 9);
+              doc.setFont('helvetica', 'bold');
+              doc.text(correspLines, margin + 3, by);
+              by += correspLines.length * 4 + 1;
+              doc.setTextColor(22, 53, 159);
+              doc.setFont('helvetica', 'normal');
+            }
+            by += 1;
           }
 
           for (let fi = 0; fi < chunk.length; fi++) {
@@ -12051,7 +12130,7 @@ async function gerarPDFGerencia(options = {}) {
 
           if (chunkIdx > 0) {
             const hChunkRows = Math.ceil(chunk.length / fotosPorLinha);
-            const hChunk = 12 + criterioLines.length * 4 + obsLines.length * 4 + sugLines.length * 4 + (hChunkRows * fotoH) + ((hChunkRows - 1) * gapFoto) + 8;
+            const hChunk = 12 + criterioLines.length * 4 + obsLines.length * 4 + sugLines.length * 4 + correspLines.length * 4 + (hChunkRows * fotoH) + ((hChunkRows - 1) * gapFoto) + 8;
             y += hChunk + 4;
           }
         }
@@ -12444,7 +12523,10 @@ async function gerarPDFSetorial(setor, options = {}) {
     yy += 9;
 
     if (!rows.length) {
-      doc.text('Nenhuma área inspecionada encontrada para este período.', margin, yy);
+      const msg = totalNCAbertas > 0
+        ? `Nenhuma inspeção realizada neste período. O relatório mantém ${totalNCAbertas} desvio(s) aberto(s) acumulado(s) de períodos anteriores.`
+        : 'Nenhuma área inspecionada encontrada para este período.';
+      doc.text(doc.splitTextToSize(msg, W - margin * 2), margin, yy);
       return;
     }
 
@@ -12628,7 +12710,7 @@ async function gerarPDFSetorial(setor, options = {}) {
   drawDashCard(margin + cardW + gap, row1Y, cardW, cardH, 'Média Geral', mediaGeral !== null ? mediaGeral.toFixed(2) : '—', 'Nota média do setor', [14, 165, 233]);
   drawDashCard(margin + (cardW + gap) * 2, row1Y, cardW, cardH, 'Taxa de Resolução', taxaResolucaoSetor, 'Resolvidas sobre desvios do período', [16, 185, 129]);
 
-  drawDashCard(margin, row2Y, cardW, cardH, 'Desvios abertos', totalNCAbertas, 'Inclui encaminhados', [244, 63, 94]);
+  drawDashCard(margin, row2Y, cardW, cardH, 'Desvios abertos', totalNCAbertas, 'Inclui períodos anteriores', [244, 63, 94]);
   drawDashCard(margin + cardW + gap, row2Y, cardW, cardH, 'Desvios resolvidos', totalResolvidas, 'Resolvidos no período', [16, 185, 129]);
   drawDashCard(margin + (cardW + gap) * 2, row2Y, cardW, cardH, 'Desvios recebidos', totalNCRecebidas, 'Encaminhados de outros setores', [245, 158, 11]);
 
@@ -12677,7 +12759,6 @@ async function gerarPDFSetorial(setor, options = {}) {
       const correspLines = correspTxt ? doc.splitTextToSize(correspTxt, W - margin * 2 - 8) : [];
       const fotosPorLinha = 2;
       const fotoW = 118;
-      const fotoH = 78;
       const gapFoto = 8;
       const fotosPorPagina = fotosPorLinha;
       const chunks = splitArrayIntoChunks(fotosDataUrl, fotosPorPagina);
@@ -12688,6 +12769,13 @@ async function gerarPDFSetorial(setor, options = {}) {
       for (let part = 0; part < blocos.length; part++) {
         const fotosParte = blocos[part];
         const linhasFotos = fotosParte.length ? Math.ceil(fotosParte.length / fotosPorLinha) : 0;
+        let fotoH = 78;
+        if (linhasFotos) {
+          const hTexto = 14 + (linhasBase * lineH) + 14;
+          const maxCardH = H - 42;
+          const availableFotosH = maxCardH - hTexto - ((linhasFotos - 1) * gapFoto);
+          fotoH = Math.max(48, Math.min(78, Math.floor(availableFotosH / linhasFotos)));
+        }
         const hFotos = linhasFotos ? (linhasFotos * fotoH) + ((linhasFotos - 1) * gapFoto) : 0;
         const h = 14 + (linhasBase * lineH) + hFotos + 14;
         if (part > 0) {
