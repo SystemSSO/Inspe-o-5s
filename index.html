@@ -4752,7 +4752,7 @@ function getSetorialReportDashboardData(setor, periodo = getSetorialReportPeriod
       origemTipo: 'propria',
       origemSetor: insp.setor,
       origemLocal: localLabel(insp),
-      destinoSetor: (cr.encaminharSetor || insp.setor),
+      destinoSetor: getDestinoPrincipalCriterio(cr, insp.setor),
       destinoLocal: localLabel(insp)
     });
   });
@@ -4773,7 +4773,7 @@ function getSetorialReportDashboardData(setor, periodo = getSetorialReportPeriod
 
   Object.values(latestEncByCrit).forEach(({ insp, s, ci, cr }) => {
     if (!criterioTemNCAberta(cr)) return;
-    if ((cr.encaminharSetor || '') !== setor) return;
+    if (!criterioEncaminhadoPara(cr, setor)) return;
     ncList.push({
       data: insp.data,
       local: localLabel(insp),
@@ -4803,7 +4803,7 @@ function getSetorialReportDashboardData(setor, periodo = getSetorialReportPeriod
     SENSOS.forEach(s => {
       (insp.sensos?.[s.id] || []).forEach((crAtual, ci) => {
         const crAnterior = inspAnterior.sensos?.[s.id]?.[ci] || {};
-        const destinoSetor = crAnterior.encaminharSetor || crAtual?.encaminharSetor || insp.setor;
+        const destinoSetor = getDestinoPrincipalCriterio(crAnterior) || getDestinoPrincipalCriterio(crAtual) || insp.setor;
         const itensResolvidos = buildResolvedDesvioReportItems(insp, inspAnterior, s, ci, crAtual, crAnterior, {
           origemSetor: insp.setor,
           origemLocal: localLabel(insp),
@@ -4869,7 +4869,7 @@ function getSetorialReportDashboardData(setor, periodo = getSetorialReportPeriod
     SENSOS.forEach(s => {
       (inspOrigem.sensos?.[s.id] || []).forEach((crAtual, ci) => {
         const crAnterior = inspAnteriorOrigem.sensos?.[s.id]?.[ci] || {};
-        const destinoSetor = crAnterior.encaminharSetor || crAtual?.encaminharSetor || '';
+        const destinoSetor = getDestinoPrincipalCriterio(crAnterior) || getDestinoPrincipalCriterio(crAtual) || '';
         const itensResolvidos = buildResolvedDesvioReportItems(inspOrigem, inspAnteriorOrigem, s, ci, crAtual, crAnterior, {
           origemSetor: inspOrigem.setor,
           origemLocal: localLabel(inspOrigem),
@@ -5019,13 +5019,13 @@ function getGerenciaReportDashboardData(gerencia, periodo = getSetorialReportPer
           const itensResolvidos = buildResolvedDesvioReportItems(insp, anterior, s, ci, cr, crAnt, {
             origemSetor: insp.setor,
             origemLocal: localLabel(insp),
-            destinoSetor: crAnt?.encaminharSetor || cr?.encaminharSetor || insp.setor
+            destinoSetor: getDestinoPrincipalCriterio(crAnt) || getDestinoPrincipalCriterio(cr) || insp.setor
           });
           if (itensResolvidos.length) {
             const resolucaoIncompleta = getResolucaoIncompletaInfo(insp, s, ci, cr, {
               origemSetor: insp.setor,
               origemLocal: localLabel(insp),
-              destinoSetor: crAnt?.encaminharSetor || cr?.encaminharSetor || insp.setor
+              destinoSetor: getDestinoPrincipalCriterio(crAnt) || getDestinoPrincipalCriterio(cr) || insp.setor
             });
             if (resolucaoIncompleta) {
               resolucoesIncompletas.push(resolucaoIncompleta);
@@ -5050,7 +5050,7 @@ function getGerenciaReportDashboardData(gerencia, periodo = getSetorialReportPer
             const resolucaoIncompleta = getResolucaoIncompletaInfo(insp, s, ci, cr, {
               origemSetor: insp.setor,
               origemLocal: localLabel(insp),
-              destinoSetor: crAnt?.encaminharSetor || cr?.encaminharSetor || insp.setor
+              destinoSetor: getDestinoPrincipalCriterio(crAnt) || getDestinoPrincipalCriterio(cr) || insp.setor
             });
             if (resolucaoIncompleta) {
               resolucoesIncompletas.push(resolucaoIncompleta);
@@ -7920,7 +7920,10 @@ function getCorresponsavelSetorNames(unidade = currentUnidade) {
     .filter(insp => getInspectionUnidade(insp) === unit)
     .forEach(insp => {
       SENSOS.forEach(s => {
-        (insp.sensos?.[s.id] || []).forEach(cr => addNome(cr?.encaminharSetor));
+        (insp.sensos?.[s.id] || []).forEach(cr => {
+          addNome(cr?.encaminharSetor);
+          getDestinosCorresponsaveisCriterio(cr).forEach(addNome);
+        });
       });
     });
   return Array.from(nomes).sort((a, b) => a.localeCompare(b, 'pt-BR'));
@@ -7947,7 +7950,7 @@ function getPendenciasRecebidas(setorDestino, limitDateIso = null) {
     SENSOS.forEach(s => {
       inspOrigem.sensos[s.id].forEach((cr, ci) => {
         if ((cr.nota || 0) >= 4) return;
-        if ((cr.encaminharSetor || '') !== setorDestino) return;
+        if (!criterioEncaminhadoPara(cr, setorDestino)) return;
         recebidas.push({
           origemSetor: inspOrigem.setor,
           origemLocal: localLabel(inspOrigem),
@@ -8441,6 +8444,30 @@ function getDesviosAbertosCriterio(criterio) {
 // === Function: getDesviosResolvidosCriterio ===
 function getDesviosResolvidosCriterio(criterio) {
   return getCriterioDesvios(criterio).filter(desvio => desvioTemConteudo(desvio) && !isDesvioAberto(desvio));
+}
+
+// === Function: getDestinosCorresponsaveisCriterio ===
+function getDestinosCorresponsaveisCriterio(criterio) {
+  if (!criterio) return [];
+  const destinosDesvios = getCriterioDesvios(criterio, { includeLegacy: false })
+    .filter(desvio => desvioTemConteudo(desvio) && isDesvioAberto(desvio))
+    .map(desvio => String(desvio.encaminharSetor || '').trim())
+    .filter(Boolean);
+  if (destinosDesvios.length) return [...new Set(destinosDesvios)];
+  const destinoLegado = String(criterio.encaminharSetor || '').trim();
+  return destinoLegado && criterioTemNCAberta(criterio) ? [destinoLegado] : [];
+}
+
+// === Function: criterioEncaminhadoPara ===
+function criterioEncaminhadoPara(criterio, setorDestino) {
+  const destino = String(setorDestino || '').trim();
+  if (!destino) return false;
+  return getDestinosCorresponsaveisCriterio(criterio).includes(destino);
+}
+
+// === Function: getDestinoPrincipalCriterio ===
+function getDestinoPrincipalCriterio(criterio, fallback = '') {
+  return getDestinosCorresponsaveisCriterio(criterio)[0] || String(fallback || '').trim();
 }
 
 // === Function: criterioTemNCAberta ===
@@ -9413,7 +9440,7 @@ function getDebitoRazoesInspecao(insp) {
         localImpactado: localLabel(insp),
         origemSetor: insp.setor,
         origemLocal: localLabel(insp),
-        destinoSetor: crAtual.encaminharSetor || '',
+        destinoSetor: getDestinoPrincipalCriterio(crAtual, ''),
         sensoId: s.id,
         senso: s.nome,
         criterioIndice: ci + 1,
@@ -9433,7 +9460,7 @@ function getDebitoRazoesInspecao(insp) {
     SENSOS.forEach(s => {
       const criteriosOrigem = inspOrigem.sensos?.[s.id] || [];
       criteriosOrigem.forEach((crAtual, ci) => {
-        if ((crAtual?.encaminharSetor || '') !== insp.setor) return;
+        if (!criterioEncaminhadoPara(crAtual, insp.setor)) return;
         if (!criterioTemNCAberta(crAtual)) return;
 
         razoes.push({
@@ -9570,7 +9597,7 @@ function getImpactosCorresponsavelSetor(setorDestino, periodo = getSetorialRepor
     .forEach(inspOrigem => {
       SENSOS.forEach(s => {
         (inspOrigem.sensos?.[s.id] || []).forEach((crAtual, ci) => {
-          if ((crAtual?.encaminharSetor || '') !== destino) return;
+          if (!criterioEncaminhadoPara(crAtual, destino)) return;
           if (!criterioTemNCAberta(crAtual)) return;
 
           const key = `${destino}||${s.id}||${ci}`;
@@ -10041,7 +10068,7 @@ function openDetalhe(id) {
           <div class="pend-status" style="color:${resolvida?'var(--green)':'var(--red)'}">
             ${resolvida ? '✓ Resolvida nesta inspeção' : `Nota: ${cr.nota} - ${cr.obs || 'Sem observação'}${reincTxt}`}
           </div>
-          ${cr.encaminharSetor ? `<div style="font-size:11px;color:var(--gold);margin-top:4px">Encaminhada para: ${cr.encaminharSetor}</div>` : ''}
+          ${getDestinoPrincipalCriterio(cr) ? `<div style="font-size:11px;color:var(--gold);margin-top:4px">Encaminhada para: ${getDestinoPrincipalCriterio(cr)}</div>` : ''}
         </div>`;
       }
     });
@@ -10233,7 +10260,7 @@ function renderPendList() {
           <div class="pend-desc">${SENSOS.find(x=>x.id===s.id).criterios[ci]}</div>
           <div style="font-size:11px;color:var(--text2);margin-top:4px">${formatDate(insp.data)} · ${insp.tecnico}</div>
           ${isNC ? `<div class="pend-status" style="color:var(--red)">Nota ${cr.nota} - ${cr.obs || 'Sem observação'}${reincTxt}</div>` : ''}
-          ${cr.encaminharSetor ? `<div style="font-size:11px;color:var(--gold);margin-top:4px">Desvio com corresponsável: ${cr.encaminharSetor}</div>` : ''}
+          ${getDestinoPrincipalCriterio(cr) ? `<div style="font-size:11px;color:var(--gold);margin-top:4px">Desvio com corresponsável: ${getDestinoPrincipalCriterio(cr)}</div>` : ''}
           ${isNC ? `<div style="font-size:11px;color:var(--text2);margin-top:3px">Toque para abrir inspeção e corrigir esta pendência.</div>` : ''}
           ${isNC && fotosNC.length ? `<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:8px">${fotosNC.map((foto, idx) => `<img src="${foto}" alt="Evidência do desvio ${idx + 1}" onclick="event.stopPropagation();openImageModal('${foto.replace(/'/g, "\\'")}')" style="width:100%;height:68px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer">`).join('')}</div>` : ''}
           ${isNC && !fotosNC.length ? `<div style="font-size:11px;color:var(--text2);margin-top:4px">Foto do desvio: não anexada.</div>` : ''}
@@ -10757,7 +10784,7 @@ function gerarExcelSetorial() {
             nota: cr.nota ?? '',
             observacao: cr.obs || '',
             sugestao: cr.sugestao || '',
-            encaminhado_para: cr.encaminharSetor || '',
+            encaminhado_para: getDestinoPrincipalCriterio(cr, ''),
             fotos_qtd: (getFotosNCAbertaComFallback(insp, s.id, ci, cr) || []).length
           });
         }
@@ -11005,7 +11032,7 @@ function gerarExcelGeral() {
             nota: cr.nota ?? '',
             observacao: cr.obs || '',
             sugestao: cr.sugestao || '',
-            encaminhado_para: cr.encaminharSetor || '',
+            encaminhado_para: getDestinoPrincipalCriterio(cr, ''),
             fotos_qtd: (getFotosNCAbertaComFallback(insp, s.id, ci, cr) || []).length
           });
         }
@@ -11024,7 +11051,7 @@ function gerarExcelGeral() {
             nota: cr.nota ?? '',
             observacao: `Antes: ${crAnterior.obs || ''} | Agora: ${cr.obs || ''}`,
             sugestao: cr.sugestao || '',
-            encaminhado_para: cr.encaminharSetor || '',
+            encaminhado_para: getDestinoPrincipalCriterio(cr, ''),
             fotos_qtd: (getFotosValidasCriterio(cr) || []).length
           });
         }
@@ -12974,10 +13001,11 @@ async function gerarPDFInsp(id, options = {}) {
           doc.text(obsL, margin+8, y);
           y += obsL.length * 4 + 4;
         }
-        if (cr.encaminharSetor) {
+        const destinoCorresponsavel = getDestinoPrincipalCriterio(cr, '');
+        if (destinoCorresponsavel) {
           checkY(8);
           doc.setTextColor(240,165,0); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
-          doc.text(`Encaminhada para: ${cr.encaminharSetor}`, margin+8, y);
+          doc.text(`Encaminhada para: ${destinoCorresponsavel}`, margin+8, y);
           y += 6;
         }
       });
