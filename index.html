@@ -452,6 +452,70 @@ body.light-mode .s-debito-corresp {
   background: rgba(245, 158, 11, 0.14);
   border-color: rgba(245, 158, 11, 0.38);
 }
+.desvio-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.desvio-card {
+  border: 1px solid rgba(245, 158, 11, 0.32);
+  border-radius: 10px;
+  padding: 9px;
+  background: rgba(245, 158, 11, 0.08);
+}
+.desvio-card.resolvido {
+  border-color: rgba(16, 185, 129, 0.34);
+  background: rgba(16, 185, 129, 0.08);
+}
+.desvio-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.desvio-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text);
+}
+.desvio-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.desvio-mini-btn {
+  border: 1px solid var(--border);
+  background: var(--navy3);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 5px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.desvio-mini-btn.active {
+  border-color: rgba(16, 185, 129, 0.45);
+  background: rgba(16, 185, 129, 0.18);
+  color: var(--green);
+}
+.desvio-mini-btn.danger {
+  border-color: rgba(244, 63, 94, 0.34);
+  color: var(--red);
+  background: rgba(244, 63, 94, 0.08);
+}
+.desvio-resolution {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+.desvio-empty {
+  color: var(--text2);
+  font-size: 12px;
+  line-height: 1.35;
+  padding: 7px 0;
+}
 .criterio-section {
   margin-top: 9px;
   padding: 9px;
@@ -2644,7 +2708,7 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
   <div class="app-header">
     <div>
       <div style="font-family:var(--font-display);font-size:17px;font-weight:700">Pendências</div>
-      <div style="font-size:10px;color:var(--text2)">Acompanhamento de não conformidades</div>
+      <div style="font-size:10px;color:var(--text2)">Acompanhamento de desvios</div>
     </div>
   </div>
   <div class="scroll-body" style="padding-top:8px">
@@ -4350,7 +4414,7 @@ function buildInspectionEmailBody(insp) {
   const linhasAreas = resumoBase.map((item, idx) => {
     const total = getInspectionNcTotals(item);
     const nota = typeof item.notaGeral === 'number' ? item.notaGeral.toFixed(2) : '—';
-    return `${idx + 1}. ${item.subarea || 'Área geral do setor'} - Nota ${nota} - NC abertas: ${total.abertas} - NC resolvidas: ${total.resolvidas}`;
+    return `${idx + 1}. ${item.subarea || 'Área geral do setor'} - Nota ${nota} - Desvios abertos: ${total.abertas} - Desvios resolvidos: ${total.resolvidas}`;
   }).join('\n');
 
   return [
@@ -4363,8 +4427,8 @@ function buildInspectionEmailBody(insp) {
     `Período: ${periodo}`,
     `Áreas inspecionadas: ${resumoBase.length}`,
     `Pontuação média do setor: ${pontuacaoMedia !== null ? pontuacaoMedia.toFixed(2) : '—'}`,
-    `NC abertas no setor: ${ncTotalSetor.abertas}`,
-    `NC resolvidas no setor: ${ncTotalSetor.resolvidas}`,
+    `Desvios abertos no setor: ${ncTotalSetor.abertas}`,
+    `Desvios resolvidos no setor: ${ncTotalSetor.resolvidas}`,
     '',
     'Pontuação média por senso:',
     linhasSensos,
@@ -5019,8 +5083,8 @@ function buildSetorialReportEmailPayload(setor, attachment, periodo = getSetoria
     `Áreas consideradas: ${resumo.locaisUnicos}`,
     `Inspeções consideradas: ${resumo.totalInspecoes}`,
     `Pontuação média do setor: ${resumo.mediaGeral !== null ? resumo.mediaGeral.toFixed(2) : '—'}`,
-    `NC abertas no setor: ${resumo.totalNCAbertas}`,
-    `NC resolvidas no setor: ${resumo.totalResolvidas}`,
+    `Desvios abertos no setor: ${resumo.totalNCAbertas}`,
+    `Desvios resolvidos no setor: ${resumo.totalResolvidas}`,
     '',
     'Link para acesso ao Dashboard de Housekeeping',
     HOUSEKEEPING_DASHBOARD_URL,
@@ -5053,8 +5117,8 @@ function buildGerenciaReportEmailPayload(gerencia, attachment, to, periodo = get
     `Setores mapeados: ${resumo.setores.length}`,
     `Inspeções consideradas: ${resumo.totais.inspecoes}`,
     `Pontuação média da gerência: ${resumo.mediaGerencia !== null ? resumo.mediaGerencia.toFixed(2) : '—'}`,
-    `NC abertas: ${resumo.totais.ncAbertas}`,
-    `NC resolvidas: ${resumo.totais.ncResolvidas}`,
+    `Desvios abertos: ${resumo.totais.ncAbertas}`,
+    `Desvios resolvidos: ${resumo.totais.ncResolvidas}`,
     '',
     'Link para acesso ao Dashboard de Housekeeping',
     HOUSEKEEPING_DASHBOARD_URL,
@@ -8039,7 +8103,7 @@ function iniciarInspecao() {
     updatedAt: new Date().toISOString()
   };
   SENSOS.forEach(s => {
-    currentInsp.sensos[s.id] = s.criterios.map(() => ({ nota: null, obs: '', sugestao: '', fotos: [], fotoLegendas: [], encaminharSetor: '', ncResolvida: false, ncAberta: false, autoReincidenciaFrom: null, autoReincidenciaTo: null }));
+    currentInsp.sensos[s.id] = s.criterios.map(() => ({ nota: null, obs: '', sugestao: '', fotos: [], fotoLegendas: [], desvios: [], encaminharSetor: '', ncResolvida: false, ncAberta: false, autoReincidenciaFrom: null, autoReincidenciaTo: null }));
   });
   if (ultimaMesmoLocal && sameLocal(currentInsp, ultimaMesmoLocal)) {
     aplicarRegraReincidencia(ultimaMesmoLocal);
@@ -8087,7 +8151,7 @@ function renderInspecaoForm() {
         return `${escapeHtml(origemCorresp.origemSetor)} - ${escapeHtml(origemCorresp.origemLocal)} · Critério ${item.criterioIndice}`;
       })
       .join('<br>');
-    const extra = itens.length > 2 ? `<br>+ ${itens.length - 2} outra(s) NC(s) encaminhada(s)` : '';
+    const extra = itens.length > 2 ? `<br>+ ${itens.length - 2} outro(s) desvio(s) encaminhado(s)` : '';
     return `<div class="s-debito-corresp">
       Impacto setorial em ${total.toFixed(0)} critério(s) deste senso, limitado a 1 ponto por critério, considerado na nota do setor nos relatórios.<br>
       Origem: ${detalhe}${extra}
@@ -8165,9 +8229,100 @@ function restoreDraftUIState() {
   }
 }
 
+// === Function: newDesvioId ===
+function newDesvioId() {
+  return `desvio_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+// === Function: normalizeDesvio ===
+function normalizeDesvio(desvio = {}, fallback = {}) {
+  const rawStatus = String(desvio.status || fallback.status || '').trim().toLowerCase();
+  const status = rawStatus === 'resolvido' ? 'resolvido' : 'aberto';
+  return {
+    id: String(desvio.id || fallback.id || newDesvioId()),
+    origemId: String(desvio.origemId || fallback.origemId || ''),
+    descricao: String(desvio.descricao ?? fallback.descricao ?? ''),
+    sugestao: String(desvio.sugestao ?? fallback.sugestao ?? ''),
+    encaminharSetor: String(desvio.encaminharSetor ?? fallback.encaminharSetor ?? ''),
+    fotos: Array.isArray(desvio.fotos) ? desvio.fotos : (Array.isArray(fallback.fotos) ? fallback.fotos : []),
+    fotoLegendas: Array.isArray(desvio.fotoLegendas) ? desvio.fotoLegendas : (Array.isArray(fallback.fotoLegendas) ? fallback.fotoLegendas : []),
+    status,
+    resolucaoObs: String(desvio.resolucaoObs ?? fallback.resolucaoObs ?? ''),
+    resolucaoFotos: Array.isArray(desvio.resolucaoFotos) ? desvio.resolucaoFotos : (Array.isArray(fallback.resolucaoFotos) ? fallback.resolucaoFotos : []),
+    resolucaoFotoLegendas: Array.isArray(desvio.resolucaoFotoLegendas) ? desvio.resolucaoFotoLegendas : (Array.isArray(fallback.resolucaoFotoLegendas) ? fallback.resolucaoFotoLegendas : []),
+    criadoEm: String(desvio.criadoEm || fallback.criadoEm || new Date().toISOString()),
+    resolvidoEm: String(desvio.resolvidoEm || fallback.resolvidoEm || ''),
+    herdado: desvio.herdado === true || fallback.herdado === true,
+    legacy: desvio.legacy === true || fallback.legacy === true
+  };
+}
+
+// === Function: getLegacyDesvioFromCriterio ===
+function getLegacyDesvioFromCriterio(criterio) {
+  if (!criterio) return null;
+  const fotos = getFotosValidasCriterio(criterio);
+  const hasLegacyContent = String(criterio.obs || '').trim() || String(criterio.sugestao || '').trim() || fotos.length;
+  const nota = criterio.nota ?? null;
+  const resolved = criterio.ncResolvida === true || (typeof nota === 'number' && nota >= 4);
+  const open = typeof nota === 'number' && nota <= 3 && criterio.ncResolvida !== true;
+  if (!hasLegacyContent && !open && !resolved) return null;
+  return normalizeDesvio({
+    id: criterio.legacyDesvioId || 'desvio_legado',
+    descricao: criterio.obs || '',
+    sugestao: criterio.sugestao || '',
+    encaminharSetor: criterio.encaminharSetor || '',
+    fotos,
+    fotoLegendas: getFotoLegendasCriterio(criterio),
+    status: resolved ? 'resolvido' : 'aberto',
+    resolucaoObs: resolved ? (criterio.obs || '') : '',
+    resolucaoFotos: resolved ? fotos : [],
+    resolucaoFotoLegendas: resolved ? getFotoLegendasCriterio(criterio) : [],
+    legacy: true
+  });
+}
+
+// === Function: getCriterioDesvios ===
+function getCriterioDesvios(criterio, options = {}) {
+  const includeLegacy = options.includeLegacy !== false;
+  const explicit = Array.isArray(criterio?.desvios)
+    ? criterio.desvios.map(item => normalizeDesvio(item))
+    : [];
+  if (explicit.length || !includeLegacy) return explicit;
+  const legacy = getLegacyDesvioFromCriterio(criterio);
+  return legacy ? [legacy] : [];
+}
+
+// === Function: ensureCriterioDesvios ===
+function ensureCriterioDesvios(criterio) {
+  if (!criterio) return [];
+  if (!Array.isArray(criterio.desvios)) {
+    const legacy = getLegacyDesvioFromCriterio(criterio);
+    criterio.desvios = legacy ? [legacy] : [];
+  }
+  criterio.desvios = criterio.desvios.map(item => normalizeDesvio(item));
+  return criterio.desvios;
+}
+
+// === Function: isDesvioAberto ===
+function isDesvioAberto(desvio) {
+  return normalizeDesvio(desvio).status !== 'resolvido';
+}
+
+// === Function: getDesviosAbertosCriterio ===
+function getDesviosAbertosCriterio(criterio) {
+  return getCriterioDesvios(criterio).filter(isDesvioAberto);
+}
+
+// === Function: getDesviosResolvidosCriterio ===
+function getDesviosResolvidosCriterio(criterio) {
+  return getCriterioDesvios(criterio).filter(desvio => !isDesvioAberto(desvio));
+}
+
 // === Function: criterioTemNCAberta ===
 function criterioTemNCAberta(criterio) {
   if (!criterio) return false;
+  const desvios = getCriterioDesvios(criterio, { includeLegacy: false });
+  if (desvios.length) return desvios.some(isDesvioAberto);
   const nota = criterio.nota ?? null;
   const resolvidaMarcada = criterio.ncResolvida === true;
   if (nota !== null && nota <= 3) return !resolvidaMarcada;
@@ -8195,6 +8350,12 @@ function criterioFoiResolvidoComEvidencia(crAnterior, crAtual) {
 // === Function: getCamposFaltantesResolucao ===
 function getCamposFaltantesResolucao(crAtual) {
   const faltantes = [];
+  const resolvidos = getDesviosResolvidosCriterio(crAtual);
+  if (resolvidos.length) {
+    if (resolvidos.some(desvio => !String(desvio.resolucaoObs || '').trim())) faltantes.push('observação da resolução');
+    if (resolvidos.some(desvio => !Array.isArray(desvio.resolucaoFotos) || !desvio.resolucaoFotos.filter(f => typeof f === 'string' && f && f !== '__ref__').length)) faltantes.push('evidência da resolução');
+    return [...new Set(faltantes)];
+  }
   if (!String(crAtual?.obs || '').trim()) faltantes.push('observação da resolução');
   if (!getFotosValidasCriterio(crAtual).length) faltantes.push('evidência da resolução');
   return faltantes;
@@ -8220,11 +8381,11 @@ function getResolucaoIncompletaInfo(insp, s, ci, crAtual, extras = {}) {
 function getMensagemResolucaoIncompleta(lista) {
   const itens = Array.isArray(lista) ? lista : [];
   const primeiro = itens[0];
-  if (!primeiro) return 'Há NC resolvida sem observação ou evidência de resolução.';
+  if (!primeiro) return 'Há desvio resolvido sem observação ou evidência de resolução.';
   const detalhe = `${primeiro.setor || 'Setor'} - ${primeiro.local || 'Área'} · ${primeiro.senso || 'Senso'} · Critério ${primeiro.criterioIndice || ''}`;
   const campos = (primeiro.faltantes || []).join(' e ') || 'dados obrigatórios';
   const extra = itens.length > 1 ? ` (+${itens.length - 1} outra(s))` : '';
-  return `Corrija a resolução da NC antes de gerar o relatório: ${detalhe} sem ${campos}${extra}.`;
+  return `Corrija a resolução do desvio antes de gerar o relatório: ${detalhe} sem ${campos}${extra}.`;
 }
 
 // === Function: hasPendenciaAnterior ===
@@ -8239,7 +8400,7 @@ function getNCAnteriorReferencia(sId, ci) {
     .filter(i => sameLocal(i, currentInsp) && getInspectionUnidade(i) === getInspectionUnidade(currentInsp))
     .sort((a, b) => new Date(b.data) - new Date(a.data));
   // Regra correta: considerar apenas o estado mais recente do critério.
-  // Se a inspeção mais recente não está aberta, não existe NC pendente.
+  // Se a inspeção mais recente não está aberta, não existe desvio pendente.
   for (const insp of historico) {
     const cr = insp?.sensos?.[sId]?.[ci] || null;
     if (!cr) continue;
@@ -8252,8 +8413,27 @@ function getNCAnteriorReferencia(sId, ci) {
 
 // === Function: getFotosValidasCriterio ===
 function getFotosValidasCriterio(criterio) {
-  if (!criterio || !Array.isArray(criterio.fotos)) return [];
-  return criterio.fotos.filter(f => typeof f === 'string' && f && f !== '__ref__');
+  if (!criterio) return [];
+  const fotos = Array.isArray(criterio.fotos) ? criterio.fotos : [];
+  const fotosDesvios = getCriterioDesvios(criterio, { includeLegacy: false })
+    .flatMap(desvio => [
+      ...(Array.isArray(desvio.fotos) ? desvio.fotos : []),
+      ...(Array.isArray(desvio.resolucaoFotos) ? desvio.resolucaoFotos : [])
+    ]);
+  return [...fotos, ...fotosDesvios].filter(f => typeof f === 'string' && f && f !== '__ref__');
+}
+
+// === Function: getFotosAberturaCriterio ===
+function getFotosAberturaCriterio(criterio) {
+  if (!criterio) return [];
+  const desvios = getCriterioDesvios(criterio, { includeLegacy: false });
+  if (desvios.length) {
+    return desvios
+      .filter(isDesvioAberto)
+      .flatMap(desvio => Array.isArray(desvio.fotos) ? desvio.fotos : [])
+      .filter(f => typeof f === 'string' && f && f !== '__ref__');
+  }
+  return getFotosValidasCriterio(criterio);
 }
 
 // === Function: getFotoLegendasCriterio ===
@@ -8263,16 +8443,41 @@ function getFotoLegendasCriterio(criterio) {
 
 // === Function: getFotosComLegendasCriterio ===
 function getFotosComLegendasCriterio(criterio) {
-  if (!criterio || !Array.isArray(criterio.fotos)) return [];
+  if (!criterio) return [];
   const legendas = getFotoLegendasCriterio(criterio);
-  return criterio.fotos
+  const direct = (Array.isArray(criterio.fotos) ? criterio.fotos : [])
     .map((foto, index) => ({ foto, legenda: String(legendas[index] || '').trim() }))
     .filter(item => typeof item.foto === 'string' && item.foto && item.foto !== '__ref__');
+  const fromDesvios = getCriterioDesvios(criterio, { includeLegacy: false }).flatMap(desvio => {
+    const fotosAbertura = (Array.isArray(desvio.fotos) ? desvio.fotos : [])
+      .map((foto, index) => ({ foto, legenda: String((desvio.fotoLegendas || [])[index] || desvio.descricao || '').trim() }));
+    const fotosResolucao = (Array.isArray(desvio.resolucaoFotos) ? desvio.resolucaoFotos : [])
+      .map((foto, index) => ({ foto, legenda: String((desvio.resolucaoFotoLegendas || [])[index] || desvio.resolucaoObs || '').trim() }));
+    return [...fotosAbertura, ...fotosResolucao];
+  }).filter(item => typeof item.foto === 'string' && item.foto && item.foto !== '__ref__');
+  return [...direct, ...fromDesvios];
+}
+
+// === Function: getFotosComLegendasAberturaCriterio ===
+function getFotosComLegendasAberturaCriterio(criterio) {
+  if (!criterio) return [];
+  const desvios = getCriterioDesvios(criterio, { includeLegacy: false });
+  if (desvios.length) {
+    return desvios
+      .filter(isDesvioAberto)
+      .flatMap(desvio => (Array.isArray(desvio.fotos) ? desvio.fotos : [])
+        .map((foto, index) => ({
+          foto,
+          legenda: String((desvio.fotoLegendas || [])[index] || desvio.descricao || '').trim()
+        })))
+      .filter(item => typeof item.foto === 'string' && item.foto && item.foto !== '__ref__');
+  }
+  return getFotosComLegendasCriterio(criterio);
 }
 
 // === Function: getFotosNCAbertaComFallback ===
 function getFotosNCAbertaComFallback(insp, sId, ci, crAtual = null) {
-  const fotosDiretas = getFotosValidasCriterio(crAtual || insp?.sensos?.[sId]?.[ci]);
+  const fotosDiretas = getFotosAberturaCriterio(crAtual || insp?.sensos?.[sId]?.[ci]);
   if (fotosDiretas.length) return fotosDiretas;
   if (!insp) return [];
   const dataLimite = new Date(insp.data).getTime();
@@ -8282,7 +8487,7 @@ function getFotosNCAbertaComFallback(insp, sId, ci, crAtual = null) {
   for (const h of historico) {
     const crHist = h?.sensos?.[sId]?.[ci] || null;
     if (!criterioTemNCAberta(crHist)) continue;
-    const fotosHist = getFotosValidasCriterio(crHist);
+    const fotosHist = getFotosAberturaCriterio(crHist);
     if (fotosHist.length) return fotosHist;
   }
   return [];
@@ -8290,7 +8495,7 @@ function getFotosNCAbertaComFallback(insp, sId, ci, crAtual = null) {
 
 // === Function: getFotosComLegendasNCAbertaComFallback ===
 function getFotosComLegendasNCAbertaComFallback(insp, sId, ci, crAtual = null) {
-  const fotosDiretas = getFotosComLegendasCriterio(crAtual || insp?.sensos?.[sId]?.[ci]);
+  const fotosDiretas = getFotosComLegendasAberturaCriterio(crAtual || insp?.sensos?.[sId]?.[ci]);
   if (fotosDiretas.length) return fotosDiretas;
   if (!insp) return [];
   const dataLimite = new Date(insp.data).getTime();
@@ -8300,7 +8505,7 @@ function getFotosComLegendasNCAbertaComFallback(insp, sId, ci, crAtual = null) {
   for (const h of historico) {
     const crHist = h?.sensos?.[sId]?.[ci] || null;
     if (!criterioTemNCAberta(crHist)) continue;
-    const fotosHist = getFotosComLegendasCriterio(crHist);
+    const fotosHist = getFotosComLegendasAberturaCriterio(crHist);
     if (fotosHist.length) return fotosHist;
   }
   return [];
@@ -8348,6 +8553,204 @@ function aplicarRegraReincidencia(baseInsp) {
   });
 }
 
+// === Function: syncCriterioResumoFromDesvios ===
+function syncCriterioResumoFromDesvios(criterio) {
+  const desvios = getCriterioDesvios(criterio, { includeLegacy: false });
+  if (!criterio || !desvios.length) return;
+  const abertos = desvios.filter(isDesvioAberto);
+  const resolvidos = desvios.filter(desvio => !isDesvioAberto(desvio));
+  const principais = abertos.length ? abertos : resolvidos;
+  const descricoes = principais
+    .map((desvio, idx) => {
+      const texto = isDesvioAberto(desvio) ? desvio.descricao : (desvio.resolucaoObs || desvio.descricao);
+      return String(texto || '').trim() ? `${idx + 1}. ${texto}` : '';
+    })
+    .filter(Boolean);
+  const sugestoes = principais.map(desvio => String(desvio.sugestao || '').trim()).filter(Boolean);
+  const responsavel = abertos.find(desvio => desvio.encaminharSetor)?.encaminharSetor || '';
+  if (descricoes.length) criterio.obs = descricoes.join('\n');
+  if (sugestoes.length) criterio.sugestao = [...new Set(sugestoes)].join('\n');
+  criterio.encaminharSetor = responsavel;
+}
+
+// === Function: ensureDesviosFromAnterior ===
+function ensureDesviosFromAnterior(criterioAtual, criterioAnterior) {
+  if (!criterioAtual) return [];
+  const atuais = ensureCriterioDesvios(criterioAtual);
+  const anterioresAbertos = getDesviosAbertosCriterio(criterioAnterior);
+  anterioresAbertos.forEach((desvioAnterior, idx) => {
+    const origemId = desvioAnterior.id || `desvio_anterior_${idx + 1}`;
+    const exists = atuais.some(item => item.origemId === origemId || item.id === origemId);
+    if (exists) return;
+    atuais.push(normalizeDesvio({
+      origemId,
+      descricao: desvioAnterior.descricao || '',
+      sugestao: desvioAnterior.sugestao || '',
+      encaminharSetor: desvioAnterior.encaminharSetor || '',
+      fotos: [...(desvioAnterior.fotos || [])],
+      fotoLegendas: [...(desvioAnterior.fotoLegendas || [])],
+      status: 'aberto',
+      herdado: true
+    }));
+  });
+  return atuais;
+}
+
+// === Function: getDesvioAtual ===
+function getDesvioAtual(sId, ci, desvioId) {
+  const criterio = currentInsp?.sensos?.[sId]?.[ci];
+  if (!criterio) return null;
+  const desvios = ensureCriterioDesvios(criterio);
+  return desvios.find(item => item.id === desvioId) || null;
+}
+
+function renderDesvioFotosHtml(sId, ci, desvio, kind = 'abertura') {
+  const isResolucao = kind === 'resolucao';
+  const fotos = isResolucao ? (desvio.resolucaoFotos || []) : (desvio.fotos || []);
+  const legendas = isResolucao ? (desvio.resolucaoFotoLegendas || []) : (desvio.fotoLegendas || []);
+  const title = isResolucao ? 'Fotos da resolução' : 'Fotos do desvio';
+  return `
+    <div style="margin-top:8px">
+      <div class="criterio-section-title" style="margin-bottom:5px">${title}</div>
+      <button type="button" class="desvio-mini-btn" onclick="triggerFotoDesvio('${sId}',${ci},'${desvio.id}','${kind}')">+ Foto</button>
+      <div class="foto-grid" style="margin-top:7px">
+        ${fotos.filter(f => typeof f === 'string' && f && f !== '__ref__').map((foto, fi) => `
+          <div class="foto-item">
+            <div class="foto-thumb">
+              <img src="${foto}" alt="foto">
+              <button class="rm-foto" onclick="removeFotoDesvio('${sId}',${ci},'${desvio.id}',${fi},'${kind}')">×</button>
+            </div>
+            <textarea class="form-input foto-caption-input" maxlength="180" placeholder="Legenda da foto ${fi + 1}" oninput="setFotoLegendaDesvio('${sId}',${ci},'${desvio.id}',${fi},'${kind}',this.value)">${escapeHtml(legendas[fi] || '')}</textarea>
+          </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+function renderDesviosCriterioHtml(s, ci, criterio) {
+  const desvios = ensureCriterioDesvios(criterio);
+  const setoresCorresponsaveis = getCorresponsavelSetorNames(getInspectionUnidadeForForm(currentInsp))
+    .filter(nome => nome !== currentInsp.setor);
+  return `
+    <div class="criterio-section">
+      <div class="criterio-section-title">Desvios do critério</div>
+      <div class="desvio-list">
+        ${desvios.length ? desvios.map((desvio, idx) => {
+          const resolvido = !isDesvioAberto(desvio);
+          const inherited = desvio.herdado || desvio.origemId;
+          return `
+            <div class="desvio-card ${resolvido ? 'resolvido' : ''}" id="desvio-${s.id}-${ci}-${desvio.id}">
+              <div class="desvio-head">
+                <div class="desvio-title">${inherited ? 'Desvio anterior' : 'Novo desvio'} ${idx + 1}</div>
+                <div class="desvio-actions">
+                  <button type="button" class="desvio-mini-btn ${!resolvido ? 'active' : ''}" onclick="setDesvioStatus('${s.id}',${ci},'${desvio.id}','aberto')">Aberto</button>
+                  <button type="button" class="desvio-mini-btn ${resolvido ? 'active' : ''}" onclick="setDesvioStatus('${s.id}',${ci},'${desvio.id}','resolvido')">Resolvido</button>
+                  ${!inherited ? `<button type="button" class="desvio-mini-btn danger" onclick="removeDesvioCriterio('${s.id}',${ci},'${desvio.id}')">Remover</button>` : ''}
+                </div>
+              </div>
+              <textarea class="form-textarea" rows="2" placeholder="Descreva este desvio" oninput="setDesvioField('${s.id}',${ci},'${desvio.id}','descricao',this.value)">${escapeHtml(desvio.descricao || '')}</textarea>
+              <textarea class="form-textarea" rows="2" placeholder="Sugestão de melhoria deste desvio" style="margin-top:7px" oninput="setDesvioField('${s.id}',${ci},'${desvio.id}','sugestao',this.value)">${escapeHtml(desvio.sugestao || '')}</textarea>
+              <select class="form-select" style="font-size:13px;margin-top:7px" onchange="setDesvioField('${s.id}',${ci},'${desvio.id}','encaminharSetor',this.value)">
+                <option value="">— Responsabilidade local —</option>
+                ${setoresCorresponsaveis.map(nome => `<option value="${escapeHtml(nome)}" ${desvio.encaminharSetor === nome ? 'selected' : ''}>${escapeHtml(nome)}</option>`).join('')}
+              </select>
+              ${renderDesvioFotosHtml(s.id, ci, desvio, 'abertura')}
+              ${resolvido ? `
+                <div class="desvio-resolution">
+                  <textarea class="form-textarea" rows="2" placeholder="Observação da resolução deste desvio" oninput="setDesvioField('${s.id}',${ci},'${desvio.id}','resolucaoObs',this.value)">${escapeHtml(desvio.resolucaoObs || '')}</textarea>
+                  ${renderDesvioFotosHtml(s.id, ci, desvio, 'resolucao')}
+                </div>
+              ` : ''}
+            </div>`;
+        }).join('') : `<div class="desvio-empty">Adicione um desvio quando este critério tiver uma condição fora do padrão. A nota continua sendo uma só para o critério.</div>`}
+      </div>
+      <button type="button" class="btn-secondary" onclick="addDesvioCriterio('${s.id}',${ci})" style="margin-top:8px">+ Adicionar desvio</button>
+    </div>`;
+}
+
+// === Function: refreshCriterioAfterDesvioChange ===
+function refreshCriterioAfterDesvioChange(sId, ci) {
+  const criterio = currentInsp?.sensos?.[sId]?.[ci];
+  if (!criterio) return;
+  syncCriterioResumoFromDesvios(criterio);
+  criterio.ncAberta = criterioTemNCAberta(criterio);
+  criterio.ncResolvida = getDesviosResolvidosCriterio(criterio).length > 0 && !criterio.ncAberta;
+  updateScoreMini(sId);
+  updateProgresso();
+  updateNotaGeral();
+  scheduleDraftSave();
+}
+
+// === Function: addDesvioCriterio ===
+function addDesvioCriterio(sId, ci) {
+  const criterio = currentInsp?.sensos?.[sId]?.[ci];
+  if (!criterio) return;
+  const desvios = ensureCriterioDesvios(criterio);
+  desvios.push(normalizeDesvio({ status: 'aberto' }));
+  if (!(typeof criterio.nota === 'number' && criterio.nota <= 3)) {
+    criterio.nota = 3;
+  }
+  refreshCriterioAfterDesvioChange(sId, ci);
+  renderInspecaoForm();
+}
+
+// === Function: removeDesvioCriterio ===
+function removeDesvioCriterio(sId, ci, desvioId) {
+  const criterio = currentInsp?.sensos?.[sId]?.[ci];
+  if (!criterio || !Array.isArray(criterio.desvios)) return;
+  criterio.desvios = criterio.desvios.filter(item => item.id !== desvioId);
+  refreshCriterioAfterDesvioChange(sId, ci);
+  renderInspecaoForm();
+}
+
+// === Function: setDesvioField ===
+function setDesvioField(sId, ci, desvioId, field, value) {
+  const desvio = getDesvioAtual(sId, ci, desvioId);
+  if (!desvio) return;
+  desvio[field] = value;
+  refreshCriterioAfterDesvioChange(sId, ci);
+}
+
+// === Function: setDesvioStatus ===
+function setDesvioStatus(sId, ci, desvioId, status) {
+  const desvio = getDesvioAtual(sId, ci, desvioId);
+  if (!desvio) return;
+  desvio.status = status === 'resolvido' ? 'resolvido' : 'aberto';
+  if (desvio.status === 'resolvido' && !desvio.resolvidoEm) desvio.resolvidoEm = new Date().toISOString();
+  if (desvio.status === 'aberto') desvio.resolvidoEm = '';
+  refreshCriterioAfterDesvioChange(sId, ci);
+  renderInspecaoForm();
+}
+
+// === Function: triggerFotoDesvio ===
+function triggerFotoDesvio(sId, ci, desvioId, kind = 'abertura') {
+  pendingFotoTarget = { sId, ci, desvioId, kind };
+  touchDraftContext({ lastSensoId: sId, lastCriterioIndex: ci, lastAction: `foto_desvio_${kind}`, fotoModalOpen: true, fotoTarget: pendingFotoTarget });
+  scheduleDraftSave();
+  document.getElementById('modal-foto-opcao').classList.add('open');
+}
+
+// === Function: setFotoLegendaDesvio ===
+function setFotoLegendaDesvio(sId, ci, desvioId, fi, kind, val) {
+  const desvio = getDesvioAtual(sId, ci, desvioId);
+  if (!desvio) return;
+  const key = kind === 'resolucao' ? 'resolucaoFotoLegendas' : 'fotoLegendas';
+  if (!Array.isArray(desvio[key])) desvio[key] = [];
+  desvio[key][fi] = val;
+  refreshCriterioAfterDesvioChange(sId, ci);
+}
+
+// === Function: removeFotoDesvio ===
+function removeFotoDesvio(sId, ci, desvioId, fi, kind = 'abertura') {
+  const desvio = getDesvioAtual(sId, ci, desvioId);
+  if (!desvio) return;
+  const fotosKey = kind === 'resolucao' ? 'resolucaoFotos' : 'fotos';
+  const legendasKey = kind === 'resolucao' ? 'resolucaoFotoLegendas' : 'fotoLegendas';
+  if (Array.isArray(desvio[fotosKey])) desvio[fotosKey].splice(fi, 1);
+  if (Array.isArray(desvio[legendasKey])) desvio[legendasKey].splice(fi, 1);
+  refreshCriterioAfterDesvioChange(sId, ci);
+  renderInspecaoForm();
+}
+
 // === Function: criterioHTML ===
 function criterioHTML(s, si, cr, ci, base) {
   const ncAnteriorRef = getNCAnteriorReferencia(s.id, ci);
@@ -8358,6 +8761,9 @@ function criterioHTML(s, si, cr, ci, base) {
   const baseFotos = baseFotosDiretas.length ? baseFotosDiretas : getUltimaEvidenciaNC(s.id, ci);
   const baseTemRefPendente = Array.isArray(baseCr?.fotos) && baseCr.fotos.includes('__ref__');
   const item = currentInsp.sensos[s.id][ci];
+  ensureDesviosFromAnterior(item, baseCr);
+  syncCriterioResumoFromDesvios(item);
+  const desviosSection = renderDesviosCriterioHtml(s, ci, item);
   const fotosDepois = getFotosValidasCriterio(item);
   const correspAtual = item.encaminharSetor && item.encaminharSetor !== currentInsp.setor ? item.encaminharSetor : '';
   const correspAnterior = baseCr?.encaminharSetor && baseCr.encaminharSetor !== currentInsp.setor ? baseCr.encaminharSetor : '';
@@ -8376,7 +8782,7 @@ function criterioHTML(s, si, cr, ci, base) {
     ? `<div class="criterio-auto-ajuste">Reincidência automática: nota ajustada de <strong>${item.autoReincidenciaFrom}</strong> para <strong>${item.autoReincidenciaTo}</strong>.</div>`
     : '';
   
-  // Seção de não conformidade anterior com imagens
+  // Seção de desvio anterior com imagens
   const hasNCAnterior = criterioTemNCAberta(baseCr);
   const isResolved = item.ncResolvida === true || (item.nota !== null && item.nota >= 4);
   const antesDepoisSection = (isResolved && hasNCAnterior) ? `
@@ -8407,7 +8813,7 @@ function criterioHTML(s, si, cr, ci, base) {
     <div class="nc-anterior-section">
       <div class="nc-anterior-header">
         <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="8"/><path d="M10 6v8M6 10h8"/></svg>
-        Não Conformidade Anterior
+        Desvio Anterior
       </div>
       <div class="nc-anterior-info">
         Nota anterior: <strong style="color:${notaCor(baseNota)}">${baseNota}</strong> | Reincidência: <strong>${reincAtual}ª</strong>${correspAnterior ? ` | <span style="color:var(--gold);font-weight:700">Corresponsável anterior: ${correspAnterior}</span>` : ''} | Observação: ${baseObs || 'Sem descrição'}
@@ -8420,7 +8826,7 @@ function criterioHTML(s, si, cr, ci, base) {
             </div>
           `).join('')}
         </div>
-      ` : `<div style="font-size:11px;color:var(--text2);padding:6px;text-align:center">${baseTemRefPendente ? 'Evidência da NC anterior em sincronização...' : 'Sem fotos registradas da não conformidade anterior'}</div>`}
+      ` : `<div style="font-size:11px;color:var(--text2);padding:6px;text-align:center">${baseTemRefPendente ? 'Evidência do desvio anterior em sincronização...' : 'Sem fotos registradas do desvio anterior'}</div>`}
       ${antesDepoisSection}
       <div class="nc-anterior-actions">
         <button class="btn-nc-resolved ${isResolved ? 'active' : ''}" onclick="toggleResolved('${s.id}',${ci})" id="btn-resolved-${s.id}-${ci}">
@@ -8440,7 +8846,7 @@ function criterioHTML(s, si, cr, ci, base) {
     <div class="criterio-nome">${cr}</div>
     ${baseHint}
     ${autoHint}
-    ${ncAnteriorSection}
+    ${desviosSection}
     <div class="criterio-section">
       <div class="criterio-section-title">Nota da Avaliação</div>
       <div class="nota-row">
@@ -8449,9 +8855,9 @@ function criterioHTML(s, si, cr, ci, base) {
       </div>
     </div>
     <div class="criterio-section">
-      <div class="criterio-section-title">Observação / Não Conformidade</div>
+      <div class="criterio-section-title">Observação / Desvio</div>
       <div class="criterio-obs">
-        <textarea class="form-textarea" placeholder="Observação / não conformidade (obrigatório para notas de 0 a 3)..." rows="2"
+        <textarea class="form-textarea" placeholder="Observação / desvio (obrigatório para notas de 0 a 3)..." rows="2"
           id="obs-${s.id}-${ci}" oninput="setObs('${s.id}',${ci},this.value)"
           style="font-size:13px;min-height:52px">${item.obs || ''}</textarea>
       </div>
@@ -8472,7 +8878,7 @@ function criterioHTML(s, si, cr, ci, base) {
           <option value="">— Nenhuma (Responsabilidade local) —</option>
           ${setorOptions}
         </select>
-        ${correspAtual ? `<div style="font-size:11px;color:var(--gold);margin-top:6px">NC com corresponsável: ${correspAtual}</div>` : ''}
+        ${correspAtual ? `<div style="font-size:11px;color:var(--gold);margin-top:6px">Desvio com corresponsável: ${correspAtual}</div>` : ''}
       </div>
     </div>
     <div class="criterio-section">
@@ -8502,12 +8908,14 @@ function toggleS(id) {
 // === Function: setNota ===
 function setNota(sId, ci, nota) {
   touchDraftContext({ lastSensoId: sId, lastCriterioIndex: ci, lastAction: 'nota', lastFieldId: `nb-${sId}-${ci}-${nota}` });
-  currentInsp.sensos[sId][ci].nota = nota;
-  currentInsp.sensos[sId][ci].autoReincidenciaFrom = null;
-  currentInsp.sensos[sId][ci].autoReincidenciaTo = null;
+  const criterio = currentInsp.sensos[sId][ci];
+  criterio.nota = nota;
+  criterio.autoReincidenciaFrom = null;
+  criterio.autoReincidenciaTo = null;
   const tinhaNCAnterior = hasPendenciaAnterior(sId, ci);
-  if (typeof nota === 'number' && nota <= 3) currentInsp.sensos[sId][ci].ncResolvida = false;
-  currentInsp.sensos[sId][ci].ncAberta = typeof nota === 'number' && nota <= 3 && currentInsp.sensos[sId][ci].ncResolvida !== true;
+  const desvios = Array.isArray(criterio.desvios) ? ensureCriterioDesvios(criterio) : [];
+  if (typeof nota === 'number' && nota <= 3) criterio.ncResolvida = false;
+  criterio.ncAberta = typeof nota === 'number' && nota <= 3 && criterio.ncResolvida !== true;
   [0,1,2,3,4].forEach(n => {
     const btn = document.getElementById(`nb-${sId}-${ci}-${n}`);
     btn.className = 'nota-btn' + (n === nota ? ` sel-${n}` : '');
@@ -8518,11 +8926,15 @@ function setNota(sId, ci, nota) {
   const obs = document.getElementById(`obs-${sId}-${ci}`);
   if (typeof nota === 'number' && nota >= 4) {
     obs.style.borderColor = '';
+    desvios.forEach(desvio => {
+      desvio.status = 'resolvido';
+      if (!desvio.resolvidoEm) desvio.resolvidoEm = new Date().toISOString();
+    });
     
-    // Marcar automaticamente como resolvido se houver NC anterior e nota >= 4
+    // Marcar automaticamente como resolvido se houver desvio anterior e nota >= 4
     updateResolvedButton(sId, ci, true);
-    if (tinhaNCAnterior) currentInsp.sensos[sId][ci].ncResolvida = true;
-    if (tinhaNCAnterior) currentInsp.sensos[sId][ci].ncAberta = false;
+    if (tinhaNCAnterior || desvios.length) criterio.ncResolvida = true;
+    if (tinhaNCAnterior || desvios.length) criterio.ncAberta = false;
   } else if (nota !== 'NA') {
     updateResolvedButton(sId, ci, false);
     if (obs && !obs.value.trim()) obs.style.borderColor = 'var(--red)';
@@ -8530,6 +8942,7 @@ function setNota(sId, ci, nota) {
     obs.style.borderColor = '';
     updateResolvedButton(sId, ci, false);
   }
+  if (desvios.length) syncCriterioResumoFromDesvios(criterio);
   updateScoreMini(sId);
   updateProgresso();
   updateNotaGeral();
@@ -8609,6 +9022,12 @@ function toggleResolved(sId, ci) {
     criterio.ncResolvida = false;
     if (criterio.nota === 4) criterio.nota = null;
     criterio.ncAberta = (criterio.nota ?? null) !== null && criterio.nota <= 3;
+    if (Array.isArray(criterio.desvios)) {
+      ensureCriterioDesvios(criterio).forEach(desvio => {
+        desvio.status = 'aberto';
+        desvio.resolvidoEm = '';
+      });
+    }
   } else {
     updateResolvedButton(sId, ci, true);
     criterio.nota = 4;
@@ -8616,6 +9035,13 @@ function toggleResolved(sId, ci) {
     criterio.autoReincidenciaTo = null;
     criterio.ncResolvida = true;
     criterio.ncAberta = false;
+    if (Array.isArray(criterio.desvios)) {
+      ensureCriterioDesvios(criterio).forEach(desvio => {
+        desvio.status = 'resolvido';
+        if (!desvio.resolvidoEm) desvio.resolvidoEm = new Date().toISOString();
+      });
+      syncCriterioResumoFromDesvios(criterio);
+    }
     const obs = document.getElementById(`obs-${sId}-${ci}`);
     if (obs) obs.style.borderColor = '';
   }
@@ -8662,14 +9088,18 @@ function closeFotoModal() {
 // === Function: escolherFonteFoto ===
 function escolherFonteFoto(source) {
   if (!pendingFotoTarget) return;
-  const { sId, ci } = pendingFotoTarget;
+  const { sId, ci, desvioId = '', kind = 'criterio' } = pendingFotoTarget;
   touchDraftContext({ lastSensoId: sId, lastCriterioIndex: ci, lastAction: `foto_${source}`, fotoModalOpen: false, fotoTarget: { sId, ci } });
   scheduleDraftSave();
   const inputId = source === 'camera' ? `foto-inp-camera-${sId}-${ci}` : `foto-inp-gallery-${sId}-${ci}`;
   document.getElementById('modal-foto-opcao').classList.remove('open');
   pendingFotoTarget = null;
   const inp = document.getElementById(inputId);
-  if (inp) inp.click();
+  if (inp) {
+    inp.dataset.desvioId = desvioId;
+    inp.dataset.fotoKind = kind;
+    inp.click();
+  }
 }
 
 // Comprime imagem para base64 (máx 800px, qualidade 0.65) — cabe no Firestore sem Storage pago
@@ -8700,25 +9130,42 @@ function comprimirImagem(file, maxPx = 800, quality = 0.65) {
 async function addFotos(sId, ci, inp) {
   touchDraftContext({ lastSensoId: sId, lastCriterioIndex: ci, lastAction: 'foto_add', lastFieldId: `foto-grid-${sId}-${ci}` });
   const files = Array.from(inp.files);
+  const desvioId = inp.dataset.desvioId || '';
+  const fotoKind = inp.dataset.fotoKind || 'criterio';
   for (const file of files) {
     try {
       toast('Processando foto...');
       const fotoSrc = await comprimirImagem(file);
       const criterio = currentInsp.sensos[sId][ci];
-      if (!Array.isArray(criterio.fotos)) criterio.fotos = [];
-      if (!Array.isArray(criterio.fotoLegendas)) criterio.fotoLegendas = [];
-      criterio.fotos.push(fotoSrc);
-      criterio.fotoLegendas.push('');
+      if (desvioId) {
+        const desvio = getDesvioAtual(sId, ci, desvioId);
+        if (!desvio) continue;
+        const fotosKey = fotoKind === 'resolucao' ? 'resolucaoFotos' : 'fotos';
+        const legendasKey = fotoKind === 'resolucao' ? 'resolucaoFotoLegendas' : 'fotoLegendas';
+        if (!Array.isArray(desvio[fotosKey])) desvio[fotosKey] = [];
+        if (!Array.isArray(desvio[legendasKey])) desvio[legendasKey] = [];
+        desvio[fotosKey].push(fotoSrc);
+        desvio[legendasKey].push('');
+        refreshCriterioAfterDesvioChange(sId, ci);
+      } else {
+        if (!Array.isArray(criterio.fotos)) criterio.fotos = [];
+        if (!Array.isArray(criterio.fotoLegendas)) criterio.fotoLegendas = [];
+        criterio.fotos.push(fotoSrc);
+        criterio.fotoLegendas.push('');
+      }
       const fotoArea = document.getElementById(`foto-area-${sId}-${ci}`);
       if (fotoArea) fotoArea.style.borderColor = '';
-      renderFotoGrid(sId, ci);
+      if (!desvioId) renderFotoGrid(sId, ci);
       scheduleDraftSave();
     } catch (e) {
       console.error("Erro ao processar foto:", e);
       toast('Erro ao processar foto');
     }
   }
+  inp.dataset.desvioId = '';
+  inp.dataset.fotoKind = '';
   inp.value = '';
+  if (desvioId) renderInspecaoForm();
   toast('Fotos adicionadas!');
 }
 
@@ -8824,7 +9271,7 @@ function getDebitoRazoesInspecao(insp) {
         criterioIndice: ci + 1,
         criterioTexto: s.criterios[ci],
         pontos: 1,
-        motivo: `NC reincidente no setor de origem (${insp.setor} - ${localLabel(insp)}), no senso ${s.nome}.`
+        motivo: `Desvio reincidente no setor de origem (${insp.setor} - ${localLabel(insp)}), no senso ${s.nome}.`
       });
     });
   });
@@ -8853,7 +9300,7 @@ function getDebitoRazoesInspecao(insp) {
           criterioIndice: ci + 1,
           criterioTexto: s.criterios[ci],
           pontos: 1,
-          motivo: `NC encaminhada ao corresponsável ${insp.setor}; débito aplicado no senso ${s.nome}.`
+          motivo: `Desvio encaminhado ao corresponsável ${insp.setor}; débito aplicado no senso ${s.nome}.`
         });
       });
     });
@@ -8998,6 +9445,21 @@ function getImpactosCorresponsavelSetor(setorDestino, periodo = getSetorialRepor
   return Array.from(porCriterio.values()).filter(item => item.impacto > 0);
 }
 
+function formatImpactoRecebido(value) {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return '—';
+  if (value < 0.01) return '-<0.01';
+  return `-${value.toFixed(2)}`;
+}
+
+function formatNotaComImpacto(value, baseValue = null) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return '—';
+  const rounded = value.toFixed(2);
+  if (typeof baseValue === 'number' && baseValue > value && baseValue.toFixed(2) === rounded) {
+    return value.toFixed(3);
+  }
+  return rounded;
+}
+
 function getSetorPontuacaoComparativo(setor, periodo = getSetorialReportPeriod()) {
   const inspsSetor = getInspectionsForReportPeriod(periodo).filter(i => i.setor === setor);
   const impactos = getImpactosCorresponsavelSetor(setor, periodo);
@@ -9012,7 +9474,8 @@ function getSetorPontuacaoComparativo(setor, periodo = getSetorialReportPeriod()
     .map(notas => notas.reduce((a, b) => a + b, 0) / notas.length);
   const quantidadeLocais = Math.max(1, mediasLocais.length);
   const sensosAvaliados = SENSOS.length;
-  const divisorImpactoSetorial = Math.max(1, sensosAvaliados * quantidadeLocais);
+  const divisorImpactoSenso = quantidadeLocais;
+  const divisorImpactoSetorial = Math.max(1, sensosAvaliados);
   const impactosPorSenso = impactos.reduce((acc, item) => {
     if (!acc[item.sensoId]) acc[item.sensoId] = [];
     acc[item.sensoId].push(item);
@@ -9027,14 +9490,16 @@ function getSetorPontuacaoComparativo(setor, periodo = getSetorialReportPeriod()
     const mediaSemExternas = notasSenso.length ? (notasSenso.reduce((a, b) => a + b, 0) / notasSenso.length) : null;
     const itensImpacto = impactosPorSenso[s.id] || [];
     const impactoBrutoSenso = itensImpacto.reduce((sum, item) => sum + item.impacto, 0);
-    const impactoExternas = impactoBrutoSenso / divisorImpactoSetorial;
-    const mediaComExternas = mediaSemExternas === null ? null : Math.max(0, mediaSemExternas - impactoExternas);
+    const impactoNoSenso = impactoBrutoSenso / divisorImpactoSenso;
+    const impactoExternas = impactoNoSenso / divisorImpactoSetorial;
+    const mediaComExternas = mediaSemExternas === null ? null : Math.max(0, mediaSemExternas - impactoNoSenso);
     return {
       sensoId: s.id,
       senso: s.nome,
       mediaSemExternas,
       mediaComExternas,
       impactoExternas,
+      impactoNoSenso,
       impactoBrutoSenso,
       impactos: itensImpacto
     };
@@ -9112,6 +9577,7 @@ function setSalvarButtonState(isSaving) {
 }
 
 function criterioResolvidoNoFormulario(sId, ci, cr) {
+  if (getDesviosResolvidosCriterio(cr).length) return true;
   if (!hasPendenciaAnterior(sId, ci)) return false;
   return cr?.ncResolvida === true || (typeof cr?.nota === 'number' && cr.nota >= 4);
 }
@@ -9157,12 +9623,32 @@ async function salvarInspecao() {
   SENSOS.forEach(s => {
     currentInsp.sensos[s.id].forEach((cr, ci) => {
       if (cr.nota === null) { ok = false; return; }
+      syncCriterioResumoFromDesvios(cr);
       const obsTxt = String(cr.obs || '').trim();
-      if (cr.nota <= 3 && !obsTxt) {
+      const desvios = getCriterioDesvios(cr, { includeLegacy: false });
+      const desviosAbertos = desvios.filter(isDesvioAberto);
+      const desviosResolvidos = desvios.filter(desvio => !isDesvioAberto(desvio));
+      const temDescricaoDesvioAberto = desviosAbertos.some(desvio => String(desvio.descricao || '').trim());
+
+      if (cr.nota <= 3 && !obsTxt && !temDescricaoDesvioAberto) {
         faltamObs.push(`${s.nome} - Critério ${ci+1}`);
         if (!primeiraPendencia) primeiraPendencia = { sId: s.id, ci, campo: 'obs' };
       }
-      if (criterioResolvidoNoFormulario(s.id, ci, cr)) {
+      if (desviosResolvidos.length) {
+        const semObsResolucao = desviosResolvidos.some(desvio => !String(desvio.resolucaoObs || '').trim());
+        const semFotoResolucao = desviosResolvidos.some(desvio =>
+          !Array.isArray(desvio.resolucaoFotos) ||
+          !desvio.resolucaoFotos.filter(f => typeof f === 'string' && f && f !== '__ref__').length
+        );
+        if (semObsResolucao) {
+          faltamObsResolucao.push(`${s.nome} - Critério ${ci+1}`);
+          if (!primeiraPendencia) primeiraPendencia = { sId: s.id, ci, campo: 'obs' };
+        }
+        if (semFotoResolucao) {
+          faltamFotoResolucao.push(`${s.nome} - Critério ${ci+1}`);
+          if (!primeiraPendencia) primeiraPendencia = { sId: s.id, ci, campo: 'foto' };
+        }
+      } else if (criterioResolvidoNoFormulario(s.id, ci, cr)) {
         const fotos = getFotosValidasCriterio(cr);
         if (!obsTxt) {
           faltamObsResolucao.push(`${s.nome} - Critério ${ci+1}`);
@@ -9183,12 +9669,12 @@ async function salvarInspecao() {
   }
   if (faltamObsResolucao.length > 0) {
     destacarCriterioPendente(primeiraPendencia.sId, primeiraPendencia.ci, primeiraPendencia.campo);
-    toast('Informe a observação da resolução da NC');
+    toast('Informe a observação da resolução do desvio');
     return;
   }
   if (faltamFotoResolucao.length > 0) {
     destacarCriterioPendente(primeiraPendencia.sId, primeiraPendencia.ci, primeiraPendencia.campo);
-    toast('Anexe foto de evidência para NC marcada como resolvida');
+    toast('Anexe foto de evidência para desvio marcado como resolvido');
     return;
   }
 
@@ -9206,11 +9692,16 @@ async function salvarInspecao() {
 
     SENSOS.forEach(s => {
       currentInsp.sensos[s.id].forEach((cr, ci) => {
+        syncCriterioResumoFromDesvios(cr);
         const notaAtual = cr.nota ?? null;
+        const temDesvios = getCriterioDesvios(cr, { includeLegacy: false }).length > 0;
         const tinhaAnterior = hasPendenciaAnterior(s.id, ci);
-        if (!tinhaAnterior) cr.ncResolvida = false;
+        if (!tinhaAnterior && !temDesvios) cr.ncResolvida = false;
         const resolvidaMarcada = cr.ncResolvida === true;
-        cr.ncAberta = notaAtual !== null && notaAtual <= 3 && !resolvidaMarcada;
+        cr.ncAberta = temDesvios
+          ? criterioTemNCAberta(cr)
+          : notaAtual !== null && notaAtual <= 3 && !resolvidaMarcada;
+        if (temDesvios) cr.ncResolvida = getDesviosResolvidosCriterio(cr).length > 0 && !cr.ncAberta;
       });
     });
 
@@ -9404,7 +9895,7 @@ function openDetalhe(id) {
   });
 
   if (pendHTML) {
-    html += `<div style="font-family:var(--font-display);font-size:14px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Não conformidades</div>${pendHTML}`;
+    html += `<div style="font-family:var(--font-display);font-size:14px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Desvios</div>${pendHTML}`;
   }
 
   if (recebidas.length) {
@@ -9502,7 +9993,7 @@ function iniciarNovaComBase(baseId) {
     updatedAt: new Date().toISOString()
   };
   SENSOS.forEach(s => {
-    currentInsp.sensos[s.id] = s.criterios.map(() => ({ nota: null, obs: '', sugestao: '', fotos: [], fotoLegendas: [], encaminharSetor: '', ncResolvida: false, ncAberta: false, autoReincidenciaFrom: null, autoReincidenciaTo: null }));
+    currentInsp.sensos[s.id] = s.criterios.map(() => ({ nota: null, obs: '', sugestao: '', fotos: [], fotoLegendas: [], desvios: [], encaminharSetor: '', ncResolvida: false, ncAberta: false, autoReincidenciaFrom: null, autoReincidenciaTo: null }));
   });
   if (sameLocal(currentInsp, base)) {
     aplicarRegraReincidencia(base);
@@ -9589,12 +10080,12 @@ function renderPendList() {
           <div class="pend-desc">${SENSOS.find(x=>x.id===s.id).criterios[ci]}</div>
           <div style="font-size:11px;color:var(--text2);margin-top:4px">${formatDate(insp.data)} · ${insp.tecnico}</div>
           ${isNC ? `<div class="pend-status" style="color:var(--red)">Nota ${cr.nota} - ${cr.obs || 'Sem observação'}${reincTxt}</div>` : ''}
-          ${cr.encaminharSetor ? `<div style="font-size:11px;color:var(--gold);margin-top:4px">NC com corresponsável: ${cr.encaminharSetor}</div>` : ''}
+          ${cr.encaminharSetor ? `<div style="font-size:11px;color:var(--gold);margin-top:4px">Desvio com corresponsável: ${cr.encaminharSetor}</div>` : ''}
           ${isNC ? `<div style="font-size:11px;color:var(--text2);margin-top:3px">Toque para abrir inspeção e corrigir esta pendência.</div>` : ''}
-          ${isNC && fotosNC.length ? `<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:8px">${fotosNC.map((foto, idx) => `<img src="${foto}" alt="Evidência NC ${idx + 1}" onclick="event.stopPropagation();openImageModal('${foto.replace(/'/g, "\\'")}')" style="width:100%;height:68px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer">`).join('')}</div>` : ''}
-          ${isNC && !fotosNC.length ? `<div style="font-size:11px;color:var(--text2);margin-top:4px">Foto da NC: não anexada.</div>` : ''}
+          ${isNC && fotosNC.length ? `<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:8px">${fotosNC.map((foto, idx) => `<img src="${foto}" alt="Evidência do desvio ${idx + 1}" onclick="event.stopPropagation();openImageModal('${foto.replace(/'/g, "\\'")}')" style="width:100%;height:68px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer">`).join('')}</div>` : ''}
+          ${isNC && !fotosNC.length ? `<div style="font-size:11px;color:var(--text2);margin-top:4px">Foto do desvio: não anexada.</div>` : ''}
           ${isResolvida ? `<div class="pend-status" style="color:var(--green)">✓ Resolvida em ${formatDate(insp.data)}</div>` : ''}
-          ${isResolvida ? `<div style="font-size:11px;color:var(--text2);margin-top:3px">Reincidências até concluir: <strong style="color:var(--green)">${reincResolvida?.reincidencias ?? 0}</strong> <span style="color:var(--text2)">(${reincResolvida?.ocorrenciasNC ?? 0} ocorrências NC consecutivas)</span></div>` : ''}
+          ${isResolvida ? `<div style="font-size:11px;color:var(--text2);margin-top:3px">Reincidências até concluir: <strong style="color:var(--green)">${reincResolvida?.reincidencias ?? 0}</strong> <span style="color:var(--text2)">(${reincResolvida?.ocorrenciasNC ?? 0} ocorrências de desvio consecutivas)</span></div>` : ''}
           ${isResolvida ? `<div style="font-size:11px;color:var(--text2);margin-top:3px">Antes: ${crAnterior?.obs || 'Sem observação'}<br>Agora: ${cr.obs || 'Sem observação'}</div>` : ''}
           ${antesDepoisResolvida}
           <div class="pend-status" style="margin-top:6px;color:${isNC ? 'var(--red)' : 'var(--green)'};font-weight:700">
@@ -10147,8 +10638,8 @@ function gerarExcelSetorial() {
         { key: 'local', label: 'Local' },
         { key: 'tecnico', label: 'Técnico' },
         { key: 'nota_geral', label: 'Nota Geral' },
-        { key: 'nc_abertas', label: 'NC Abertas' },
-        { key: 'nc_resolvidas', label: 'NC Resolvidas' }
+        { key: 'nc_abertas', label: 'Desvios abertos' },
+        { key: 'nc_resolvidas', label: 'Desvios resolvidos' }
       ],
       rows: inspeRows
     },
@@ -10173,7 +10664,7 @@ function gerarExcelSetorial() {
       name: 'NC_Resolvidas',
       columns: [
         { key: 'data_resolucao', label: 'Data Resolução' },
-        { key: 'data_origem', label: 'Data Origem NC' },
+        { key: 'data_origem', label: 'Data origem do desvio' },
         { key: 'periodo', label: 'Período' },
         { key: 'local', label: 'Local' },
         { key: 'senso', label: 'Senso' },
@@ -10283,8 +10774,8 @@ function gerarExcelGerencia() {
         { key: 'setor', label: 'Setor' },
         { key: 'inspecoes', label: 'Inspeções' },
         { key: 'media_geral', label: 'Média Geral' },
-        { key: 'nc_abertas', label: 'NC Abertas' },
-        { key: 'nc_resolvidas', label: 'NC Resolvidas' }
+        { key: 'nc_abertas', label: 'Desvios abertos' },
+        { key: 'nc_resolvidas', label: 'Desvios resolvidos' }
       ],
       rows: resumoRows
     },
@@ -10401,8 +10892,8 @@ function gerarExcelGeral() {
         { key: 'local', label: 'Local' },
         { key: 'tecnico', label: 'Técnico' },
         { key: 'nota_geral', label: 'Nota Geral' },
-        { key: 'nc_abertas', label: 'NC Abertas' },
-        { key: 'nc_resolvidas', label: 'NC Resolvidas' }
+        { key: 'nc_abertas', label: 'Desvios abertos' },
+        { key: 'nc_resolvidas', label: 'Desvios resolvidos' }
       ],
       rows: rowsInspecoes
     },
@@ -10549,7 +11040,7 @@ async function gerarPDFGerencia(options = {}) {
   function renderGerenciaObjetivoPage() {
     let yy = novaPaginaComCabecalho('Objetivo do Housekeeping', `${gerencia} · ${mesAnoAtual}`);
     const objetivoTxt = `Este relatório apresenta a consolidação mensal de Housekeeping da gerência ${gerencia}, com análise integrada dos setores mapeados para apoiar a priorização de ações, melhoria contínua, segurança operacional, organização, limpeza e tomada de decisão.`;
-    const escopoTxt = `O Housekeeping avalia as condições das áreas inspecionadas por meio dos critérios 5S, registrando pontuação, não conformidades abertas, reincidências, encaminhamentos corresponsáveis e evidências de resolução no período selecionado.`;
+    const escopoTxt = `O Housekeeping avalia as condições das áreas inspecionadas por meio dos critérios 5S, registrando pontuação, desvios abertos, reincidências, encaminhamentos corresponsáveis e evidências de resolução no período selecionado.`;
     const textoX = margin;
     const textoW = W - margin * 2 - 18;
 
@@ -10803,13 +11294,13 @@ async function gerarPDFGerencia(options = {}) {
 
   function renderGerenciaImpactoNCExternaPage() {
     if (!setoresComNCExterna.length) return;
-    let yy = novaPaginaComCabecalho('Impacto de NCs Recebidas de Outras Áreas', `${gerencia} · ${mesAnoAtual}`);
+    let yy = novaPaginaComCabecalho('Impacto de Desvios Recebidos de Outras Áreas', `${gerencia} · ${mesAnoAtual}`);
 
     const gapLocal = 8;
     const cardLocalW = (W - margin * 2 - gapLocal * 2) / 3;
-    drawDashCard(margin, yy, cardLocalW, 30, 'Gerência sem recebidas', mediaGerenciaSemNCExterna !== null ? mediaGerenciaSemNCExterna.toFixed(2) : '—', 'Média sem NC externa', [22, 53, 159]);
-    drawDashCard(margin + cardLocalW + gapLocal, yy, cardLocalW, 30, 'Impacto recebido', impactoNCExternaGerencia ? `-${impactoNCExternaGerencia.toFixed(2)}` : '—', 'Rateado por sensos e áreas', [245, 158, 11]);
-    drawDashCard(margin + (cardLocalW + gapLocal) * 2, yy, cardLocalW, 30, 'Gerência com recebidas', mediaGerencia !== null ? mediaGerencia.toFixed(2) : '—', 'Média considerada', [244, 63, 94]);
+    drawDashCard(margin, yy, cardLocalW, 30, 'Gerência sem recebidos', mediaGerenciaSemNCExterna !== null ? mediaGerenciaSemNCExterna.toFixed(2) : '—', 'Média sem desvio externo', [22, 53, 159]);
+    drawDashCard(margin + cardLocalW + gapLocal, yy, cardLocalW, 30, 'Impacto recebido', formatImpactoRecebido(impactoNCExternaGerencia), 'Rateado por sensos e áreas', [245, 158, 11]);
+    drawDashCard(margin + (cardLocalW + gapLocal) * 2, yy, cardLocalW, 30, 'Gerência com recebidas', formatNotaComImpacto(mediaGerencia, mediaGerenciaSemNCExterna), 'Média considerada', [244, 63, 94]);
     yy += 44;
 
     doc.setTextColor(22, 53, 159);
@@ -10828,12 +11319,12 @@ async function gerarPDFGerencia(options = {}) {
     doc.text('Sem recebidas', margin + 132, yy + 6.5, { align: 'right' });
     doc.text('Impacto', margin + 176, yy + 6.5, { align: 'right' });
     doc.text('Com recebidas', margin + 220, yy + 6.5, { align: 'right' });
-    doc.text('NCs recebidas', W - margin - 4, yy + 6.5, { align: 'right' });
+    doc.text('Desvios recebidos', W - margin - 4, yy + 6.5, { align: 'right' });
     yy += 14;
 
     setoresComNCExterna.forEach((row, idx) => {
       if (yy > H - 18) {
-        yy = novaPaginaComCabecalho('Impacto de NCs Recebidas de Outras Áreas', `${gerencia} · ${mesAnoAtual}`);
+        yy = novaPaginaComCabecalho('Impacto de Desvios Recebidos de Outras Áreas', `${gerencia} · ${mesAnoAtual}`);
       }
       if (idx % 2 === 0) {
         doc.setFillColor(250, 252, 255);
@@ -10844,8 +11335,8 @@ async function gerarPDFGerencia(options = {}) {
       doc.setFontSize(8.5);
       doc.text(doc.splitTextToSize(row.setor, 118), margin + 4, yy);
       doc.text(row.mediaSemNCExterna !== null ? row.mediaSemNCExterna.toFixed(2) : '—', margin + 132, yy, { align: 'right' });
-      doc.text(`-${(row.impactoNCExterna || 0).toFixed(2)}`, margin + 176, yy, { align: 'right' });
-      doc.text(row.media !== null ? row.media.toFixed(2) : '—', margin + 220, yy, { align: 'right' });
+      doc.text(formatImpactoRecebido(row.impactoNCExterna || 0), margin + 176, yy, { align: 'right' });
+      doc.text(formatNotaComImpacto(row.media, row.mediaSemNCExterna), margin + 220, yy, { align: 'right' });
       doc.text(String(row.ncRecebidasComDebito || 0), W - margin - 4, yy, { align: 'right' });
       yy += 8;
     });
@@ -10883,9 +11374,9 @@ async function gerarPDFGerencia(options = {}) {
   const taxaResolucaoGerencia = totalNCGerencia ? `${Math.round((totais.ncResolvidas / totalNCGerencia) * 100)}%` : '—';
   drawDashCard(margin, row1Y, cardW, cardH, 'Inspeções', totais.inspecoes, 'No mês atual', [22, 53, 159]);
   drawDashCard(margin + cardW + gap, row1Y, cardW, cardH, 'Média Geral', mediaGerencia !== null ? mediaGerencia.toFixed(2) : '—', 'Nota média da gerência', [14, 165, 233]);
-  drawDashCard(margin + (cardW + gap) * 2, row1Y, cardW, cardH, 'Taxa de Resolução', taxaResolucaoGerencia, 'Resolvidas sobre NCs do período', [16, 185, 129]);
-  drawDashCard(margin, row2Y, cardW, cardH, 'NC Abertas', totais.ncAbertas, 'Pendências identificadas', [244, 63, 94]);
-  drawDashCard(margin + cardW + gap, row2Y, cardW, cardH, 'NC Resolvidas', totais.ncResolvidas, 'Concluídas no período', [16, 185, 129]);
+  drawDashCard(margin + (cardW + gap) * 2, row1Y, cardW, cardH, 'Taxa de Resolução', taxaResolucaoGerencia, 'Resolvidas sobre desvios do período', [16, 185, 129]);
+  drawDashCard(margin, row2Y, cardW, cardH, 'Desvios abertos', totais.ncAbertas, 'Pendências identificadas', [244, 63, 94]);
+  drawDashCard(margin + cardW + gap, row2Y, cardW, cardH, 'Desvios resolvidos', totais.ncResolvidas, 'Concluídas no período', [16, 185, 129]);
   drawDashCard(margin + (cardW + gap) * 2, row2Y, cardW, cardH, 'Setores Totais', setores.length, 'Mapeados na gerência', [245, 158, 11]);
 
   // Tabela resumida por setor
@@ -10914,8 +11405,8 @@ async function gerarPDFGerencia(options = {}) {
   doc.text('Status', resumoColX.status, y + 6.5, { align: 'center' });
   doc.text('Inspeções', resumoColX.inspecoes, y + 6.5, { align: 'right' });
   doc.text('Média', resumoColX.media, y + 6.5, { align: 'right' });
-  doc.text('NC abertas', resumoColX.ncAbertas, y + 6.5, { align: 'right' });
-  doc.text('NC resolvidas', resumoColX.ncResolvidas, y + 6.5, { align: 'right' });
+  doc.text('Desvios abertos', resumoColX.ncAbertas, y + 6.5, { align: 'right' });
+  doc.text('Desvios resolvidos', resumoColX.ncResolvidas, y + 6.5, { align: 'right' });
   y += 14;
 
   doc.setFont('helvetica', 'normal');
@@ -11017,7 +11508,7 @@ async function gerarPDFGerencia(options = {}) {
         const antesLines = doc.splitTextToSize(`Antes: ${item.obsAnterior || 'Sem observação.'}`, W - margin * 2 - 8);
         const agoraLines = doc.splitTextToSize(`Depois: ${item.obsAtual || item.obs || 'Sem observação.'}`, W - margin * 2 - 8);
         const acaoLines = doc.splitTextToSize(`Ação/Sugestão: ${item.sugestao || 'Não informada.'}`, W - margin * 2 - 8);
-        const origemLines = item.dataAnterior ? doc.splitTextToSize(`Origem da NC: ${formatDate(item.dataAnterior)}`, W - margin * 2 - 8) : [];
+        const origemLines = item.dataAnterior ? doc.splitTextToSize(`Origem do desvio: ${formatDate(item.dataAnterior)}`, W - margin * 2 - 8) : [];
         const comparativoH = 108;
         const lineH = 4.4;
         const linhasBase = criterioLines.length + antesLines.length + agoraLines.length + acaoLines.length + origemLines.length;
@@ -11224,15 +11715,15 @@ async function gerarPDFGerencia(options = {}) {
   if (ncsAbertasOrdenadas.length) {
     await renderGerencialNCSection(
       ncsAbertasOrdenadas,
-      'Relatório de não conformidades',
-      'Nenhuma não conformidade aberta registrada no período selecionado.'
+      'Relatório de desvios',
+      'Nenhum desvio aberto registrado no período selecionado.'
     );
   }
   if (ncsResolvidasOrdenadas.length) {
     await renderGerencialNCSection(
       ncsResolvidasOrdenadas,
-      'Relatório de não conformidades resolvidas',
-      'Nenhuma não conformidade foi concluída no período selecionado para esta gerência.'
+      'Relatório de desvios resolvidos',
+      'Nenhum desvio foi concluído no período selecionado para esta gerência.'
     );
   }
 
@@ -11519,7 +12010,7 @@ async function gerarPDFSetorial(setor, options = {}) {
 
     let yy = 34;
     const objetivoTxt = `Este relatório tem como objetivo apresentar as informações do Housekeeping realizado no setor ${setor} durante ${mesAnoAtual}, identificando oportunidades de melhoria, condições inseguras, desvios de organização e limpeza, reincidências e ações concluídas.`;
-    const escopoTxt = 'A análise consolida as áreas inspecionadas no período selecionado, as pontuações por critérios 5S, as não conformidades abertas, as não conformidades resolvidas com evidência e os encaminhamentos corresponsáveis.';
+    const escopoTxt = 'A análise consolida as áreas inspecionadas no período selecionado, as pontuações por critérios 5S, os desvios abertos, os desvios resolvidos com evidência e os encaminhamentos corresponsáveis.';
     const textoX = margin;
     const textoW = W - margin * 2 - 18;
 
@@ -11614,7 +12105,7 @@ async function gerarPDFSetorial(setor, options = {}) {
       doc.text('Área', margin + 4, yy + 6);
       doc.text('Data', margin + 112, yy + 6);
       doc.text('Técnico(a)', margin + 148, yy + 6);
-      doc.text('NC abertas', margin + 222, yy + 6, { align: 'right' });
+      doc.text('Desvios abertos', margin + 222, yy + 6, { align: 'right' });
       doc.text('Nota', W - margin - 4, yy + 6, { align: 'right' });
       yy += 12;
     }
@@ -11701,16 +12192,16 @@ async function gerarPDFSetorial(setor, options = {}) {
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
-    doc.text('Impacto de NCs Recebidas de Outras Áreas', margin, 14);
+    doc.text('Impacto de Desvios Recebidos de Outras Áreas', margin, 14);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9.5);
     doc.text(`${setor} · ${mesAnoAtual}`, margin, 20);
 
     const gapLocal = 8;
     const cardLocalW = (W - margin * 2 - gapLocal * 2) / 3;
-    drawDashCard(margin, 34, cardLocalW, 30, 'Sem NC externa', mediaSemNCExterna !== null ? mediaSemNCExterna.toFixed(2) : '—', 'Nota do setor sem recebidas', [22, 53, 159]);
-    drawDashCard(margin + cardLocalW + gapLocal, 34, cardLocalW, 30, 'Impacto recebido', impactoNCExterna ? `-${impactoNCExterna.toFixed(2)}` : '—', 'Rateado por sensos e áreas', [245, 158, 11]);
-    drawDashCard(margin + (cardLocalW + gapLocal) * 2, 34, cardLocalW, 30, 'Com NC externa', mediaGeral !== null ? mediaGeral.toFixed(2) : '—', 'Nota considerada no relatório', [244, 63, 94]);
+    drawDashCard(margin, 34, cardLocalW, 30, 'Sem desvio externo', mediaSemNCExterna !== null ? mediaSemNCExterna.toFixed(2) : '—', 'Nota do setor sem recebidos', [22, 53, 159]);
+    drawDashCard(margin + cardLocalW + gapLocal, 34, cardLocalW, 30, 'Impacto recebido', formatImpactoRecebido(impactoNCExterna), 'Rateado por sensos e áreas', [245, 158, 11]);
+    drawDashCard(margin + (cardLocalW + gapLocal) * 2, 34, cardLocalW, 30, 'Com desvio externo', formatNotaComImpacto(mediaGeral, mediaSemNCExterna), 'Nota considerada no relatório', [244, 63, 94]);
 
     let yy = 78;
     doc.setTextColor(22, 53, 159);
@@ -11744,8 +12235,8 @@ async function gerarPDFSetorial(setor, options = {}) {
         doc.setFontSize(8.5);
         doc.text(item.senso, margin + 4, yy);
         doc.text(item.mediaSemExternas !== null ? item.mediaSemExternas.toFixed(2) : '—', margin + 125, yy, { align: 'right' });
-        doc.text(`-${item.impactoExternas.toFixed(2)}`, margin + 170, yy, { align: 'right' });
-        doc.text(item.mediaComExternas !== null ? item.mediaComExternas.toFixed(2) : '—', margin + 215, yy, { align: 'right' });
+        doc.text(formatImpactoRecebido(item.impactoNoSenso ?? item.impactoExternas), margin + 170, yy, { align: 'right' });
+        doc.text(formatNotaComImpacto(item.mediaComExternas, item.mediaSemExternas), margin + 215, yy, { align: 'right' });
         doc.text(String(item.impactos.length), W - margin - 4, yy, { align: 'right' });
         yy += 8;
       });
@@ -11753,7 +12244,7 @@ async function gerarPDFSetorial(setor, options = {}) {
     yy += 8;
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
-    doc.text('Origem das NCs recebidas com débito', margin, yy);
+    doc.text('Origem dos desvios recebidos com débito', margin, yy);
     yy += 7;
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
@@ -11776,11 +12267,11 @@ async function gerarPDFSetorial(setor, options = {}) {
 
   drawDashCard(margin, row1Y, cardW, cardH, 'Inspeções', totalInspecoes, 'No mês atual', [22, 53, 159]);
   drawDashCard(margin + cardW + gap, row1Y, cardW, cardH, 'Média Geral', mediaGeral !== null ? mediaGeral.toFixed(2) : '—', 'Nota média do setor', [14, 165, 233]);
-  drawDashCard(margin + (cardW + gap) * 2, row1Y, cardW, cardH, 'Taxa de Resolução', taxaResolucaoSetor, 'Resolvidas sobre NCs do período', [16, 185, 129]);
+  drawDashCard(margin + (cardW + gap) * 2, row1Y, cardW, cardH, 'Taxa de Resolução', taxaResolucaoSetor, 'Resolvidas sobre desvios do período', [16, 185, 129]);
 
-  drawDashCard(margin, row2Y, cardW, cardH, 'NC Abertas', totalNCAbertas, 'Inclui encaminhadas', [244, 63, 94]);
-  drawDashCard(margin + cardW + gap, row2Y, cardW, cardH, 'NC Resolvidas', totalResolvidas, 'Resolvidas no período', [16, 185, 129]);
-  drawDashCard(margin + (cardW + gap) * 2, row2Y, cardW, cardH, 'NC Recebidas', totalNCRecebidas, 'Encaminhadas de outros setores', [245, 158, 11]);
+  drawDashCard(margin, row2Y, cardW, cardH, 'Desvios abertos', totalNCAbertas, 'Inclui encaminhados', [244, 63, 94]);
+  drawDashCard(margin + cardW + gap, row2Y, cardW, cardH, 'Desvios resolvidos', totalResolvidas, 'Resolvidos no período', [16, 185, 129]);
+  drawDashCard(margin + (cardW + gap) * 2, row2Y, cardW, cardH, 'Desvios recebidos', totalNCRecebidas, 'Encaminhados de outros setores', [245, 158, 11]);
 
   const boxY = row2Y + cardH + 10;
   doc.setDrawColor(226, 232, 240);
@@ -11807,7 +12298,7 @@ async function gerarPDFSetorial(setor, options = {}) {
     doc.setTextColor(22, 53, 159);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
-    doc.text('Relatório de não conformidades', margin, y);
+    doc.text('Relatório de desvios', margin, y);
     y += 8;
 
     for (let idx = 0; idx < ncList.length; idx++) {
@@ -11822,7 +12313,7 @@ async function gerarPDFSetorial(setor, options = {}) {
       const sugLines = doc.splitTextToSize(`Sugestão: ${nc.sugestao}`, W - margin * 2 - 8);
       const reincLines = doc.splitTextToSize(`Reincidência: ${nc.reincidencia}ª ocorrência consecutiva`, W - margin * 2 - 8);
       const correspTxt = (nc.origemTipo === 'encaminhada' || (nc.destinoSetor && nc.destinoSetor !== nc.origemSetor))
-        ? `NC corresponsável - Origem: ${nc.origemSetor} · ${nc.origemLocal} | Destino: ${nc.destinoSetor}`
+        ? `Desvio corresponsável - Origem: ${nc.origemSetor} · ${nc.origemLocal} | Destino: ${nc.destinoSetor}`
         : '';
       const correspLines = correspTxt ? doc.splitTextToSize(correspTxt, W - margin * 2 - 8) : [];
       const fotosPorLinha = 2;
@@ -11928,7 +12419,7 @@ async function gerarPDFSetorial(setor, options = {}) {
     doc.setTextColor(22, 53, 159);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
-    doc.text('Relatório de não conformidades resolvidas', margin, y);
+    doc.text('Relatório de desvios resolvidos', margin, y);
     y += 8;
   }
 
@@ -11947,7 +12438,7 @@ async function gerarPDFSetorial(setor, options = {}) {
       const antesLines = doc.splitTextToSize(`Antes: ${item.obsAnterior}`, W - margin * 2 - 8);
       const agoraLines = doc.splitTextToSize(`Agora: ${item.obsAtual}`, W - margin * 2 - 8);
       const sugLines = doc.splitTextToSize(`Ação/Sugestão: ${item.sugestaoAtual}`, W - margin * 2 - 8);
-      const reincLines = doc.splitTextToSize(`Reincidências até conclusão: ${item.reincidencias} (ocorrências NC consecutivas: ${item.ocorrenciasNC})`, W - margin * 2 - 8);
+      const reincLines = doc.splitTextToSize(`Reincidências até conclusão: ${item.reincidencias} (ocorrências de desvio consecutivas: ${item.ocorrenciasNC})`, W - margin * 2 - 8);
       const correspTxt = item.resolvidaPorCorresponsavel
         ? `Resolvida pelo corresponsável - Origem: ${item.origemSetor} · ${item.origemLocal} | Destino: ${item.destinoSetor}`
         : '';
@@ -11998,7 +12489,7 @@ async function gerarPDFSetorial(setor, options = {}) {
         }
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(22, 53, 159);
-        doc.text(`Origem da NC: ${formatDate(item.dataAnterior)}`, margin + 3, by);
+        doc.text(`Origem do desvio: ${formatDate(item.dataAnterior)}`, margin + 3, by);
         by += 5;
 
         const compX = margin + 3;
@@ -12283,7 +12774,7 @@ async function gerarPDFInsp(id, options = {}) {
     y += 6;
   });
 
-  // Pendencias e não conformidades
+  // Pendências e desvios
   let hasPend = false;
   SENSOS.forEach(s => insp.sensos[s.id].forEach(cr => { if ((cr.nota||0)<2) hasPend=true; }));
 
@@ -12293,7 +12784,7 @@ async function gerarPDFInsp(id, options = {}) {
     doc.setFillColor(148,163,184); doc.rect(0,0,W,1,'F');
     y = 14;
     doc.setTextColor(22,53,159); doc.setFontSize(14); doc.setFont('helvetica','bold');
-    doc.text('NÃO CONFORMIDADES / PENDÊNCIAS', margin, y+8); y += 22;
+    doc.text('DESVIOS / PENDÊNCIAS', margin, y+8); y += 22;
 
     SENSOS.forEach(s => {
       insp.sensos[s.id].forEach((cr, ci) => {
@@ -12303,7 +12794,7 @@ async function gerarPDFInsp(id, options = {}) {
         doc.setFillColor(231,76,60); doc.rect(margin, y+2, 2, 12, 'F');
         doc.setTextColor(153,27,27); doc.setFontSize(9); doc.setFont('helvetica','bold');
         
-        // Ícone NC
+        // Ícone de desvio
         doc.setFillColor(231, 76, 60);
         doc.circle(margin + 7, y + 6.2, 2.5, 'F');
         doc.setTextColor(255, 255, 255);
@@ -12351,7 +12842,7 @@ async function gerarPDFInsp(id, options = {}) {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
       const origemLines = doc.splitTextToSize(`${item.origemSetor} · ${item.origemLocal}`, W - margin * 2 - 8);
-      const correspLines = doc.splitTextToSize(`NC corresponsável - Origem: ${item.origemSetor} · ${item.origemLocal} | Destino: ${insp.setor}`, W - margin * 2 - 8);
+      const correspLines = doc.splitTextToSize(`Desvio corresponsável - Origem: ${item.origemSetor} · ${item.origemLocal} | Destino: ${insp.setor}`, W - margin * 2 - 8);
       const critLines = doc.splitTextToSize(`${item.senso} · Critério ${item.criterioIndice} - ${item.criterioTexto}`, W - margin * 2 - 8);
       const obsLines = item.obs ? doc.splitTextToSize(`Obs: ${item.obs}`, W - margin * 2 - 8) : [];
       const fotosDataUrl = (await Promise.all((Array.isArray(item.fotos) ? item.fotos : []).map(imageUrlToDataURL))).filter(Boolean);
@@ -12572,7 +13063,7 @@ async function gerarPDFInsp(id, options = {}) {
     async function drawPhotoCard(opts) {
       const { x, yTop, wCard, hCard, imgIndex, totalFotos, fotoUrl, legenda, isNC } = opts;
       const badgeTxt = `Imagem ${imgIndex}`;
-      const statusTxt = isNC ? 'Não\nConforme' : 'Conforme';
+      const statusTxt = isNC ? 'Desvio' : 'Conforme';
       const statusCol = isNC ? RED : GREEN;
       const statusIcon = isNC ? '!' : 'V';
 
