@@ -9021,6 +9021,33 @@ function refreshCriterioAfterDesvioChange(sId, ci) {
   scheduleDraftSave();
 }
 
+// === Function: getDesviosComConteudoDoSenso ===
+function getDesviosComConteudoDoSenso(sId) {
+  const criterios = currentInsp?.sensos?.[sId] || [];
+  return criterios.flatMap((criterio, ci) =>
+    getCriterioDesvios(criterio, { includeLegacy: false })
+      .filter(desvioTemConteudo)
+      .map(desvio => ({ criterio, ci, desvio }))
+  );
+}
+
+// === Function: aplicarNotaMaximaSeUnicoDesvioResolvido ===
+function aplicarNotaMaximaSeUnicoDesvioResolvido(sId, ci) {
+  const criterio = currentInsp?.sensos?.[sId]?.[ci];
+  if (!criterio) return false;
+  const desviosSenso = getDesviosComConteudoDoSenso(sId);
+  if (desviosSenso.length !== 1) return false;
+  if (desviosSenso.some(item => isDesvioAberto(item.desvio))) return false;
+  if (desviosSenso[0].criterio !== criterio) return false;
+
+  criterio.nota = 4;
+  criterio.autoReincidenciaFrom = null;
+  criterio.autoReincidenciaTo = null;
+  criterio.ncAberta = false;
+  criterio.ncResolvida = true;
+  return true;
+}
+
 // === Function: addDesvioCriterio ===
 function addDesvioCriterio(sId, ci) {
   const criterio = currentInsp?.sensos?.[sId]?.[ci];
@@ -9063,6 +9090,7 @@ function setDesvioStatus(sId, ci, desvioId, status) {
   desvio.status = status === 'resolvido' ? 'resolvido' : 'aberto';
   if (desvio.status === 'resolvido' && !desvio.resolvidoEm) desvio.resolvidoEm = new Date().toISOString();
   if (desvio.status === 'aberto') desvio.resolvidoEm = '';
+  if (desvio.status === 'resolvido') aplicarNotaMaximaSeUnicoDesvioResolvido(sId, ci);
   refreshCriterioAfterDesvioChange(sId, ci);
   renderInspecaoForm();
 }
@@ -11441,23 +11469,30 @@ async function gerarPDFGerencia(options = {}) {
 
     drawHeader();
     rows.forEach((row, idx) => {
-      if (yy > H - 16) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      const setorLines = doc.splitTextToSize(row.setor, 72);
+      const areaLines = doc.splitTextToSize(row.area, 80);
+      const tecnicoLines = doc.splitTextToSize(row.tecnico, 50);
+      const rowH = Math.max(8, 4 * Math.max(setorLines.length, areaLines.length, tecnicoLines.length) + 4);
+
+      if (yy + rowH > H - 14) {
         yy = novaPaginaComCabecalho('Áreas Inspecionadas', `${gerencia} · ${mesAnoAtual}`);
         drawHeader();
       }
       if (idx % 2 === 0) {
         doc.setFillColor(250, 252, 255);
-        doc.rect(margin, yy - 5.5, W - margin * 2, 8, 'F');
+        doc.rect(margin, yy - 5.5, W - margin * 2, rowH, 'F');
       }
       doc.setTextColor(22, 53, 159);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
-      doc.text(doc.splitTextToSize(row.setor, 72), margin + 4, yy);
-      doc.text(doc.splitTextToSize(row.area, 80), margin + 82, yy);
+      doc.text(setorLines, margin + 4, yy);
+      doc.text(areaLines, margin + 82, yy);
       doc.text(row.data, margin + 168, yy);
-      doc.text(doc.splitTextToSize(row.tecnico, 50), margin + 202, yy);
+      doc.text(tecnicoLines, margin + 202, yy);
       doc.text(row.nota, W - margin - 4, yy, { align: 'right' });
-      yy += 8;
+      yy += rowH;
     });
   }
 
@@ -12430,7 +12465,13 @@ async function gerarPDFSetorial(setor, options = {}) {
 
     drawHeader();
     rows.forEach((row, idx) => {
-      if (yy > H - 16) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      const areaLines = doc.splitTextToSize(row.area, 102);
+      const tecnicoLines = doc.splitTextToSize(row.tecnico, 68);
+      const rowH = Math.max(8, 4 * Math.max(areaLines.length, tecnicoLines.length) + 4);
+
+      if (yy + rowH > H - 14) {
         doc.addPage();
         doc.setFillColor(255, 255, 255);
         doc.rect(0, 0, W, H, 'F');
@@ -12445,17 +12486,17 @@ async function gerarPDFSetorial(setor, options = {}) {
       }
       if (idx % 2 === 0) {
         doc.setFillColor(250, 252, 255);
-        doc.rect(margin, yy - 5.5, W - margin * 2, 8, 'F');
+        doc.rect(margin, yy - 5.5, W - margin * 2, rowH, 'F');
       }
       doc.setTextColor(22, 53, 159);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
-      doc.text(doc.splitTextToSize(row.area, 102), margin + 4, yy);
+      doc.text(areaLines, margin + 4, yy);
       doc.text(row.data, margin + 112, yy);
-      doc.text(doc.splitTextToSize(row.tecnico, 68), margin + 148, yy);
+      doc.text(tecnicoLines, margin + 148, yy);
       doc.text(String(row.nc.abertas), margin + 222, yy, { align: 'right' });
       doc.text(row.nota, W - margin - 4, yy, { align: 'right' });
-      yy += 8;
+      yy += rowH;
     });
   }
 
