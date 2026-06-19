@@ -2643,10 +2643,6 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
       <span style="font-size:11px;color:var(--text2)" id="insp-progress-txt">0 critérios avaliados</span>
       <span style="font-size:11px;color:var(--text2)" id="insp-date-txt"></span>
     </div>
-    <div id="insp-periodo-edit-wrap" style="display:none;margin-top:10px;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card2)">
-      <label class="form-label" for="insp-periodo-edit" style="margin-bottom:6px">Período da inspeção</label>
-      <input type="month" class="form-input" id="insp-periodo-edit" onchange="setPeriodoInspecao(this.value)">
-    </div>
   </div>
 
   <div class="scroll-body" id="insp-form-body" style="padding:12px 0 20px">
@@ -4807,10 +4803,29 @@ function getSetorialReportDashboardData(setor, periodo = getSetorialReportPeriod
     SENSOS.forEach(s => {
       (insp.sensos?.[s.id] || []).forEach((crAtual, ci) => {
         const crAnterior = inspAnterior.sensos?.[s.id]?.[ci] || {};
+        const destinoSetor = crAnterior.encaminharSetor || crAtual?.encaminharSetor || insp.setor;
+        const itensResolvidos = buildResolvedDesvioReportItems(insp, inspAnterior, s, ci, crAtual, crAnterior, {
+          origemSetor: insp.setor,
+          origemLocal: localLabel(insp),
+          destinoSetor
+        });
+        if (itensResolvidos.length) {
+          const resolucaoIncompleta = getResolucaoIncompletaInfo(insp, s, ci, crAtual, {
+            origemSetor: insp.setor,
+            origemLocal: localLabel(insp),
+            destinoSetor
+          });
+          if (resolucaoIncompleta) {
+            resolucoesIncompletas.push(resolucaoIncompleta);
+            return;
+          }
+          resolvidasList.push(...itensResolvidos);
+          return;
+        }
+
         if (!criterioFoiResolvido(crAnterior, crAtual)) return;
 
         const reinc = getReincidenciasAteConclusao(insp, s.id, ci);
-        const destinoSetor = crAnterior.encaminharSetor || crAtual?.encaminharSetor || insp.setor;
         const resolucaoIncompleta = getResolucaoIncompletaInfo(insp, s, ci, crAtual, {
           origemSetor: insp.setor,
           origemLocal: localLabel(insp),
@@ -4855,8 +4870,27 @@ function getSetorialReportDashboardData(setor, periodo = getSetorialReportPeriod
       (inspOrigem.sensos?.[s.id] || []).forEach((crAtual, ci) => {
         const crAnterior = inspAnteriorOrigem.sensos?.[s.id]?.[ci] || {};
         const destinoSetor = crAnterior.encaminharSetor || crAtual?.encaminharSetor || '';
-        if (!criterioFoiResolvido(crAnterior, crAtual)) return;
+        const itensResolvidos = buildResolvedDesvioReportItems(inspOrigem, inspAnteriorOrigem, s, ci, crAtual, crAnterior, {
+          origemSetor: inspOrigem.setor,
+          origemLocal: localLabel(inspOrigem),
+          destinoSetor,
+          resolvidaPorCorresponsavel: true
+        }).filter(item => item.destinoSetor === setor);
+        if (itensResolvidos.length) {
+          const resolucaoIncompleta = getResolucaoIncompletaInfo(inspOrigem, s, ci, crAtual, {
+            origemSetor: inspOrigem.setor,
+            origemLocal: localLabel(inspOrigem),
+            destinoSetor
+          });
+          if (resolucaoIncompleta) {
+            resolucoesIncompletas.push(resolucaoIncompleta);
+            return;
+          }
+          resolvidasList.push(...itensResolvidos);
+          return;
+        }
         if (destinoSetor !== setor) return;
+        if (!criterioFoiResolvido(crAnterior, crAtual)) return;
 
         const reinc = getReincidenciasAteConclusao(inspOrigem, s.id, ci);
         const resolucaoIncompleta = getResolucaoIncompletaInfo(inspOrigem, s, ci, crAtual, {
@@ -4982,6 +5016,36 @@ function getGerenciaReportDashboardData(gerencia, periodo = getSetorialReportPer
       SENSOS.forEach(s => {
         (insp.sensos?.[s.id] || []).forEach((cr, ci) => {
           const crAnt = anterior?.sensos?.[s.id]?.[ci] || null;
+          const itensResolvidos = buildResolvedDesvioReportItems(insp, anterior, s, ci, cr, crAnt, {
+            origemSetor: insp.setor,
+            origemLocal: localLabel(insp),
+            destinoSetor: crAnt?.encaminharSetor || cr?.encaminharSetor || insp.setor
+          });
+          if (itensResolvidos.length) {
+            const resolucaoIncompleta = getResolucaoIncompletaInfo(insp, s, ci, cr, {
+              origemSetor: insp.setor,
+              origemLocal: localLabel(insp),
+              destinoSetor: crAnt?.encaminharSetor || cr?.encaminharSetor || insp.setor
+            });
+            if (resolucaoIncompleta) {
+              resolucoesIncompletas.push(resolucaoIncompleta);
+              return;
+            }
+            ncResolvidas += itensResolvidos.length;
+            itensResolvidos.forEach(item => {
+              ncDetalhes.push({
+                ...item,
+                tipo: 'resolvida',
+                setor,
+                data: item.dataResolucao,
+                obs: item.obsAtual,
+                nota: cr?.nota ?? null,
+                fotos: item.fotosResolucao,
+                fotoLegendas: item.fotoLegendasResolucao
+              });
+            });
+            return;
+          }
           if (criterioFoiResolvido(crAnt, cr)) {
             const resolucaoIncompleta = getResolucaoIncompletaInfo(insp, s, ci, cr, {
               origemSetor: insp.setor,
@@ -5908,6 +5972,80 @@ function scheduleSyncQueue(delay = 200) {
   syncRetryTimer = setTimeout(() => syncPendingQueue(), delay);
 }
 
+function isPhotoRefArray(value) {
+  return Array.isArray(value) && value[0] === '__ref__';
+}
+
+function getPhotoDocKey(sId, ci, parts = []) {
+  const cleanParts = parts
+    .map(part => String(part || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9_-]/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_+|_+$/g, ''))
+    .filter(Boolean);
+  return [sId, ci, ...cleanParts].join('_');
+}
+
+function movePhotoArrayToFotosDoc(holder, prop, key, fotosDoc) {
+  if (!holder || !Array.isArray(holder[prop]) || !holder[prop].length) return;
+  const fotos = holder[prop].filter(f => typeof f === 'string' && f && f !== '__ref__');
+  if (!fotos.length) return;
+  fotosDoc[key] = fotos;
+  holder[prop] = ['__ref__'];
+}
+
+function extractInspectionPhotosForSync(inspSemFotos) {
+  const fotosDoc = {};
+  SENSOS.forEach(s => {
+    if (!inspSemFotos.sensos?.[s.id]) return;
+    inspSemFotos.sensos[s.id].forEach((cr, ci) => {
+      movePhotoArrayToFotosDoc(cr, 'fotos', getPhotoDocKey(s.id, ci), fotosDoc);
+      const desvios = Array.isArray(cr.desvios) ? ensureCriterioDesvios(cr) : [];
+      desvios.forEach(desvio => {
+        movePhotoArrayToFotosDoc(desvio, 'fotos', getPhotoDocKey(s.id, ci, ['desvio', desvio.id, 'fotos']), fotosDoc);
+        movePhotoArrayToFotosDoc(desvio, 'resolucaoFotos', getPhotoDocKey(s.id, ci, ['desvio', desvio.id, 'resolucao']), fotosDoc);
+      });
+    });
+  });
+  return fotosDoc;
+}
+
+function restorePhotoArrayFromFotosDoc(holder, prop, key, fotosDoc) {
+  if (!holder || !isPhotoRefArray(holder[prop])) return;
+  holder[prop] = Array.isArray(fotosDoc?.[key]) ? fotosDoc[key] : [];
+}
+
+function inspectionHasPhotoRefs(insp) {
+  let hasRef = false;
+  SENSOS.forEach(s => {
+    if (!insp.sensos?.[s.id]) return;
+    insp.sensos[s.id].forEach(cr => {
+      if (isPhotoRefArray(cr.fotos)) hasRef = true;
+      const desvios = Array.isArray(cr.desvios) ? ensureCriterioDesvios(cr) : [];
+      desvios.forEach(desvio => {
+        if (isPhotoRefArray(desvio.fotos) || isPhotoRefArray(desvio.resolucaoFotos)) hasRef = true;
+      });
+    });
+  });
+  return hasRef;
+}
+
+function restoreInspectionPhotosFromDoc(insp, fotosDoc) {
+  SENSOS.forEach(s => {
+    if (!insp.sensos?.[s.id]) return;
+    insp.sensos[s.id].forEach((cr, ci) => {
+      restorePhotoArrayFromFotosDoc(cr, 'fotos', getPhotoDocKey(s.id, ci), fotosDoc);
+      const desvios = Array.isArray(cr.desvios) ? ensureCriterioDesvios(cr) : [];
+      desvios.forEach(desvio => {
+        restorePhotoArrayFromFotosDoc(desvio, 'fotos', getPhotoDocKey(s.id, ci, ['desvio', desvio.id, 'fotos']), fotosDoc);
+        restorePhotoArrayFromFotosDoc(desvio, 'resolucaoFotos', getPhotoDocKey(s.id, ci, ['desvio', desvio.id, 'resolucao']), fotosDoc);
+      });
+    });
+  });
+}
+
 // === Function: syncPendingQueue ===
 async function syncPendingQueue() {
   if (syncInProgress) return;
@@ -5963,16 +6101,7 @@ async function syncPendingQueue() {
 
       // Separa os dados: inspeção sem fotos + fotos em doc separado (evita limite 1MB)
       const inspSemFotos = JSON.parse(JSON.stringify(insp));
-      const fotosDoc = {};
-      SENSOS.forEach(s => {
-        if (!inspSemFotos.sensos[s.id]) return;
-        inspSemFotos.sensos[s.id].forEach((cr, ci) => {
-          if (Array.isArray(cr.fotos) && cr.fotos.length > 0) {
-            fotosDoc[`${s.id}_${ci}`] = cr.fotos;
-            inspSemFotos.sensos[s.id][ci].fotos = ['__ref__'];
-          }
-        });
-      });
+      const fotosDoc = extractInspectionPhotosForSync(inspSemFotos);
 
       await db.collection("inspecoes").doc(insp.id).set(inspSemFotos, { merge: true });
 
@@ -6038,26 +6167,13 @@ async function syncFromCloud() {
     // Restaurar fotos de documentos separados
     for (const insp of cloudInsps) {
       if (!insp?.id) continue;
-      let temFotoRef = false;
-      SENSOS.forEach(s => {
-        if (!insp.sensos?.[s.id]) return;
-        insp.sensos[s.id].forEach(cr => {
-          if (Array.isArray(cr.fotos) && cr.fotos[0] === '__ref__') temFotoRef = true;
-        });
-      });
-      if (temFotoRef) {
+      if (inspectionHasPhotoRefs(insp)) {
         try {
           const fotosDoc = await db.collection("inspecoes_fotos").doc(insp.id).get();
           if (fotosDoc.exists) {
-            const fotos = fotosDoc.data();
-            SENSOS.forEach(s => {
-              if (!insp.sensos?.[s.id]) return;
-              insp.sensos[s.id].forEach((cr, ci) => {
-                const key = `${s.id}_${ci}`;
-                if (fotos[key]) cr.fotos = fotos[key];
-                else if (cr.fotos?.[0] === '__ref__') cr.fotos = [];
-              });
-            });
+            restoreInspectionPhotosFromDoc(insp, fotosDoc.data());
+          } else {
+            restoreInspectionPhotosFromDoc(insp, {});
           }
         } catch(e) { console.warn("Erro ao buscar fotos:", e); }
       }
@@ -8123,11 +8239,6 @@ function renderInspecaoForm() {
   document.getElementById('insp-header-setor').textContent = currentInsp.setor;
   document.getElementById('insp-header-sub').textContent = `${currentInsp.subarea ? currentInsp.subarea + ' · ' : ''}${currentInsp.periodo || ''}`;
   document.getElementById('insp-date-txt').textContent = new Date().toLocaleDateString('pt-BR');
-  const periodoEditWrap = document.getElementById('insp-periodo-edit-wrap');
-  const periodoEditInput = document.getElementById('insp-periodo-edit');
-  const isEditing = currentInsp.__isEditing === true;
-  if (periodoEditWrap) periodoEditWrap.style.display = isEditing ? 'block' : 'none';
-  if (periodoEditInput) periodoEditInput.value = /^\d{4}-\d{2}$/.test(currentInsp.periodo || '') ? currentInsp.periodo : '';
 
   // se tem base, carrega para mostrar notas anteriores
   const baseRef = currentInsp.baseId ? APP.inspecoes.find(i => i.id === currentInsp.baseId) : null;
@@ -8184,7 +8295,6 @@ function renderInspecaoForm() {
   `;
 
   SENSOS.forEach(s => updateScoreMini(s.id));
-  SENSOS.forEach(s => currentInsp.sensos[s.id].forEach((_, ci) => renderFotoGrid(s.id, ci)));
   restoreDraftUIState();
   const inspBody = document.getElementById('insp-form-body');
   if (inspBody) {
@@ -8265,7 +8375,7 @@ function getLegacyDesvioFromCriterio(criterio) {
   const nota = criterio.nota ?? null;
   const resolved = criterio.ncResolvida === true || (typeof nota === 'number' && nota >= 4);
   const open = typeof nota === 'number' && nota <= 3 && criterio.ncResolvida !== true;
-  if (!hasLegacyContent && !open && !resolved) return null;
+  if (!hasLegacyContent && !open) return null;
   return normalizeDesvio({
     id: criterio.legacyDesvioId || 'desvio_legado',
     descricao: criterio.obs || '',
@@ -8308,14 +8418,29 @@ function isDesvioAberto(desvio) {
   return normalizeDesvio(desvio).status !== 'resolvido';
 }
 
+// === Function: desvioTemConteudo ===
+function desvioTemConteudo(desvio) {
+  const item = normalizeDesvio(desvio);
+  return !!(
+    item.herdado ||
+    item.origemId ||
+    String(item.descricao || '').trim() ||
+    String(item.sugestao || '').trim() ||
+    String(item.encaminharSetor || '').trim() ||
+    getFotosValidasArray(item.fotos).length ||
+    String(item.resolucaoObs || '').trim() ||
+    getFotosValidasArray(item.resolucaoFotos).length
+  );
+}
+
 // === Function: getDesviosAbertosCriterio ===
 function getDesviosAbertosCriterio(criterio) {
-  return getCriterioDesvios(criterio).filter(isDesvioAberto);
+  return getCriterioDesvios(criterio).filter(desvio => desvioTemConteudo(desvio) && isDesvioAberto(desvio));
 }
 
 // === Function: getDesviosResolvidosCriterio ===
 function getDesviosResolvidosCriterio(criterio) {
-  return getCriterioDesvios(criterio).filter(desvio => !isDesvioAberto(desvio));
+  return getCriterioDesvios(criterio).filter(desvio => desvioTemConteudo(desvio) && !isDesvioAberto(desvio));
 }
 
 // === Function: criterioTemNCAberta ===
@@ -8352,11 +8477,9 @@ function getCamposFaltantesResolucao(crAtual) {
   const faltantes = [];
   const resolvidos = getDesviosResolvidosCriterio(crAtual);
   if (resolvidos.length) {
-    if (resolvidos.some(desvio => !String(desvio.resolucaoObs || '').trim())) faltantes.push('observação da resolução');
     if (resolvidos.some(desvio => !Array.isArray(desvio.resolucaoFotos) || !desvio.resolucaoFotos.filter(f => typeof f === 'string' && f && f !== '__ref__').length)) faltantes.push('evidência da resolução');
     return [...new Set(faltantes)];
   }
-  if (!String(crAtual?.obs || '').trim()) faltantes.push('observação da resolução');
   if (!getFotosValidasCriterio(crAtual).length) faltantes.push('evidência da resolução');
   return faltantes;
 }
@@ -8381,7 +8504,7 @@ function getResolucaoIncompletaInfo(insp, s, ci, crAtual, extras = {}) {
 function getMensagemResolucaoIncompleta(lista) {
   const itens = Array.isArray(lista) ? lista : [];
   const primeiro = itens[0];
-  if (!primeiro) return 'Há desvio resolvido sem observação ou evidência de resolução.';
+  if (!primeiro) return 'Há desvio resolvido sem evidência de resolução.';
   const detalhe = `${primeiro.setor || 'Setor'} - ${primeiro.local || 'Área'} · ${primeiro.senso || 'Senso'} · Critério ${primeiro.criterioIndice || ''}`;
   const campos = (primeiro.faltantes || []).join(' e ') || 'dados obrigatórios';
   const extra = itens.length > 1 ? ` (+${itens.length - 1} outra(s))` : '';
@@ -8396,8 +8519,9 @@ function hasPendenciaAnterior(sId, ci) {
 // === Function: getNCAnteriorReferencia ===
 function getNCAnteriorReferencia(sId, ci) {
   if (!currentInsp) return null;
+  const currentIds = new Set([currentInsp.id, currentInsp.__originalId].filter(Boolean));
   const historico = APP.inspecoes
-    .filter(i => sameLocal(i, currentInsp) && getInspectionUnidade(i) === getInspectionUnidade(currentInsp))
+    .filter(i => !currentIds.has(i.id) && sameLocal(i, currentInsp) && getInspectionUnidade(i) === getInspectionUnidade(currentInsp))
     .sort((a, b) => new Date(b.data) - new Date(a.data));
   // Regra correta: considerar apenas o estado mais recente do critério.
   // Se a inspeção mais recente não está aberta, não existe desvio pendente.
@@ -8473,6 +8597,55 @@ function getFotosComLegendasAberturaCriterio(criterio) {
       .filter(item => typeof item.foto === 'string' && item.foto && item.foto !== '__ref__');
   }
   return getFotosComLegendasCriterio(criterio);
+}
+
+// === Function: getFotosValidasArray ===
+function getFotosValidasArray(fotos = []) {
+  return (Array.isArray(fotos) ? fotos : []).filter(f => typeof f === 'string' && f && f !== '__ref__');
+}
+
+// === Function: buildResolvedDesvioReportItems ===
+function buildResolvedDesvioReportItems(insp, inspAnterior, s, ci, crAtual, crAnterior, extras = {}) {
+  const resolvidos = getCriterioDesvios(crAtual, { includeLegacy: false })
+    .filter(desvio => !isDesvioAberto(desvio));
+  if (!resolvidos.length) return [];
+
+  const anteriores = getCriterioDesvios(crAnterior);
+  const reinc = getReincidenciasAteConclusao(insp, s.id, ci);
+  return resolvidos.map((desvio, idx) => {
+    const origemId = desvio.origemId || desvio.id;
+    const anterior = anteriores.find(item => item.id === origemId || item.origemId === origemId) || anteriores[idx] || {};
+    const fotosAnterior = getFotosValidasArray(desvio.fotos).length
+      ? getFotosValidasArray(desvio.fotos)
+      : (getFotosValidasArray(anterior.fotos).length ? getFotosValidasArray(anterior.fotos) : getFotosNCAbertaComFallback(inspAnterior, s.id, ci, crAnterior));
+    const fotosResolucao = getFotosValidasArray(desvio.resolucaoFotos);
+    const fotoLegendasResolucao = Array.isArray(desvio.resolucaoFotoLegendas)
+      ? desvio.resolucaoFotoLegendas
+      : [];
+    const destinoSetor = desvio.encaminharSetor || crAnterior?.encaminharSetor || crAtual?.encaminharSetor || extras.destinoSetor || insp?.setor || '';
+
+    return {
+      dataResolucao: insp?.data || '',
+      dataAnterior: inspAnterior?.data || '',
+      local: localLabel(insp || {}),
+      senso: s.nome,
+      criterio: s.criterios[ci],
+      desvioIndice: idx + 1,
+      desvioId: desvio.id,
+      obsAnterior: desvio.descricao || anterior.descricao || crAnterior?.obs || 'Sem observação.',
+      obsAtual: String(desvio.resolucaoObs || '').trim() || 'Resolvido com evidência anexada.',
+      sugestaoAtual: desvio.sugestao || anterior.sugestao || crAtual?.sugestao || 'Não informada.',
+      fotosAnterior,
+      fotosResolucao,
+      fotoLegendasResolucao,
+      ocorrenciasNC: reinc.ocorrenciasNC,
+      reincidencias: reinc.reincidencias,
+      origemSetor: extras.origemSetor || insp?.setor || '',
+      origemLocal: extras.origemLocal || localLabel(insp || {}),
+      destinoSetor,
+      resolvidaPorCorresponsavel: extras.resolvidaPorCorresponsavel ?? (destinoSetor !== insp?.setor)
+    };
+  });
 }
 
 // === Function: getFotosNCAbertaComFallback ===
@@ -8609,10 +8782,11 @@ function renderDesvioFotosHtml(sId, ci, desvio, kind = 'abertura') {
   const fotos = isResolucao ? (desvio.resolucaoFotos || []) : (desvio.fotos || []);
   const legendas = isResolucao ? (desvio.resolucaoFotoLegendas || []) : (desvio.fotoLegendas || []);
   const title = isResolucao ? 'Fotos da resolução' : 'Fotos do desvio';
+  const buttonId = `foto-desvio-${kind}-${sId}-${ci}-${desvio.id}`;
   return `
     <div style="margin-top:8px">
       <div class="criterio-section-title" style="margin-bottom:5px">${title}</div>
-      <button type="button" class="desvio-mini-btn" onclick="triggerFotoDesvio('${sId}',${ci},'${desvio.id}','${kind}')">+ Foto</button>
+      <button type="button" class="desvio-mini-btn" id="${buttonId}" onclick="triggerFotoDesvio('${sId}',${ci},'${desvio.id}','${kind}')">+ Foto</button>
       <div class="foto-grid" style="margin-top:7px">
         ${fotos.filter(f => typeof f === 'string' && f && f !== '__ref__').map((foto, fi) => `
           <div class="foto-item">
@@ -8627,43 +8801,49 @@ function renderDesvioFotosHtml(sId, ci, desvio, kind = 'abertura') {
 }
 
 function renderDesviosCriterioHtml(s, ci, criterio) {
-  const desvios = ensureCriterioDesvios(criterio);
+  const todosDesvios = ensureCriterioDesvios(criterio);
+  const notaConforme = (typeof criterio?.nota === 'number' && criterio.nota >= 4) || criterio?.nota === 'NA';
+  const desvios = notaConforme ? todosDesvios.filter(desvioTemConteudo) : todosDesvios;
   const setoresCorresponsaveis = getCorresponsavelSetorNames(getInspectionUnidadeForForm(currentInsp))
     .filter(nome => nome !== currentInsp.setor);
   return `
     <div class="criterio-section">
       <div class="criterio-section-title">Desvios do critério</div>
-      <div class="desvio-list">
+      <div class="desvio-list" id="desvio-list-${s.id}-${ci}">
         ${desvios.length ? desvios.map((desvio, idx) => {
-          const resolvido = !isDesvioAberto(desvio);
           const inherited = desvio.herdado || desvio.origemId;
+          if (!inherited && !isDesvioAberto(desvio)) {
+            desvio.status = 'aberto';
+            desvio.resolvidoEm = '';
+          }
+          const resolvido = !!inherited && !isDesvioAberto(desvio);
           return `
             <div class="desvio-card ${resolvido ? 'resolvido' : ''}" id="desvio-${s.id}-${ci}-${desvio.id}">
               <div class="desvio-head">
                 <div class="desvio-title">${inherited ? 'Desvio anterior' : 'Novo desvio'} ${idx + 1}</div>
                 <div class="desvio-actions">
                   <button type="button" class="desvio-mini-btn ${!resolvido ? 'active' : ''}" onclick="setDesvioStatus('${s.id}',${ci},'${desvio.id}','aberto')">Aberto</button>
-                  <button type="button" class="desvio-mini-btn ${resolvido ? 'active' : ''}" onclick="setDesvioStatus('${s.id}',${ci},'${desvio.id}','resolvido')">Resolvido</button>
+                  ${inherited ? `<button type="button" class="desvio-mini-btn ${resolvido ? 'active' : ''}" onclick="setDesvioStatus('${s.id}',${ci},'${desvio.id}','resolvido')">Resolvido</button>` : ''}
                   ${!inherited ? `<button type="button" class="desvio-mini-btn danger" onclick="removeDesvioCriterio('${s.id}',${ci},'${desvio.id}')">Remover</button>` : ''}
                 </div>
               </div>
-              <textarea class="form-textarea" rows="2" placeholder="Descreva este desvio" oninput="setDesvioField('${s.id}',${ci},'${desvio.id}','descricao',this.value)">${escapeHtml(desvio.descricao || '')}</textarea>
+              <textarea class="form-textarea" id="desvio-desc-${s.id}-${ci}-${desvio.id}" rows="2" placeholder="Descreva este desvio" oninput="setDesvioField('${s.id}',${ci},'${desvio.id}','descricao',this.value)">${escapeHtml(desvio.descricao || '')}</textarea>
               <textarea class="form-textarea" rows="2" placeholder="Sugestão de melhoria deste desvio" style="margin-top:7px" oninput="setDesvioField('${s.id}',${ci},'${desvio.id}','sugestao',this.value)">${escapeHtml(desvio.sugestao || '')}</textarea>
               <select class="form-select" style="font-size:13px;margin-top:7px" onchange="setDesvioField('${s.id}',${ci},'${desvio.id}','encaminharSetor',this.value)">
                 <option value="">— Responsabilidade local —</option>
                 ${setoresCorresponsaveis.map(nome => `<option value="${escapeHtml(nome)}" ${desvio.encaminharSetor === nome ? 'selected' : ''}>${escapeHtml(nome)}</option>`).join('')}
               </select>
               ${renderDesvioFotosHtml(s.id, ci, desvio, 'abertura')}
-              ${resolvido ? `
+              ${inherited && resolvido ? `
                 <div class="desvio-resolution">
-                  <textarea class="form-textarea" rows="2" placeholder="Observação da resolução deste desvio" oninput="setDesvioField('${s.id}',${ci},'${desvio.id}','resolucaoObs',this.value)">${escapeHtml(desvio.resolucaoObs || '')}</textarea>
+                  <textarea class="form-textarea" id="desvio-resolucao-${s.id}-${ci}-${desvio.id}" rows="2" placeholder="Observação da resolução deste desvio (opcional)" oninput="setDesvioField('${s.id}',${ci},'${desvio.id}','resolucaoObs',this.value)">${escapeHtml(desvio.resolucaoObs || '')}</textarea>
                   ${renderDesvioFotosHtml(s.id, ci, desvio, 'resolucao')}
                 </div>
               ` : ''}
             </div>`;
         }).join('') : `<div class="desvio-empty">Adicione um desvio quando este critério tiver uma condição fora do padrão. A nota continua sendo uma só para o critério.</div>`}
       </div>
-      <button type="button" class="btn-secondary" onclick="addDesvioCriterio('${s.id}',${ci})" style="margin-top:8px">+ Adicionar desvio</button>
+      <button type="button" class="btn-secondary" id="add-desvio-${s.id}-${ci}" onclick="addDesvioCriterio('${s.id}',${ci})" style="margin-top:8px">+ Adicionar desvio</button>
     </div>`;
 }
 
@@ -8714,6 +8894,11 @@ function setDesvioField(sId, ci, desvioId, field, value) {
 function setDesvioStatus(sId, ci, desvioId, status) {
   const desvio = getDesvioAtual(sId, ci, desvioId);
   if (!desvio) return;
+  const podeResolver = desvio.herdado || desvio.origemId;
+  if (status === 'resolvido' && !podeResolver) {
+    toast('A resolução fica disponível na próxima inspeção, quando o desvio já existir no histórico.');
+    return;
+  }
   desvio.status = status === 'resolvido' ? 'resolvido' : 'aberto';
   if (desvio.status === 'resolvido' && !desvio.resolvidoEm) desvio.resolvidoEm = new Date().toISOString();
   if (desvio.status === 'aberto') desvio.resolvidoEm = '';
@@ -8769,10 +8954,6 @@ function criterioHTML(s, si, cr, ci, base) {
   const correspAnterior = baseCr?.encaminharSetor && baseCr.encaminharSetor !== currentInsp.setor ? baseCr.encaminharSetor : '';
   const reincAtual = getReincidenciaFormulario(s.id, ci);
   const totalCriterios = s.criterios.length;
-  const setorOptions = getCorresponsavelSetorNames(getInspectionUnidadeForForm(currentInsp))
-    .filter(nome => nome !== currentInsp.setor)
-    .map(nome => `<option value="${nome}" ${item.encaminharSetor === nome ? 'selected' : ''}>${nome}</option>`)
-    .join('');
   const baseHint = baseNota !== null
     ? `<div class="criterio-basehint" style="--senso-color:${s.cor}">
         Anterior: nota <strong style="color:${notaCor(baseNota)}">${baseNota}</strong>${baseObs ? ` - "${baseObs.slice(0,60)}${baseObs.length>60?'...':''}"` : ''}
@@ -8846,7 +9027,6 @@ function criterioHTML(s, si, cr, ci, base) {
     <div class="criterio-nome">${cr}</div>
     ${baseHint}
     ${autoHint}
-    ${desviosSection}
     <div class="criterio-section">
       <div class="criterio-section-title">Nota da Avaliação</div>
       <div class="nota-row">
@@ -8854,45 +9034,9 @@ function criterioHTML(s, si, cr, ci, base) {
         <button class="nota-btn${item.nota === 'NA' ? ` sel-na` : ''}" id="nb-${s.id}-${ci}-NA" onclick="setNota('${s.id}',${ci},'NA')">N/A</button>
       </div>
     </div>
-    <div class="criterio-section">
-      <div class="criterio-section-title">Observação / Desvio</div>
-      <div class="criterio-obs">
-        <textarea class="form-textarea" placeholder="Observação / desvio (obrigatório para notas de 0 a 3)..." rows="2"
-          id="obs-${s.id}-${ci}" oninput="setObs('${s.id}',${ci},this.value)"
-          style="font-size:13px;min-height:52px">${item.obs || ''}</textarea>
-      </div>
-    </div>
-    <div class="criterio-section">
-      <div class="criterio-section-title">Sugestão de Melhoria</div>
-      <div class="criterio-obs">
-        <textarea class="form-textarea" placeholder="Sugestão de melhoria..." rows="2"
-          id="sug-${s.id}-${ci}" oninput="setSugestao('${s.id}',${ci},this.value)"
-          style="font-size:13px;min-height:52px">${item.sugestao || ''}</textarea>
-      </div>
-    </div>
-    <div class="criterio-section">
-      <div class="criterio-section-title">Encaminhamento</div>
-      <div class="criterio-obs">
-        <label class="form-label" style="margin-bottom:6px">Encaminhar para outro setor</label>
-        <select class="form-select" id="resp-${s.id}-${ci}" onchange="setResponsavelSetor('${s.id}',${ci},this.value)" style="font-size:13px">
-          <option value="">— Nenhuma (Responsabilidade local) —</option>
-          ${setorOptions}
-        </select>
-        ${correspAtual ? `<div style="font-size:11px;color:var(--gold);margin-top:6px">Desvio com corresponsável: ${correspAtual}</div>` : ''}
-      </div>
-    </div>
-    <div class="criterio-section">
-      <div class="criterio-section-title">Evidências</div>
-      <div>
-        <div class="foto-area" id="foto-area-${s.id}-${ci}" onclick="triggerFoto('${s.id}',${ci})" style="margin-top:2px">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="var(--text2)" stroke-width="1.8"><rect x="2" y="5" width="16" height="12" rx="2"/><circle cx="10" cy="11" r="3"/><path d="M7 5l1.5-2h3L13 5"/></svg>
-          <span style="font-size:12px;color:var(--text2)">Adicionar foto</span>
-          <input type="file" accept="image/*" multiple capture="environment" style="display:none" id="foto-inp-camera-${s.id}-${ci}" onchange="addFotos('${s.id}',${ci},this)">
-          <input type="file" accept="image/*" multiple style="display:none" id="foto-inp-gallery-${s.id}-${ci}" onchange="addFotos('${s.id}',${ci},this)">
-        </div>
-        <div class="foto-grid" id="foto-grid-${s.id}-${ci}"></div>
-      </div>
-    </div>
+    ${desviosSection}
+    <input type="file" accept="image/*" multiple capture="environment" style="display:none" id="foto-inp-camera-${s.id}-${ci}" onchange="addFotos('${s.id}',${ci},this)">
+    <input type="file" accept="image/*" multiple style="display:none" id="foto-inp-gallery-${s.id}-${ci}" onchange="addFotos('${s.id}',${ci},this)">
   </div>`;
 }
 
@@ -8913,7 +9057,7 @@ function setNota(sId, ci, nota) {
   criterio.autoReincidenciaFrom = null;
   criterio.autoReincidenciaTo = null;
   const tinhaNCAnterior = hasPendenciaAnterior(sId, ci);
-  const desvios = Array.isArray(criterio.desvios) ? ensureCriterioDesvios(criterio) : [];
+  let desvios = Array.isArray(criterio.desvios) ? ensureCriterioDesvios(criterio) : [];
   if (typeof nota === 'number' && nota <= 3) criterio.ncResolvida = false;
   criterio.ncAberta = typeof nota === 'number' && nota <= 3 && criterio.ncResolvida !== true;
   [0,1,2,3,4].forEach(n => {
@@ -8925,21 +9069,30 @@ function setNota(sId, ci, nota) {
   // obrigatório obs se <= 3
   const obs = document.getElementById(`obs-${sId}-${ci}`);
   if (typeof nota === 'number' && nota >= 4) {
-    obs.style.borderColor = '';
-    desvios.forEach(desvio => {
+    if (obs) obs.style.borderColor = '';
+    if (Array.isArray(criterio.desvios)) {
+      criterio.desvios = criterio.desvios.filter(desvioTemConteudo);
+      desvios = ensureCriterioDesvios(criterio);
+    }
+    const desviosAnteriores = desvios.filter(desvio => desvio.herdado || desvio.origemId);
+    desviosAnteriores.forEach(desvio => {
       desvio.status = 'resolvido';
       if (!desvio.resolvidoEm) desvio.resolvidoEm = new Date().toISOString();
     });
     
     // Marcar automaticamente como resolvido se houver desvio anterior e nota >= 4
     updateResolvedButton(sId, ci, true);
-    if (tinhaNCAnterior || desvios.length) criterio.ncResolvida = true;
-    if (tinhaNCAnterior || desvios.length) criterio.ncAberta = false;
+    if (tinhaNCAnterior || desviosAnteriores.length) criterio.ncResolvida = true;
+    if (tinhaNCAnterior || desviosAnteriores.length) criterio.ncAberta = false;
+    if (desvios.length) {
+      criterio.ncAberta = criterioTemNCAberta(criterio);
+      criterio.ncResolvida = getDesviosResolvidosCriterio(criterio).length > 0 && !criterio.ncAberta;
+    }
   } else if (nota !== 'NA') {
     updateResolvedButton(sId, ci, false);
     if (obs && !obs.value.trim()) obs.style.borderColor = 'var(--red)';
   } else {
-    obs.style.borderColor = '';
+    if (obs) obs.style.borderColor = '';
     updateResolvedButton(sId, ci, false);
   }
   if (desvios.length) syncCriterioResumoFromDesvios(criterio);
@@ -8994,20 +9147,8 @@ function setResponsavelSetor(sId, ci, val) {
 }
 
 // === Function: setPeriodoInspecao ===
-function setPeriodoInspecao(val) {
-  if (!currentInsp?.__isEditing) return;
-  const periodo = String(val || '').trim();
-  const input = document.getElementById('insp-periodo-edit');
-  if (!/^\d{4}-\d{2}$/.test(periodo)) {
-    if (input) input.value = currentInsp.periodo || '';
-    toast('Informe um período válido para a inspeção.');
-    return;
-  }
-  currentInsp.periodo = periodo;
-  const headerSub = document.getElementById('insp-header-sub');
-  if (headerSub) headerSub.textContent = `${currentInsp.subarea ? currentInsp.subarea + ' · ' : ''}${currentInsp.periodo || ''}`;
-  touchDraftContext({ lastAction: 'periodo', lastFieldId: 'insp-periodo-edit' });
-  scheduleDraftSave();
+function setPeriodoInspecao() {
+  toast('O período da inspeção não pode ser alterado na edição.');
 }
 
 // === Function: toggleResolved ===
@@ -9024,8 +9165,10 @@ function toggleResolved(sId, ci) {
     criterio.ncAberta = (criterio.nota ?? null) !== null && criterio.nota <= 3;
     if (Array.isArray(criterio.desvios)) {
       ensureCriterioDesvios(criterio).forEach(desvio => {
-        desvio.status = 'aberto';
-        desvio.resolvidoEm = '';
+        if (desvio.herdado || desvio.origemId) {
+          desvio.status = 'aberto';
+          desvio.resolvidoEm = '';
+        }
       });
     }
   } else {
@@ -9037,10 +9180,14 @@ function toggleResolved(sId, ci) {
     criterio.ncAberta = false;
     if (Array.isArray(criterio.desvios)) {
       ensureCriterioDesvios(criterio).forEach(desvio => {
-        desvio.status = 'resolvido';
-        if (!desvio.resolvidoEm) desvio.resolvidoEm = new Date().toISOString();
+        if (desvio.herdado || desvio.origemId) {
+          desvio.status = 'resolvido';
+          if (!desvio.resolvidoEm) desvio.resolvidoEm = new Date().toISOString();
+        }
       });
       syncCriterioResumoFromDesvios(criterio);
+      criterio.ncAberta = criterioTemNCAberta(criterio);
+      criterio.ncResolvida = getDesviosResolvidosCriterio(criterio).length > 0 && !criterio.ncAberta;
     }
     const obs = document.getElementById(`obs-${sId}-${ci}`);
     if (obs) obs.style.borderColor = '';
@@ -9175,6 +9322,7 @@ function renderFotoGrid(sId, ci) {
   const fotos = Array.isArray(criterio.fotos) ? criterio.fotos : [];
   if (!Array.isArray(criterio.fotoLegendas)) criterio.fotoLegendas = [];
   const grid = document.getElementById(`foto-grid-${sId}-${ci}`);
+  if (!grid) return;
   grid.innerHTML = fotos.map((f, fi) => `
     <div class="foto-item">
       <div class="foto-thumb">
@@ -9505,9 +9653,16 @@ function getSetorPontuacaoComparativo(setor, periodo = getSetorialReportPeriod()
     };
   });
 
-  const mediaSemExternas = mediasLocais.length ? (mediasLocais.reduce((a, b) => a + b, 0) / mediasLocais.length) : null;
-  const impactoExternas = sensos.reduce((sum, item) => sum + item.impactoExternas, 0);
-  const mediaComExternas = mediaSemExternas === null ? null : Math.max(0, mediaSemExternas - impactoExternas);
+  const sensosComNota = sensos.filter(item => item.mediaSemExternas !== null);
+  const mediaSemExternas = sensosComNota.length
+    ? sensosComNota.reduce((sum, item) => sum + item.mediaSemExternas, 0) / sensosComNota.length
+    : null;
+  const mediaComExternas = sensosComNota.length
+    ? sensosComNota.reduce((sum, item) => sum + (item.mediaComExternas ?? item.mediaSemExternas), 0) / sensosComNota.length
+    : null;
+  const impactoExternas = mediaSemExternas !== null && mediaComExternas !== null
+    ? Math.max(0, mediaSemExternas - mediaComExternas)
+    : 0;
 
   return {
     setor,
@@ -9590,9 +9745,20 @@ function destacarCriterioPendente(sId, ci, campo = 'obs') {
   const card = document.getElementById(`cr-${sId}-${ci}`);
   if (card) card.scrollIntoView({ block: 'center', behavior: 'smooth' });
 
-  const target = campo === 'foto'
-    ? document.getElementById(`foto-area-${sId}-${ci}`)
-    : document.getElementById(`obs-${sId}-${ci}`);
+  let target = null;
+  if (campo && typeof campo === 'object') {
+    const desvioId = campo.desvioId || '';
+    if (campo.tipo === 'fotoResolucao') target = document.getElementById(`foto-desvio-resolucao-${sId}-${ci}-${desvioId}`);
+    if (campo.tipo === 'resolucao') target = document.getElementById(`desvio-resolucao-${sId}-${ci}-${desvioId}`);
+    if (campo.tipo === 'descricao') target = document.getElementById(`desvio-desc-${sId}-${ci}-${desvioId}`);
+  } else if (campo === 'foto') {
+    target = document.querySelector(`#desvio-list-${sId}-${ci} .desvio-mini-btn`);
+  } else if (campo === 'desvio') {
+    target = document.getElementById(`add-desvio-${sId}-${ci}`) || document.getElementById(`desvio-list-${sId}-${ci}`);
+  } else {
+    target = document.querySelector(`#desvio-list-${sId}-${ci} textarea`) || document.getElementById(`add-desvio-${sId}-${ci}`);
+  }
+
   if (target) {
     target.style.borderColor = 'var(--red)';
     setTimeout(() => {
@@ -9617,7 +9783,6 @@ async function salvarInspecao() {
   // validaÃ§Ã£o
   let ok = true;
   let faltamObs = [];
-  let faltamObsResolucao = [];
   let faltamFotoResolucao = [];
   let primeiraPendencia = null;
   SENSOS.forEach(s => {
@@ -9629,31 +9794,24 @@ async function salvarInspecao() {
       const desviosAbertos = desvios.filter(isDesvioAberto);
       const desviosResolvidos = desvios.filter(desvio => !isDesvioAberto(desvio));
       const temDescricaoDesvioAberto = desviosAbertos.some(desvio => String(desvio.descricao || '').trim());
+      const aceitaObsLegada = !Array.isArray(cr.desvios) && !!obsTxt;
 
-      if (cr.nota <= 3 && !obsTxt && !temDescricaoDesvioAberto) {
+      if (cr.nota <= 3 && !temDescricaoDesvioAberto && !aceitaObsLegada) {
         faltamObs.push(`${s.nome} - Critério ${ci+1}`);
-        if (!primeiraPendencia) primeiraPendencia = { sId: s.id, ci, campo: 'obs' };
+        const primeiroAberto = desviosAbertos[0];
+        if (!primeiraPendencia) primeiraPendencia = { sId: s.id, ci, campo: primeiroAberto ? { tipo: 'descricao', desvioId: primeiroAberto.id } : 'desvio' };
       }
       if (desviosResolvidos.length) {
-        const semObsResolucao = desviosResolvidos.some(desvio => !String(desvio.resolucaoObs || '').trim());
-        const semFotoResolucao = desviosResolvidos.some(desvio =>
+        const primeiroSemFotoResolucao = desviosResolvidos.find(desvio =>
           !Array.isArray(desvio.resolucaoFotos) ||
           !desvio.resolucaoFotos.filter(f => typeof f === 'string' && f && f !== '__ref__').length
         );
-        if (semObsResolucao) {
-          faltamObsResolucao.push(`${s.nome} - Critério ${ci+1}`);
-          if (!primeiraPendencia) primeiraPendencia = { sId: s.id, ci, campo: 'obs' };
-        }
-        if (semFotoResolucao) {
+        if (primeiroSemFotoResolucao) {
           faltamFotoResolucao.push(`${s.nome} - Critério ${ci+1}`);
-          if (!primeiraPendencia) primeiraPendencia = { sId: s.id, ci, campo: 'foto' };
+          if (!primeiraPendencia) primeiraPendencia = { sId: s.id, ci, campo: { tipo: 'fotoResolucao', desvioId: primeiroSemFotoResolucao.id } };
         }
       } else if (criterioResolvidoNoFormulario(s.id, ci, cr)) {
         const fotos = getFotosValidasCriterio(cr);
-        if (!obsTxt) {
-          faltamObsResolucao.push(`${s.nome} - Critério ${ci+1}`);
-          if (!primeiraPendencia) primeiraPendencia = { sId: s.id, ci, campo: 'obs' };
-        }
         if (!fotos.length) {
           faltamFotoResolucao.push(`${s.nome} - Critério ${ci+1}`);
           if (!primeiraPendencia) primeiraPendencia = { sId: s.id, ci, campo: 'foto' };
@@ -9664,12 +9822,7 @@ async function salvarInspecao() {
   if (!ok) { toast('Preencha todas as notas antes de salvar'); return; }
   if (faltamObs.length > 0) {
     destacarCriterioPendente(primeiraPendencia.sId, primeiraPendencia.ci, primeiraPendencia.campo);
-    toast('Adicione observação nos itens com nota de 0 a 3');
-    return;
-  }
-  if (faltamObsResolucao.length > 0) {
-    destacarCriterioPendente(primeiraPendencia.sId, primeiraPendencia.ci, primeiraPendencia.campo);
-    toast('Informe a observação da resolução do desvio');
+    toast('Adicione pelo menos um desvio com descrição nos itens com nota de 0 a 3');
     return;
   }
   if (faltamFotoResolucao.length > 0) {
@@ -12431,12 +12584,13 @@ async function gerarPDFSetorial(setor, options = {}) {
       const item = resolvidasList[idx];
       const fotoAntesDataUrl = (await toDataUrl((Array.isArray(item.fotosAnterior) ? item.fotosAnterior : [])[0])) || null;
       const fotoDepoisDataUrl = (await toDataUrl((Array.isArray(item.fotosResolucao) ? item.fotosResolucao : [])[0])) || null;
-      const titulo = `${idx + 1}. ${item.senso} · ${item.local} · Resolvido em ${formatDate(item.dataResolucao)}`;
+      const desvioTitulo = item.desvioIndice ? ` · Desvio ${item.desvioIndice}` : '';
+      const titulo = `${idx + 1}. ${item.senso}${desvioTitulo} · ${item.local} · Resolvido em ${formatDate(item.dataResolucao)}`;
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
       const criterioLines = doc.splitTextToSize(`Critério: ${item.criterio}`, W - margin * 2 - 8);
       const antesLines = doc.splitTextToSize(`Antes: ${item.obsAnterior}`, W - margin * 2 - 8);
-      const agoraLines = doc.splitTextToSize(`Agora: ${item.obsAtual}`, W - margin * 2 - 8);
+      const agoraLines = doc.splitTextToSize(`Agora: ${item.obsAtual || 'Resolvido com evidência anexada.'}`, W - margin * 2 - 8);
       const sugLines = doc.splitTextToSize(`Ação/Sugestão: ${item.sugestaoAtual}`, W - margin * 2 - 8);
       const reincLines = doc.splitTextToSize(`Reincidências até conclusão: ${item.reincidencias} (ocorrências de desvio consecutivas: ${item.ocorrenciasNC})`, W - margin * 2 - 8);
       const correspTxt = item.resolvidaPorCorresponsavel
