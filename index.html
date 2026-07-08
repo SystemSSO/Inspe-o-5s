@@ -3715,6 +3715,8 @@ const AUTH_CACHE_KEY = 'aa5s_offline_auth_v1';
 const AUTH_SESSION_KEY = 'aa5s_auth_session_v1';
 const PENDING_OFFLINE_AUTH_KEY = 'aa5s_pending_offline_auth_v1';
 const LAST_SYNC_ERROR_KEY = 'aa5s_last_sync_error_v1';
+const CLOUD_AUTO_REFRESH_MS = 3 * 60 * 1000;
+const CLOUD_MIN_SYNC_INTERVAL_MS = 60 * 1000;
 const EMAIL_AUTO_ENABLED_KEY = 'aa5s_email_auto_enabled';
 const EMAIL_AUTO_TO_KEY = 'aa5s_email_auto_to';
 const EMAIL_HISTORY_KEY = 'aa5s_email_history';
@@ -3952,6 +3954,8 @@ function loadData() {
 }
 
 let syncInProgress = false;
+let cloudSyncInProgress = false;
+let lastCloudSyncAt = 0;
 let syncRetryTimer = null;
 let draftSaveTimer = null;
 let draftUIState = {
@@ -6351,7 +6355,7 @@ async function syncPendingQueue() {
 // Função para buscar dados novos do servidor ao iniciar
 
 // === Function: syncFromCloud ===
-async function syncFromCloud() {
+async function syncFromCloud(options = {}) {
   if (!hasFirebaseConfig()) return;
   if (!navigator.onLine) {
     setSyncStatus('offline', 'Modo offline');
@@ -6361,6 +6365,13 @@ async function syncFromCloud() {
     setSyncStatus('offline', 'Login online necessário para sincronizar');
     return;
   }
+  if (cloudSyncInProgress) return;
+  const now = Date.now();
+  if (!options.force && lastCloudSyncAt && now - lastCloudSyncAt < CLOUD_MIN_SYNC_INTERVAL_MS) {
+    scheduleSyncQueue(0);
+    return;
+  }
+  cloudSyncInProgress = true;
   setSyncStatus('syncing', 'Sincronizando...');
   toast('Sincronizando dados...');
   let syncStage = 'iniciando sincronização';
@@ -6420,12 +6431,15 @@ async function syncFromCloud() {
     persistLocalApp(APP);
     refreshAfterDataSync();
     scheduleSyncQueue(0);
+    lastCloudSyncAt = Date.now();
     setSyncStatus('synced', 'Sincronizado');
     toast('Sincronização concluída.');
   } catch (e) {
     console.warn("Rodando em modo offline ou erro de sync:", e);
     setSyncErrorStatus(e, syncStage);
     toast(`Sem sincronização: ${getSyncErrorLabel(e)}.`);
+  } finally {
+    cloudSyncInProgress = false;
   }
 }
 
@@ -6754,7 +6768,7 @@ function startAppAfterLogin(profile = null) {
     applyUnitAccess(getAllowedUnitsFromProfile(profile || getAuthSession()));
     navTo('home');
     if (auth.currentUser) {
-      syncFromCloud().finally(() => scheduleSyncQueue(0));
+      syncFromCloud({ force: true }).finally(() => scheduleSyncQueue(0));
     }
     return;
   }
@@ -6769,7 +6783,7 @@ function startAppAfterLogin(profile = null) {
   if (currentTec) document.getElementById('home-tec-name').textContent = currentTec;
   renderHome();
   navTo('home');
-  syncFromCloud().finally(() => scheduleSyncQueue(0));
+  syncFromCloud({ force: true }).finally(() => scheduleSyncQueue(0));
   startCloudAutoRefresh();
 }
 
@@ -13933,7 +13947,7 @@ window.addEventListener('online', async () => {
   checkOnline();
   await handleOnlineAuthRecheck();
   if (isUsuarioLogado()) {
-    syncFromCloud();
+    syncFromCloud({ force: true });
     scheduleSyncQueue(0);
   }
 });
@@ -13956,7 +13970,7 @@ function startCloudAutoRefresh() {
   clearInterval(cloudRefreshTimer);
   cloudRefreshTimer = setInterval(() => {
     if (document.visibilityState === 'visible' && navigator.onLine && isUsuarioLogado()) syncFromCloud();
-  }, 30000);
+  }, CLOUD_AUTO_REFRESH_MS);
 }
 
 // INIT
@@ -13974,7 +13988,6 @@ window.addEventListener('load', () => {
     startAppAfterLogin(existingSession);
     if (navigator.onLine) setTimeout(async () => {
       await handleOnlineAuthRecheck();
-      syncFromCloud();
     }, 0);
   } else {
     showLoginScreen();
