@@ -2248,15 +2248,20 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
     white-space: nowrap;
   }
   #sync-status {
-    width: 28px;
+    min-width: 92px;
+    max-width: 118px;
     height: 28px;
-    padding: 0;
+    padding: 0 8px;
     justify-content: center;
     margin-right: 0;
     flex-shrink: 0;
   }
   #sync-status-text {
-    display: none;
+    display: inline;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .theme-toggle-btn {
     margin-right: 0 !important;
