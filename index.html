@@ -3994,6 +3994,7 @@ function enqueueDeleteInspection(inspId) {
   APP.syncQueue = APP.syncQueue.filter(id => id !== inspId);
   APP.smartsheetQueue = APP.smartsheetQueue.filter(id => id !== inspId);
   clearFinalizedInspectionBackup(inspId);
+  clearDraft({ id: inspId, __isEditing: true, __originalId: inspId });
   persistLocalApp(APP);
 }
 
@@ -5933,6 +5934,7 @@ function isInspectionPersistedForSync(inspId) {
 // === Function: getDraftKeyFromInspection ===
 function getDraftKeyFromInspection(insp) {
   if (!insp) return null;
+  if (isEditDraft(insp)) return `edit||${insp.__originalId || insp.id}`;
   const setor = String(insp.setor || '').trim();
   const subarea = String(insp.subarea || '').trim();
   if (!setor) return null;
@@ -5942,6 +5944,12 @@ function getDraftKeyFromInspection(insp) {
 // === Function: isEditDraft ===
 function isEditDraft(draft) {
   return draft?.__isEditing === true || !!draft?.__originalId;
+}
+
+// === Function: getDraftKindLabel ===
+function getDraftKindLabel(draft) {
+  if (isEditDraft(draft)) return 'Edição de inspeção já salva';
+  return 'Nova inspeção em andamento';
 }
 
 // === Function: getDraftBySetorLocal ===
@@ -6046,13 +6054,17 @@ function renderDraftsInNewInspModal() {
     const whenTxt = draft.__draftUpdatedAt ? new Date(draft.__draftUpdatedAt).toLocaleString('pt-BR') : 'Sem data';
     const periodoTxt = draft.periodo || 'Sem período';
     const editDraft = isEditDraft(draft);
+    const kindTxt = getDraftKindLabel(draft);
+    const originalTxt = editDraft && draft.__originalSavedAt
+      ? ` · Original: ${new Date(draft.__originalSavedAt).toLocaleString('pt-BR')}`
+      : '';
     const isMatch = matchKey && key === matchKey;
     return `
       <div class="draft-item${isMatch ? ' match' : ''}">
         <div class="draft-item-main">
           <div class="draft-item-title">${setorTxt} · ${subareaTxt}</div>
-          <div class="draft-item-sub">Período: ${periodoTxt} · Atualizado: ${whenTxt}</div>
-          ${editDraft ? '<div class="draft-item-tag">Edição não salva</div>' : ''}
+          <div class="draft-item-sub">${kindTxt} · Período: ${periodoTxt} · Atualizado: ${whenTxt}${originalTxt}</div>
+          ${editDraft ? '<div class="draft-item-tag">Edição não salva de área já salva</div>' : ''}
           ${isMatch && !editDraft ? '<div class="draft-item-tag">Mesmo local selecionado</div>' : ''}
         </div>
         <div class="draft-item-actions">
@@ -6103,6 +6115,11 @@ function saveDraftNow() {
   try {
     const store = getDraftStore();
     const key = getDraftKeyFromInspection(currentInsp) || `id||${currentInsp.id}`;
+    if (isEditDraft(currentInsp)) {
+      currentInsp.__draftKind = 'saved_inspection_edit';
+      currentInsp.__draftKindLabel = getDraftKindLabel(currentInsp);
+      currentInsp.__originalId = currentInsp.__originalId || currentInsp.id;
+    }
     const payload = {
       ...currentInsp,
       __draftMeta: captureDraftMeta(),
@@ -6124,11 +6141,20 @@ function scheduleDraftSave() {
   draftSaveTimer = setTimeout(saveDraftNow, 350);
 }
 
+// === Function: saveCurrentFormDraftOnExit ===
+function saveCurrentFormDraftOnExit() {
+  if (!currentInsp) return;
+  touchDraftContext({
+    lastAction: isEditDraft(currentInsp) ? 'edit_exit_without_save' : 'exit_without_save'
+  });
+  saveDraftNow();
+}
+
 // === Function: clearDraft ===
-function clearDraft() {
+function clearDraft(targetInsp = currentInsp) {
   try {
     const store = getDraftStore();
-    const key = getDraftKeyFromInspection(currentInsp);
+    const key = getDraftKeyFromInspection(targetInsp);
     if (key && store.byKey[key]) {
       delete store.byKey[key];
       if (store.lastKey === key) {
@@ -7166,7 +7192,7 @@ async function loginUsuario(event) {
 
 // === Function: logoutUsuario ===
 async function logoutUsuario() {
-  saveDraftNow();
+  saveCurrentFormDraftOnExit();
   document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
   clearAuthSession();
   localStorage.removeItem('aa5s_auth_email');
@@ -7247,7 +7273,7 @@ function navTo(id) {
     document.body.classList.remove('dashboard-tv');
     id = 'home';
   }
-  if (currentInsp && id !== 'inspecao') saveDraftNow();
+  if (currentInsp && id !== 'inspecao') saveCurrentFormDraftOnExit();
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const targetScreen = document.getElementById('screen-' + id);
   if (!targetScreen) return;
@@ -10153,10 +10179,14 @@ async function salvarInspecao() {
     if (!Number.isFinite(currentInsp.duracaoMs) && Number.isFinite(inicioMs) && Number.isFinite(fimMs)) {
       currentInsp.duracaoMs = Math.max(0, fimMs - inicioMs);
     }
+    const draftToClear = JSON.parse(JSON.stringify(currentInsp));
     delete currentInsp.__draftMeta;
     delete currentInsp.__draftUpdatedAt;
     delete currentInsp.__isEditing;
     delete currentInsp.__originalId;
+    delete currentInsp.__originalSavedAt;
+    delete currentInsp.__draftKind;
+    delete currentInsp.__draftKindLabel;
 
     const savedInsp = JSON.parse(JSON.stringify(currentInsp));
     if (isEditing) {
@@ -10178,7 +10208,7 @@ async function salvarInspecao() {
 
     const backupSaved = saveFinalizedInspectionBackup(savedInsp);
     if (backupSaved) {
-      clearDraft();
+      clearDraft(draftToClear);
     } else {
       toast('Inspeção salva, mas o rascunho foi mantido como segurança até sincronizar.');
     }
@@ -10886,6 +10916,9 @@ function editarInspecao(id) {
   currentInsp = JSON.parse(JSON.stringify(insp));
   currentInsp.__isEditing = true;
   currentInsp.__originalId = insp.id;
+  currentInsp.__originalSavedAt = insp.finalizadaEm || insp.data || null;
+  currentInsp.__draftKind = 'saved_inspection_edit';
+  currentInsp.__draftKindLabel = 'Edição de inspeção já salva';
   draftUIState = {
     lastFieldId: null,
     lastSensoId: null,
@@ -13847,15 +13880,15 @@ window.addEventListener('online', async () => {
 window.addEventListener('offline', checkOnline);
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') {
-    saveDraftNow();
+    saveCurrentFormDraftOnExit();
     return;
   }
   if (navigator.onLine && isUsuarioLogado()) {
     handleOnlineAuthRecheck().finally(() => syncFromCloud());
   }
 });
-window.addEventListener('pagehide', saveDraftNow);
-window.addEventListener('beforeunload', saveDraftNow);
+window.addEventListener('pagehide', saveCurrentFormDraftOnExit);
+window.addEventListener('beforeunload', saveCurrentFormDraftOnExit);
 checkOnline();
 
 // === Function: startCloudAutoRefresh ===
