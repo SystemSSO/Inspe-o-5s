@@ -3701,6 +3701,7 @@ function inspectionIsCurrentUnit(insp) {
 const DB_KEY = 'aa5s_data';
 const DRAFT_KEY = 'aa5s_draft';
 const DRAFTS_KEY = 'aa5s_drafts_v2';
+const FINALIZED_BACKUPS_KEY = 'aa5s_finalized_backups_v1';
 const AREA_OVERRIDES_KEY = 'aa5s_area_overrides_v1';
 const SMARTSHEET_CONFIG_KEY = 'aa5s_smartsheet_config_v1';
 const SMARTSHEET_ADMIN_UNLOCK_KEY = 'aa5s_smartsheet_admin_unlocked';
@@ -3961,8 +3962,10 @@ async function saveData(d) {
     APP = normalizeAppState(d);
     persistLocalApp(APP);
     scheduleSyncQueue();
+    return true;
   } catch (e) {
     console.error("Erro ao salvar dados localmente:", e);
+    return false;
   }
 }
 
@@ -3990,6 +3993,7 @@ function enqueueDeleteInspection(inspId) {
   if (!APP.deleteQueue.includes(inspId)) APP.deleteQueue.push(inspId);
   APP.syncQueue = APP.syncQueue.filter(id => id !== inspId);
   APP.smartsheetQueue = APP.smartsheetQueue.filter(id => id !== inspId);
+  clearFinalizedInspectionBackup(inspId);
   persistLocalApp(APP);
 }
 
@@ -5853,6 +5857,79 @@ function saveDraftStore(store) {
   }));
 }
 
+// === Function: getFinalizedBackupStore ===
+function getFinalizedBackupStore() {
+  try {
+    const raw = localStorage.getItem(FINALIZED_BACKUPS_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    return {
+      byId: parsed?.byId && typeof parsed.byId === 'object' ? parsed.byId : {}
+    };
+  } catch {
+    return { byId: {} };
+  }
+}
+
+// === Function: saveFinalizedBackupStore ===
+function saveFinalizedBackupStore(store) {
+  localStorage.setItem(FINALIZED_BACKUPS_KEY, JSON.stringify({
+    byId: store?.byId || {}
+  }));
+}
+
+// === Function: saveFinalizedInspectionBackup ===
+function saveFinalizedInspectionBackup(insp) {
+  if (!insp?.id) return false;
+  try {
+    const store = getFinalizedBackupStore();
+    store.byId[insp.id] = {
+      ...JSON.parse(JSON.stringify(insp)),
+      __backupUpdatedAt: new Date().toISOString()
+    };
+    saveFinalizedBackupStore(store);
+    return true;
+  } catch (e) {
+    console.warn('Não foi possível criar cópia local de recuperação:', e);
+    return false;
+  }
+}
+
+// === Function: clearFinalizedInspectionBackup ===
+function clearFinalizedInspectionBackup(inspId) {
+  if (!inspId) return;
+  try {
+    const store = getFinalizedBackupStore();
+    if (!store.byId?.[inspId]) return;
+    delete store.byId[inspId];
+    saveFinalizedBackupStore(store);
+  } catch (e) {
+    console.warn('Não foi possível limpar cópia local de recuperação:', e);
+  }
+}
+
+// === Function: restoreFinalizedInspectionBackups ===
+function restoreFinalizedInspectionBackups(appState = APP) {
+  const app = normalizeAppState(appState);
+  const store = getFinalizedBackupStore();
+  Object.values(store.byId || {}).forEach(backup => {
+    if (!backup?.id) return;
+    const cleanBackup = { ...backup };
+    delete cleanBackup.__backupUpdatedAt;
+    const idx = app.inspecoes.findIndex(i => i?.id === cleanBackup.id);
+    if (idx >= 0) app.inspecoes[idx] = { ...app.inspecoes[idx], ...cleanBackup };
+    else app.inspecoes.push(cleanBackup);
+    if (!app.syncQueue.includes(cleanBackup.id)) app.syncQueue.push(cleanBackup.id);
+  });
+  return normalizeAppState(app);
+}
+
+// === Function: isInspectionPersistedForSync ===
+function isInspectionPersistedForSync(inspId) {
+  if (!inspId) return false;
+  const persisted = loadData();
+  return persisted.inspecoes.some(i => i?.id === inspId) && persisted.syncQueue.includes(inspId);
+}
+
 // === Function: getDraftKeyFromInspection ===
 function getDraftKeyFromInspection(insp) {
   if (!insp) return null;
@@ -6188,6 +6265,7 @@ async function syncPendingQueue() {
       if (deleteSynced) {
         APP.deleteQueue = APP.deleteQueue.filter(id => id !== inspId);
         APP.syncQueue = APP.syncQueue.filter(id => id !== inspId);
+        clearFinalizedInspectionBackup(inspId);
         persistLocalApp(APP);
       }
     }
@@ -6212,6 +6290,7 @@ async function syncPendingQueue() {
       }
 
       APP.syncQueue = APP.syncQueue.filter(id => id !== inspId);
+      clearFinalizedInspectionBackup(inspId);
       persistLocalApp(APP);
     }
 
@@ -6245,6 +6324,7 @@ async function syncFromCloud() {
   setSyncStatus('syncing', 'Sincronizando...');
   toast('Sincronizando dados...');
   try {
+    APP = restoreFinalizedInspectionBackups(APP);
     // Buscar técnicos
     const config = await db.collection("config").doc("geral").get();
     if (config.exists && Array.isArray(config.data().tecnicos)) APP.tecnicos = config.data().tecnicos;
@@ -6326,7 +6406,7 @@ function refreshAfterDataSync() {
   renderHome();
 }
 
-let APP = loadData();
+let APP = restoreFinalizedInspectionBackups(loadData());
 let currentTec = '';
 let currentUnidade = localStorage.getItem('aa5s_unit') || 'CD';
 let currentUserEmail = sessionStorage.getItem('aa5s_auth_email') || '';
@@ -10078,18 +10158,30 @@ async function salvarInspecao() {
     delete currentInsp.__isEditing;
     delete currentInsp.__originalId;
 
+    const savedInsp = JSON.parse(JSON.stringify(currentInsp));
     if (isEditing) {
       const idx = APP.inspecoes.findIndex(i => i.id === originalId);
-      if (idx >= 0) APP.inspecoes[idx] = currentInsp;
-      else APP.inspecoes.push(currentInsp);
+      if (idx >= 0) APP.inspecoes[idx] = savedInsp;
+      else APP.inspecoes.push(savedInsp);
     } else {
-      APP.inspecoes.push(currentInsp);
+      APP.inspecoes.push(savedInsp);
     }
-    enqueueSyncInspection(currentInsp.id);
-    enqueueSmartsheetInspection(currentInsp.id);
-    clearDraft();
-    await saveData(APP);
-    const savedInsp = JSON.parse(JSON.stringify(currentInsp));
+    enqueueSyncInspection(savedInsp.id);
+    enqueueSmartsheetInspection(savedInsp.id);
+
+    const savedLocally = await saveData(APP);
+    const persistedForSync = savedLocally && isInspectionPersistedForSync(savedInsp.id);
+    if (!persistedForSync) {
+      toast('Não foi possível confirmar o salvamento local. O rascunho foi mantido para evitar perda.');
+      return;
+    }
+
+    const backupSaved = saveFinalizedInspectionBackup(savedInsp);
+    if (backupSaved) {
+      clearDraft();
+    } else {
+      toast('Inspeção salva, mas o rascunho foi mantido como segurança até sincronizar.');
+    }
 
     if (!navigator.onLine || !hasFirebaseConfig()) {
       toast(isEditing ? 'Edição salva no aparelho. Sincroniza quando houver internet.' : 'Inspeção salva no aparelho. Sincroniza quando houver internet.');
