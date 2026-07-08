@@ -3714,6 +3714,7 @@ const SMARTSHEET_ADMIN_PASSWORD = 'Codemin@123';
 const AUTH_CACHE_KEY = 'aa5s_offline_auth_v1';
 const AUTH_SESSION_KEY = 'aa5s_auth_session_v1';
 const PENDING_OFFLINE_AUTH_KEY = 'aa5s_pending_offline_auth_v1';
+const LAST_SYNC_ERROR_KEY = 'aa5s_last_sync_error_v1';
 const EMAIL_AUTO_ENABLED_KEY = 'aa5s_email_auto_enabled';
 const EMAIL_AUTO_TO_KEY = 'aa5s_email_auto_to';
 const EMAIL_HISTORY_KEY = 'aa5s_email_history';
@@ -3918,7 +3919,10 @@ function fileToDataURL(file) {
 }
 
 // Habilita persistÃªncia offline automÃ¡tica
-db.enablePersistence().catch((err) => console.error("Erro offline:", err.code));
+db.enablePersistence().catch((err) => {
+  console.error("Erro offline:", err.code);
+  rememberLastSyncError(err, 'persistência offline');
+});
 
 // === Function: normalizeAppState ===
 function normalizeAppState(data) {
@@ -4843,7 +4847,8 @@ function getSetorialReportDashboardData(setor, periodo = getSetorialReportPeriod
   const openDesviosAtePeriodo = getOpenDesvioItemsUntilReportPeriod(periodo);
   const inspsSetor = inspsPeriodo.filter(i => i.setor === setor);
   const pontuacaoCorresponsavel = getSetorPontuacaoComparativo(setor, periodo);
-  const debitoList = uniqueDebitoRazoes(inspsSetor.flatMap(getDebitoRazoesInspecao));
+  const debitoList = uniqueDebitoRazoes(inspsSetor.flatMap(getDebitoRazoesInspecao))
+    .filter(item => !item.tipos?.includes('corresponsavel') && item.tipo !== 'corresponsavel');
 
   const ncList = [];
   const resolucoesIncompletas = [];
@@ -5081,7 +5086,8 @@ function getGerenciaReportDashboardData(gerencia, periodo = getSetorialReportPer
   const openDesviosAtePeriodo = getOpenDesvioItemsUntilReportPeriod(periodo);
   const ncDetalhes = [];
   const resolucoesIncompletas = [];
-  const debitoList = uniqueDebitoRazoes(inspsPeriodo.flatMap(getDebitoRazoesInspecao));
+  const debitoList = uniqueDebitoRazoes(inspsPeriodo.flatMap(getDebitoRazoesInspecao))
+    .filter(item => !item.tipos?.includes('corresponsavel') && item.tipo !== 'corresponsavel');
 
   const resumo = setores.map(setor => {
     const inspsSetor = inspsPeriodo.filter(i => i.setor === setor);
@@ -5199,7 +5205,8 @@ function getGerenciaReportDashboardData(gerencia, periodo = getSetorialReportPer
       media,
       mediaSemNCExterna: pontuacaoCorresponsavel.mediaSemExternas,
       impactoNCExterna: pontuacaoCorresponsavel.impactoExternas,
-      ncRecebidasComDebito: pontuacaoCorresponsavel.totalNCRecebidasComDebito,
+      ncRecebidas: pontuacaoCorresponsavel.totalNCRecebidas,
+      ncRecebidasComDebito: 0,
       pontuacaoCorresponsavel,
       ncAbertas,
       ncResolvidas
@@ -5215,16 +5222,14 @@ function getGerenciaReportDashboardData(gerencia, periodo = getSetorialReportPer
   }, { inspecoes: 0, ncAbertas: 0, ncResolvidas: 0, somaMedia: 0, countMedia: 0 });
 
   const mediaGerencia = totais.countMedia ? (totais.somaMedia / totais.countMedia) : null;
-  const setoresComNCExterna = resumo.filter(r => (r.impactoNCExterna || 0) > 0);
+  const setoresComNCExterna = resumo.filter(r => (r.ncRecebidas || 0) > 0);
   const mediasGerenciaSem = resumo
     .map(r => r.mediaSemNCExterna)
     .filter(n => typeof n === 'number');
   const mediaGerenciaSemNCExterna = mediasGerenciaSem.length
     ? (mediasGerenciaSem.reduce((a, b) => a + b, 0) / mediasGerenciaSem.length)
     : null;
-  const impactoNCExternaGerencia = mediaGerenciaSemNCExterna !== null && mediaGerencia !== null
-    ? Math.max(0, mediaGerenciaSemNCExterna - mediaGerencia)
-    : 0;
+  const impactoNCExternaGerencia = 0;
   return {
     periodo,
     periodoTitulo,
@@ -6270,15 +6275,18 @@ async function syncPendingQueue() {
   APP = normalizeAppState(APP);
   syncInProgress = true;
   setSyncStatus('syncing', 'Sincronizando...');
+  let syncStage = 'fila pendente';
 
   try {
     // Evita sobrescrever técnicos no Firebase com lista vazia após limpeza local.
     if (Array.isArray(APP.tecnicos) && APP.tecnicos.length > 0) {
+      syncStage = 'enviando técnicos';
       await db.collection("config").doc("geral").set({ tecnicos: APP.tecnicos }, { merge: true });
     }
 
     const deletados = [...APP.deleteQueue];
     for (const inspId of deletados) {
+      syncStage = `excluindo inspeção ${inspId}`;
       let deleteSynced = false;
       await db.collection("inspecoes").doc(inspId).delete()
         .then(() => { deleteSynced = true; })
@@ -6303,6 +6311,7 @@ async function syncPendingQueue() {
 
     const pendentes = [...APP.syncQueue];
     for (const inspId of pendentes) {
+      syncStage = `enviando inspeção ${inspId}`;
       const insp = APP.inspecoes.find(i => i.id === inspId);
       if (!insp) {
         APP.syncQueue = APP.syncQueue.filter(id => id !== inspId);
@@ -6333,7 +6342,7 @@ async function syncPendingQueue() {
     setSyncStatus('synced', 'Sincronizado');
   } catch (e) {
     console.warn("Falha ao sincronizar agora. Tentaremos novamente ao reconectar.", e);
-    setSyncStatus(navigator.onLine ? 'syncing' : 'offline', navigator.onLine ? 'Aguardando nova tentativa...' : 'Modo offline');
+    setSyncErrorStatus(e, syncStage);
   } finally {
     syncInProgress = false;
   }
@@ -6354,9 +6363,11 @@ async function syncFromCloud() {
   }
   setSyncStatus('syncing', 'Sincronizando...');
   toast('Sincronizando dados...');
+  let syncStage = 'iniciando sincronização';
   try {
     APP = restoreFinalizedInspectionBackups(APP);
     // Buscar técnicos
+    syncStage = 'buscando configuração';
     const config = await db.collection("config").doc("geral").get();
     if (config.exists && Array.isArray(config.data().tecnicos)) APP.tecnicos = config.data().tecnicos;
 
@@ -6365,6 +6376,7 @@ async function syncFromCloud() {
     const pageSize = 200;
     let lastDoc = null;
     while (true) {
+      syncStage = 'buscando inspeções';
       let query = db.collection("inspecoes").orderBy("data", "desc").limit(pageSize);
       if (lastDoc) query = query.startAfter(lastDoc);
       const snapshot = await query.get();
@@ -6382,6 +6394,7 @@ async function syncFromCloud() {
       if (!insp?.id) continue;
       if (inspectionHasPhotoRefs(insp)) {
         try {
+          syncStage = `buscando fotos ${insp.id}`;
           const fotosDoc = await db.collection("inspecoes_fotos").doc(insp.id).get();
           if (fotosDoc.exists) {
             restoreInspectionPhotosFromDoc(insp, fotosDoc.data());
@@ -6411,8 +6424,8 @@ async function syncFromCloud() {
     toast('Sincronização concluída.');
   } catch (e) {
     console.warn("Rodando em modo offline ou erro de sync:", e);
-    setSyncStatus(navigator.onLine ? 'syncing' : 'offline', navigator.onLine ? 'Aguardando conexão com servidor...' : 'Modo offline');
-    toast('Sem sincronização: modo offline ou erro de conexão.');
+    setSyncErrorStatus(e, syncStage);
+    toast(`Sem sincronização: ${getSyncErrorLabel(e)}.`);
   }
 }
 
@@ -6460,7 +6473,53 @@ function setSyncStatus(status, text = '') {
   if (!el || !tx) return;
   el.classList.remove('offline', 'syncing', 'synced');
   el.classList.add(status);
-  tx.textContent = text || (status === 'offline' ? 'Modo offline' : status === 'syncing' ? 'Sincronizando...' : 'Sincronizado');
+  const label = text || (status === 'offline' ? 'Modo offline' : status === 'syncing' ? 'Sincronizando...' : 'Sincronizado');
+  tx.textContent = label;
+  el.title = label;
+}
+
+function getSyncErrorCode(error) {
+  return String(error?.code || error?.name || '').trim();
+}
+
+function getSyncErrorMessage(error) {
+  return String(error?.message || error || '').trim();
+}
+
+function getSyncErrorLabel(error) {
+  const code = getSyncErrorCode(error);
+  const msg = getSyncErrorMessage(error);
+  const text = `${code} ${msg}`.toLowerCase();
+  if (code === 'permission-denied' || text.includes('permission')) return 'Sem permissão no Firebase';
+  if (code === 'unauthenticated' || text.includes('auth')) return 'Login online necessário';
+  if (code === 'unavailable' || code === 'deadline-exceeded' || text.includes('offline') || text.includes('network')) return 'Servidor/conexão instável';
+  if (code === 'resource-exhausted' || text.includes('quota')) return 'Limite/quota do Firebase';
+  if (code === 'failed-precondition') return 'Cache offline indisponível';
+  if (code === 'quota_exceeded_err' || text.includes('quotaexceeded')) return 'Armazenamento do aparelho cheio';
+  return code ? 'Erro de sincronização com o Firebase' : 'Erro de sincronização';
+}
+
+function rememberLastSyncError(error, context = '') {
+  const payload = {
+    at: new Date().toISOString(),
+    context,
+    code: getSyncErrorCode(error),
+    message: getSyncErrorMessage(error),
+    online: navigator.onLine,
+    hasFirebaseUser: !!auth.currentUser,
+    user: auth.currentUser?.email || currentUserEmail || ''
+  };
+  try {
+    localStorage.setItem(LAST_SYNC_ERROR_KEY, JSON.stringify(payload));
+  } catch {}
+  return payload;
+}
+
+function setSyncErrorStatus(error, context = '') {
+  const info = rememberLastSyncError(error, context);
+  const label = getSyncErrorLabel(error);
+  setSyncStatus(navigator.onLine ? 'syncing' : 'offline', context ? `${label} - ${context}` : label);
+  return info;
 }
 
 // === Function: ensureCurrentTecInList ===
@@ -8470,7 +8529,6 @@ function renderInspecaoForm() {
   const renderDebitoCorresponsavelHint = (sId) => {
     const itens = debitosCorresponsavelPorSenso[sId] || [];
     if (!itens.length) return '';
-    const total = itens.reduce((acc, item) => acc + (Number(item.pontos) || 1), 0);
     const detalhe = itens
       .slice(0, 2)
       .map(item => {
@@ -8480,7 +8538,7 @@ function renderInspecaoForm() {
       .join('<br>');
     const extra = itens.length > 2 ? `<br>+ ${itens.length - 2} outro(s) desvio(s) encaminhado(s)` : '';
     return `<div class="s-debito-corresp">
-      Impacto setorial em ${total.toFixed(0)} critério(s) deste senso, limitado a 1 ponto por critério, considerado na nota do setor nos relatórios.<br>
+      Desvio(s) corresponsável(is) recebido(s) neste senso. Eles aparecerão nos relatórios do setor, sem débito na nota.<br>
       Origem: ${detalhe}${extra}
     </div>`;
   };
@@ -9760,8 +9818,8 @@ function getDebitoRazoesInspecao(insp) {
             desvioId: enc.desvioId || '',
             desvioIndice: enc.desvioIndice || null,
             desvioObs: enc.obs || '',
-            pontos: 1,
-            motivo: `Desvio encaminhado ao corresponsável ${insp.setor}; débito aplicado no senso ${s.nome}.`
+            pontos: 0,
+            motivo: `Desvio encaminhado ao corresponsável ${insp.setor}; registrado sem débito de nota no senso ${s.nome}.`
           });
         });
       });
@@ -9785,7 +9843,7 @@ function uniqueDebitoRazoes(razoes = []) {
     if (!map.has(key)) {
       map.set(key, {
         ...item,
-        pontos: 1,
+        pontos: Number.isFinite(Number(item.pontos)) ? Number(item.pontos) : 1,
         tipos: [item.tipo].filter(Boolean),
         motivos: [item.motivo].filter(Boolean),
         origens: [{
@@ -9949,9 +10007,9 @@ function getSetorPontuacaoComparativo(setor, periodo = getSetorialReportPeriod()
     const mediaSemExternas = notasSenso.length ? (notasSenso.reduce((a, b) => a + b, 0) / notasSenso.length) : null;
     const itensImpacto = impactosPorSenso[s.id] || [];
     const impactoBrutoSenso = itensImpacto.reduce((sum, item) => sum + item.impacto, 0);
-    const impactoNoSenso = impactoBrutoSenso / divisorImpactoSenso;
-    const impactoExternas = impactoNoSenso / divisorImpactoSetorial;
-    const mediaComExternas = mediaSemExternas === null ? null : Math.max(0, mediaSemExternas - impactoNoSenso);
+    const impactoNoSenso = 0;
+    const impactoExternas = 0;
+    const mediaComExternas = mediaSemExternas;
     return {
       sensoId: s.id,
       senso: s.nome,
@@ -9968,12 +10026,8 @@ function getSetorPontuacaoComparativo(setor, periodo = getSetorialReportPeriod()
   const mediaSemExternas = sensosComNota.length
     ? sensosComNota.reduce((sum, item) => sum + item.mediaSemExternas, 0) / sensosComNota.length
     : null;
-  const mediaComExternas = sensosComNota.length
-    ? sensosComNota.reduce((sum, item) => sum + (item.mediaComExternas ?? item.mediaSemExternas), 0) / sensosComNota.length
-    : null;
-  const impactoExternas = mediaSemExternas !== null && mediaComExternas !== null
-    ? Math.max(0, mediaSemExternas - mediaComExternas)
-    : 0;
+  const mediaComExternas = mediaSemExternas;
+  const impactoExternas = 0;
 
   return {
     setor,
@@ -9983,7 +10037,8 @@ function getSetorPontuacaoComparativo(setor, periodo = getSetorialReportPeriod()
     mediaSemExternas,
     mediaComExternas,
     impactoExternas,
-    totalNCRecebidasComDebito: impactos.length,
+    totalNCRecebidas: impactos.length,
+    totalNCRecebidasComDebito: 0,
     sensos,
     impactos
   };
@@ -11787,19 +11842,19 @@ async function gerarPDFGerencia(options = {}) {
 
   function renderGerenciaImpactoNCExternaPage() {
     if (!setoresComNCExterna.length) return;
-    let yy = novaPaginaComCabecalho('Impacto de Desvios Recebidos de Outras Áreas', `${gerencia} · ${mesAnoAtual}`);
+    let yy = novaPaginaComCabecalho('Desvios Recebidos de Outras Áreas', `${gerencia} · ${mesAnoAtual}`);
 
     const gapLocal = 8;
     const cardLocalW = (W - margin * 2 - gapLocal * 2) / 3;
-    drawDashCard(margin, yy, cardLocalW, 30, 'Gerência sem recebidos', mediaGerenciaSemNCExterna !== null ? mediaGerenciaSemNCExterna.toFixed(2) : '—', 'Média sem desvio externo', [22, 53, 159]);
-    drawDashCard(margin + cardLocalW + gapLocal, yy, cardLocalW, 30, 'Impacto recebido', formatImpactoRecebido(impactoNCExternaGerencia), 'Rateado por sensos e áreas', [245, 158, 11]);
-    drawDashCard(margin + (cardLocalW + gapLocal) * 2, yy, cardLocalW, 30, 'Gerência com recebidas', formatNotaComImpacto(mediaGerencia, mediaGerenciaSemNCExterna), 'Média considerada', [244, 63, 94]);
+    drawDashCard(margin, yy, cardLocalW, 30, 'Média da gerência', mediaGerencia !== null ? mediaGerencia.toFixed(2) : '—', 'Sem débito por recebidos', [22, 53, 159]);
+    drawDashCard(margin + cardLocalW + gapLocal, yy, cardLocalW, 30, 'Débito aplicado', '0.00', 'Corresponsável não debita', [16, 185, 129]);
+    drawDashCard(margin + (cardLocalW + gapLocal) * 2, yy, cardLocalW, 30, 'Setores com recebidas', String(setoresComNCExterna.length), 'NCs seguem no relatório', [245, 158, 11]);
     yy += 44;
 
     doc.setTextColor(22, 53, 159);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
-    doc.text('Setores impactados', margin, yy);
+    doc.text('Setores com desvios recebidos', margin, yy);
     yy += 6;
 
     doc.setFillColor(248, 250, 252);
@@ -11809,9 +11864,9 @@ async function gerarPDFGerencia(options = {}) {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
     doc.text('Setor', margin + 4, yy + 6.5);
-    doc.text('Sem recebidas', margin + 132, yy + 6.5, { align: 'right' });
-    doc.text('Impacto', margin + 176, yy + 6.5, { align: 'right' });
-    doc.text('Com recebidas', margin + 220, yy + 6.5, { align: 'right' });
+    doc.text('Nota', margin + 132, yy + 6.5, { align: 'right' });
+    doc.text('Débito', margin + 176, yy + 6.5, { align: 'right' });
+    doc.text('Nota final', margin + 220, yy + 6.5, { align: 'right' });
     doc.text('Desvios recebidos', W - margin - 4, yy + 6.5, { align: 'right' });
     yy += 14;
 
@@ -11822,7 +11877,7 @@ async function gerarPDFGerencia(options = {}) {
       const rowH = Math.max(8, 4 * setorLines.length + 4);
 
       if (yy + rowH > H - 14) {
-        yy = novaPaginaComCabecalho('Impacto de Desvios Recebidos de Outras Áreas', `${gerencia} · ${mesAnoAtual}`);
+        yy = novaPaginaComCabecalho('Desvios Recebidos de Outras Áreas', `${gerencia} · ${mesAnoAtual}`);
         doc.setFillColor(248, 250, 252);
         doc.setDrawColor(226, 232, 240);
         doc.roundedRect(margin, yy, W - margin * 2, 10, 2, 2, 'FD');
@@ -11830,9 +11885,9 @@ async function gerarPDFGerencia(options = {}) {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(8.5);
         doc.text('Setor', margin + 4, yy + 6.5);
-        doc.text('Sem recebidas', margin + 132, yy + 6.5, { align: 'right' });
-        doc.text('Impacto', margin + 176, yy + 6.5, { align: 'right' });
-        doc.text('Com recebidas', margin + 220, yy + 6.5, { align: 'right' });
+        doc.text('Nota', margin + 132, yy + 6.5, { align: 'right' });
+        doc.text('Débito', margin + 176, yy + 6.5, { align: 'right' });
+        doc.text('Nota final', margin + 220, yy + 6.5, { align: 'right' });
         doc.text('Desvios recebidos', W - margin - 4, yy + 6.5, { align: 'right' });
         yy += 14;
       }
@@ -11845,9 +11900,9 @@ async function gerarPDFGerencia(options = {}) {
       doc.setFontSize(8.5);
       doc.text(setorLines, margin + 4, yy);
       doc.text(row.mediaSemNCExterna !== null ? row.mediaSemNCExterna.toFixed(2) : '—', margin + 132, yy, { align: 'right' });
-      doc.text(formatImpactoRecebido(row.impactoNCExterna || 0), margin + 176, yy, { align: 'right' });
+      doc.text('0.00', margin + 176, yy, { align: 'right' });
       doc.text(formatNotaComImpacto(row.media, row.mediaSemNCExterna), margin + 220, yy, { align: 'right' });
-      doc.text(String(row.ncRecebidasComDebito || 0), W - margin - 4, yy, { align: 'right' });
+      doc.text(String(row.ncRecebidas || 0), W - margin - 4, yy, { align: 'right' });
       yy += rowH;
     });
   }
@@ -12763,22 +12818,22 @@ async function gerarPDFSetorial(setor, options = {}) {
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
-    doc.text('Impacto de Desvios Recebidos de Outras Áreas', margin, 14);
+    doc.text('Desvios Recebidos de Outras Áreas', margin, 14);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9.5);
     doc.text(`${setor} · ${mesAnoAtual}`, margin, 20);
 
     const gapLocal = 8;
     const cardLocalW = (W - margin * 2 - gapLocal * 2) / 3;
-    drawDashCard(margin, 34, cardLocalW, 30, 'Sem desvio externo', mediaSemNCExterna !== null ? mediaSemNCExterna.toFixed(2) : '—', 'Nota do setor sem recebidos', [22, 53, 159]);
-    drawDashCard(margin + cardLocalW + gapLocal, 34, cardLocalW, 30, 'Impacto recebido', formatImpactoRecebido(impactoNCExterna), 'Rateado por sensos e áreas', [245, 158, 11]);
-    drawDashCard(margin + (cardLocalW + gapLocal) * 2, 34, cardLocalW, 30, 'Com desvio externo', formatNotaComImpacto(mediaGeral, mediaSemNCExterna), 'Nota considerada no relatório', [244, 63, 94]);
+    drawDashCard(margin, 34, cardLocalW, 30, 'Nota do setor', mediaGeral !== null ? mediaGeral.toFixed(2) : '—', 'Sem débito por recebidos', [22, 53, 159]);
+    drawDashCard(margin + cardLocalW + gapLocal, 34, cardLocalW, 30, 'Débito aplicado', '0.00', 'Corresponsável não debita', [16, 185, 129]);
+    drawDashCard(margin + (cardLocalW + gapLocal) * 2, 34, cardLocalW, 30, 'Desvios recebidos', String(pontuacaoCorresponsavel.impactos.length), 'NCs encaminhadas ao setor', [245, 158, 11]);
 
     let yy = 78;
     doc.setTextColor(22, 53, 159);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
-    doc.text('Impacto por senso', margin, yy);
+    doc.text('Desvios recebidos por senso', margin, yy);
     yy += 6;
 
     doc.setFillColor(248, 250, 252);
@@ -12788,14 +12843,14 @@ async function gerarPDFSetorial(setor, options = {}) {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
     doc.text('Senso', margin + 4, yy + 6.5);
-    doc.text('Sem recebidas', margin + 125, yy + 6.5, { align: 'right' });
-    doc.text('Impacto', margin + 170, yy + 6.5, { align: 'right' });
-    doc.text('Com recebidas', margin + 215, yy + 6.5, { align: 'right' });
+    doc.text('Nota', margin + 125, yy + 6.5, { align: 'right' });
+    doc.text('Débito', margin + 170, yy + 6.5, { align: 'right' });
+    doc.text('Nota final', margin + 215, yy + 6.5, { align: 'right' });
     doc.text('Critérios recebidos', W - margin - 4, yy + 6.5, { align: 'right' });
     yy += 14;
 
     pontuacaoCorresponsavel.sensos
-      .filter(item => (item.impactoExternas || 0) > 0)
+      .filter(item => item.impactos.length > 0)
       .forEach((item, idx) => {
         if (idx % 2 === 0) {
           doc.setFillColor(250, 252, 255);
@@ -12806,7 +12861,7 @@ async function gerarPDFSetorial(setor, options = {}) {
         doc.setFontSize(8.5);
         doc.text(item.senso, margin + 4, yy);
         doc.text(item.mediaSemExternas !== null ? item.mediaSemExternas.toFixed(2) : '—', margin + 125, yy, { align: 'right' });
-        doc.text(formatImpactoRecebido(item.impactoNoSenso ?? item.impactoExternas), margin + 170, yy, { align: 'right' });
+        doc.text('0.00', margin + 170, yy, { align: 'right' });
         doc.text(formatNotaComImpacto(item.mediaComExternas, item.mediaSemExternas), margin + 215, yy, { align: 'right' });
         doc.text(String(item.impactos.length), W - margin - 4, yy, { align: 'right' });
         yy += 8;
@@ -12815,12 +12870,12 @@ async function gerarPDFSetorial(setor, options = {}) {
     yy += 8;
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
-    doc.text('Origem dos desvios recebidos com débito', margin, yy);
+    doc.text('Origem dos desvios recebidos sem débito de nota', margin, yy);
     yy += 7;
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     pontuacaoCorresponsavel.impactos.slice(0, 10).forEach((item, idx) => {
-      const linha = `${idx + 1}. ${item.senso} · Critério ${item.criterioIndice} · Origem: ${item.origemSetor} - ${item.origemLocal} · Impacto no senso de origem -${item.impacto.toFixed(2)}`;
+      const linha = `${idx + 1}. ${item.senso} · Critério ${item.criterioIndice} · Origem: ${item.origemSetor} - ${item.origemLocal} · Sem débito para o corresponsável`;
       const lines = doc.splitTextToSize(linha, W - margin * 2);
       if (yy + lines.length * 4 > H - 14) return;
       doc.text(lines, margin, yy);
