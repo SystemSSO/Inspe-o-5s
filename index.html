@@ -6238,6 +6238,7 @@ function touchDraftContext(data = {}) {
 function saveDraftNow() {
   if (!currentInsp) return;
   try {
+    syncAllDesvioDomFieldsToState();
     const store = getDraftStore();
     const key = getDraftKeyFromInspection(currentInsp) || `id||${currentInsp.id}`;
     if (isEditDraft(currentInsp)) {
@@ -6403,7 +6404,10 @@ async function restoreLocalPhotosForAppState(appState = APP) {
 async function ensureInspectionPhotosAvailable(insp, options = {}) {
   if (!insp?.id || !inspectionHasPhotoRefs(insp)) return true;
   await restoreLocalPhotosForInspection(insp);
-  if (!inspectionHasPhotoRefs(insp)) return true;
+  if (!inspectionHasPhotoRefs(insp)) {
+    if (options.showStatus !== false) refreshSyncStatusIdle();
+    return true;
+  }
   if (!navigator.onLine || !hasFirebaseConfig() || !auth.currentUser) return false;
 
   const showStatus = options.showStatus !== false;
@@ -6416,6 +6420,7 @@ async function ensureInspectionPhotosAvailable(insp, options = {}) {
     if (Object.keys(fotos || {}).length) {
       await saveLocalInspectionPhotos(insp.id, fotos).catch(() => {});
     }
+    if (showStatus) refreshSyncStatusIdle();
     return true;
   } catch (e) {
     console.warn('Erro ao buscar fotos da inspeção:', e);
@@ -6423,6 +6428,27 @@ async function ensureInspectionPhotosAvailable(insp, options = {}) {
     if (options.toastOnError !== false) toast(`Não foi possível carregar as fotos: ${getSyncErrorLabel(e)}.`);
     return false;
   }
+}
+
+async function ensureReportPhotosAvailable(inspections = [], options = {}) {
+  const unique = [];
+  const seen = new Set();
+  (Array.isArray(inspections) ? inspections : []).forEach(insp => {
+    if (!insp?.id || seen.has(insp.id)) return;
+    seen.add(insp.id);
+    unique.push(insp);
+  });
+  const withRefs = unique.filter(inspectionHasPhotoRefs);
+  if (!withRefs.length) return true;
+  if (options.showToast !== false) toast('Carregando fotos para o relatório...');
+  for (const insp of withRefs) {
+    await ensureInspectionPhotosAvailable(insp, {
+      showStatus: false,
+      toastOnError: options.toastOnError !== false
+    });
+  }
+  refreshSyncStatusIdle();
+  return true;
 }
 
 // === Function: syncPendingQueue ===
@@ -6679,6 +6705,20 @@ function setSyncErrorStatus(error, context = '') {
   const label = getSyncErrorLabel(error);
   setSyncStatus(navigator.onLine ? 'syncing' : 'offline', context ? `${label} - ${context}` : label);
   return info;
+}
+
+function refreshSyncStatusIdle() {
+  const appState = normalizeAppState(APP);
+  if (!navigator.onLine || !hasFirebaseConfig()) {
+    setSyncStatus('offline', 'Modo offline');
+    return;
+  }
+  if (!auth.currentUser) {
+    setSyncStatus('offline', 'Login online necessário para sincronizar');
+    return;
+  }
+  const pending = appState.syncQueue.length + appState.deleteQueue.length;
+  setSyncStatus(pending ? 'syncing' : 'synced', pending ? `${pending} sincronização(ões) pendente(s)` : 'Sincronizado');
 }
 
 function getTecnicosSyncHash(tecnicos = APP.tecnicos) {
@@ -8710,6 +8750,8 @@ function iniciarInspecao() {
 
 // === Function: renderInspecaoForm ===
 function renderInspecaoForm() {
+  if (!currentInsp) return;
+  syncAllDesvioDomFieldsToState();
   document.getElementById('insp-header-setor').textContent = currentInsp.setor;
   document.getElementById('insp-header-sub').textContent = `${currentInsp.subarea ? currentInsp.subarea + ' · ' : ''}${currentInsp.periodo || ''}`;
   document.getElementById('insp-date-txt').textContent = new Date().toLocaleDateString('pt-BR');
@@ -9328,6 +9370,31 @@ function getDesvioAtual(sId, ci, desvioId) {
   return desvios.find(item => item.id === desvioId) || null;
 }
 
+function syncDesvioDomFieldsToState(sId, ci, desvioId) {
+  const desvio = getDesvioAtual(sId, ci, desvioId);
+  if (!desvio) return;
+  const desc = document.getElementById(`desvio-desc-${sId}-${ci}-${desvioId}`);
+  const sug = document.getElementById(`desvio-sug-${sId}-${ci}-${desvioId}`);
+  const resp = document.getElementById(`desvio-resp-${sId}-${ci}-${desvioId}`);
+  const resolucao = document.getElementById(`desvio-resolucao-${sId}-${ci}-${desvioId}`);
+  if (desc) desvio.descricao = desc.value;
+  if (sug) desvio.sugestao = sug.value;
+  if (resp) desvio.encaminharSetor = resp.value;
+  if (resolucao) desvio.resolucaoObs = resolucao.value;
+}
+
+function syncAllDesvioDomFieldsToState() {
+  if (!currentInsp?.sensos) return;
+  SENSOS.forEach(s => {
+    (currentInsp.sensos?.[s.id] || []).forEach((criterio, ci) => {
+      ensureCriterioDesvios(criterio).forEach(desvio => {
+        syncDesvioDomFieldsToState(s.id, ci, desvio.id);
+      });
+      syncCriterioResumoFromDesvios(criterio);
+    });
+  });
+}
+
 function renderDesvioFotosHtml(sId, ci, desvio, kind = 'abertura') {
   const isResolucao = kind === 'resolucao';
   const fotos = isResolucao ? (desvio.resolucaoFotos || []) : (desvio.fotos || []);
@@ -9380,8 +9447,8 @@ function renderDesviosCriterioHtml(s, ci, criterio) {
                 </div>
               </div>
               <textarea class="form-textarea" id="desvio-desc-${s.id}-${ci}-${desvio.id}" rows="2" placeholder="Descreva este desvio" oninput="setDesvioField('${s.id}',${ci},'${desvio.id}','descricao',this.value)">${escapeHtml(desvio.descricao || '')}</textarea>
-              <textarea class="form-textarea" rows="2" placeholder="Sugestão de melhoria deste desvio" style="margin-top:7px" oninput="setDesvioField('${s.id}',${ci},'${desvio.id}','sugestao',this.value)">${escapeHtml(desvio.sugestao || '')}</textarea>
-              <select class="form-select" style="font-size:13px;margin-top:7px" onchange="setDesvioField('${s.id}',${ci},'${desvio.id}','encaminharSetor',this.value)">
+              <textarea class="form-textarea" id="desvio-sug-${s.id}-${ci}-${desvio.id}" rows="2" placeholder="Sugestão de melhoria deste desvio" style="margin-top:7px" oninput="setDesvioField('${s.id}',${ci},'${desvio.id}','sugestao',this.value)">${escapeHtml(desvio.sugestao || '')}</textarea>
+              <select class="form-select" id="desvio-resp-${s.id}-${ci}-${desvio.id}" style="font-size:13px;margin-top:7px" onchange="setDesvioField('${s.id}',${ci},'${desvio.id}','encaminharSetor',this.value)">
                 <option value="">— Responsabilidade local —</option>
                 ${setoresCorresponsaveis.map(nome => `<option value="${escapeHtml(nome)}" ${desvio.encaminharSetor === nome ? 'selected' : ''}>${escapeHtml(nome)}</option>`).join('')}
               </select>
@@ -9488,6 +9555,7 @@ function setDesvioStatus(sId, ci, desvioId, status) {
 
 // === Function: triggerFotoDesvio ===
 function triggerFotoDesvio(sId, ci, desvioId, kind = 'abertura') {
+  syncDesvioDomFieldsToState(sId, ci, desvioId);
   pendingFotoTarget = { sId, ci, desvioId, kind };
   touchDraftContext({
     lastSensoId: sId,
@@ -9883,6 +9951,7 @@ async function addFotos(sId, ci, inp) {
   const files = Array.from(inp.files);
   const desvioId = inp.dataset.desvioId || '';
   const fotoKind = inp.dataset.fotoKind || 'criterio';
+  if (desvioId) syncDesvioDomFieldsToState(sId, ci, desvioId);
   const targetMeta = {
     sId,
     ci,
@@ -11747,6 +11816,7 @@ async function gerarPDFGerencia(options = {}) {
   if (!setores.length) { toast('Nenhum setor mapeado para esta gerência'); return; }
 
   const periodoSelecionado = options.periodo || getSetorialReportPeriod(getReportPeriodInputValue('rel-periodo-gerencia'));
+  await ensureReportPhotosAvailable(getInspectionsUntilReportPeriod(periodoSelecionado), { showToast: shouldToast, toastOnError: shouldToast });
   const gerenciaData = getGerenciaReportDashboardData(gerencia, periodoSelecionado);
   if (gerenciaData.resolucoesIncompletas?.length) {
     if (shouldToast) toast(getMensagemResolucaoIncompleta(gerenciaData.resolucoesIncompletas));
@@ -12116,73 +12186,6 @@ async function gerarPDFGerencia(options = {}) {
     doc.text(subtitle, x + 6, yPos + 23);
   }
 
-  function renderGerenciaImpactoNCExternaPage() {
-    if (!setoresComNCExterna.length) return;
-    let yy = novaPaginaComCabecalho('Desvios Recebidos de Outras Áreas', `${gerencia} · ${mesAnoAtual}`);
-
-    const gapLocal = 8;
-    const cardLocalW = (W - margin * 2 - gapLocal * 2) / 3;
-    drawDashCard(margin, yy, cardLocalW, 30, 'Média da gerência', mediaGerencia !== null ? mediaGerencia.toFixed(2) : '—', 'Sem débito por recebidos', [22, 53, 159]);
-    drawDashCard(margin + cardLocalW + gapLocal, yy, cardLocalW, 30, 'Débito aplicado', '0.00', 'Corresponsável não debita', [16, 185, 129]);
-    drawDashCard(margin + (cardLocalW + gapLocal) * 2, yy, cardLocalW, 30, 'Setores com recebidas', String(setoresComNCExterna.length), 'NCs seguem no relatório', [245, 158, 11]);
-    yy += 44;
-
-    doc.setTextColor(22, 53, 159);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.text('Setores com desvios recebidos', margin, yy);
-    yy += 6;
-
-    doc.setFillColor(248, 250, 252);
-    doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(margin, yy, W - margin * 2, 10, 2, 2, 'FD');
-    doc.setTextColor(22, 53, 159);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8.5);
-    doc.text('Setor', margin + 4, yy + 6.5);
-    doc.text('Nota', margin + 132, yy + 6.5, { align: 'right' });
-    doc.text('Débito', margin + 176, yy + 6.5, { align: 'right' });
-    doc.text('Nota final', margin + 220, yy + 6.5, { align: 'right' });
-    doc.text('Desvios recebidos', W - margin - 4, yy + 6.5, { align: 'right' });
-    yy += 14;
-
-    setoresComNCExterna.forEach((row, idx) => {
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8.5);
-      const setorLines = doc.splitTextToSize(row.setor, 118);
-      const rowH = Math.max(8, 4 * setorLines.length + 4);
-
-      if (yy + rowH > H - 14) {
-        yy = novaPaginaComCabecalho('Desvios Recebidos de Outras Áreas', `${gerencia} · ${mesAnoAtual}`);
-        doc.setFillColor(248, 250, 252);
-        doc.setDrawColor(226, 232, 240);
-        doc.roundedRect(margin, yy, W - margin * 2, 10, 2, 2, 'FD');
-        doc.setTextColor(22, 53, 159);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(8.5);
-        doc.text('Setor', margin + 4, yy + 6.5);
-        doc.text('Nota', margin + 132, yy + 6.5, { align: 'right' });
-        doc.text('Débito', margin + 176, yy + 6.5, { align: 'right' });
-        doc.text('Nota final', margin + 220, yy + 6.5, { align: 'right' });
-        doc.text('Desvios recebidos', W - margin - 4, yy + 6.5, { align: 'right' });
-        yy += 14;
-      }
-      if (idx % 2 === 0) {
-        doc.setFillColor(250, 252, 255);
-        doc.rect(margin, yy - 5.5, W - margin * 2, rowH, 'F');
-      }
-      doc.setTextColor(22, 53, 159);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8.5);
-      doc.text(setorLines, margin + 4, yy);
-      doc.text(row.mediaSemNCExterna !== null ? row.mediaSemNCExterna.toFixed(2) : '—', margin + 132, yy, { align: 'right' });
-      doc.text('0.00', margin + 176, yy, { align: 'right' });
-      doc.text(formatNotaComImpacto(row.media, row.mediaSemNCExterna), margin + 220, yy, { align: 'right' });
-      doc.text(String(row.ncRecebidas || 0), W - margin - 4, yy, { align: 'right' });
-      yy += rowH;
-    });
-  }
-
   function getReportStatus(media, ncAbertas = 0) {
     if (typeof media !== 'number' && ncAbertas > 0) return { label: 'Pendências', color: [244, 63, 94] };
     if (typeof media !== 'number') return { label: 'Sem dados', color: [100, 116, 139] };
@@ -12334,8 +12337,6 @@ async function gerarPDFGerencia(options = {}) {
     });
   }
 
-  renderGerenciaImpactoNCExternaPage();
-
   const ncsOrdenadas = [...ncDetalhes].sort((a, b) => {
     const setorCmp = a.setor.localeCompare(b.setor, 'pt-BR');
     if (setorCmp !== 0) return setorCmp;
@@ -12366,10 +12367,7 @@ async function gerarPDFGerencia(options = {}) {
       const criterioLines = doc.splitTextToSize(`Critério: ${item.criterio}`, W - margin * 2 - 8);
       const obsLines = doc.splitTextToSize(`Obs: ${item.obs}`, W - margin * 2 - 8);
       const sugLines = doc.splitTextToSize(`Sugestão: ${item.sugestao}`, W - margin * 2 - 8);
-      const correspTxt = item.origemTipo === 'encaminhada'
-        ? `Desvio corresponsável - Origem: ${item.origemSetor || item.setor} - ${item.origemLocal || item.local} | Destino: ${item.destinoSetor || item.setor}`
-        : '';
-      const correspLines = correspTxt ? doc.splitTextToSize(correspTxt, W - margin * 2 - 8) : [];
+      const correspLines = [];
 
       if (item.tipo === 'resolvida') {
         const fotoAntesDataUrl = (await imageToDataUrl((Array.isArray(item.fotosAnterior) ? item.fotosAnterior : [])[0])) || null;
@@ -12867,6 +12865,7 @@ async function gerarPDFSetorial(setor, options = {}) {
     }
   }
 
+  await ensureReportPhotosAvailable(getInspectionsUntilReportPeriod(periodoSelecionado), { showToast: shouldToast, toastOnError: shouldToast });
   const setorialData = getSetorialReportDashboardData(setor, periodoSelecionado);
   if (setorialData.resolucoesIncompletas?.length) {
     if (shouldToast) toast(getMensagemResolucaoIncompleta(setorialData.resolucoesIncompletas));
@@ -13086,79 +13085,6 @@ async function gerarPDFSetorial(setor, options = {}) {
     doc.text(subtitle, x + 6, yPos + 23);
   }
 
-  function renderSetorialImpactoNCExternaPage() {
-    if (!pontuacaoCorresponsavel?.impactos?.length) return;
-    addNewPage();
-    doc.setFillColor(22, 53, 159);
-    doc.rect(0, 0, W, 24, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
-    doc.text('Desvios Recebidos de Outras Áreas', margin, 14);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9.5);
-    doc.text(`${setor} · ${mesAnoAtual}`, margin, 20);
-
-    const gapLocal = 8;
-    const cardLocalW = (W - margin * 2 - gapLocal * 2) / 3;
-    drawDashCard(margin, 34, cardLocalW, 30, 'Nota do setor', mediaGeral !== null ? mediaGeral.toFixed(2) : '—', 'Sem débito por recebidos', [22, 53, 159]);
-    drawDashCard(margin + cardLocalW + gapLocal, 34, cardLocalW, 30, 'Débito aplicado', '0.00', 'Corresponsável não debita', [16, 185, 129]);
-    drawDashCard(margin + (cardLocalW + gapLocal) * 2, 34, cardLocalW, 30, 'Desvios recebidos', String(pontuacaoCorresponsavel.impactos.length), 'NCs encaminhadas ao setor', [245, 158, 11]);
-
-    let yy = 78;
-    doc.setTextColor(22, 53, 159);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.text('Desvios recebidos por senso', margin, yy);
-    yy += 6;
-
-    doc.setFillColor(248, 250, 252);
-    doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(margin, yy, W - margin * 2, 10, 2, 2, 'FD');
-    doc.setTextColor(22, 53, 159);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8.5);
-    doc.text('Senso', margin + 4, yy + 6.5);
-    doc.text('Nota', margin + 125, yy + 6.5, { align: 'right' });
-    doc.text('Débito', margin + 170, yy + 6.5, { align: 'right' });
-    doc.text('Nota final', margin + 215, yy + 6.5, { align: 'right' });
-    doc.text('Critérios recebidos', W - margin - 4, yy + 6.5, { align: 'right' });
-    yy += 14;
-
-    pontuacaoCorresponsavel.sensos
-      .filter(item => item.impactos.length > 0)
-      .forEach((item, idx) => {
-        if (idx % 2 === 0) {
-          doc.setFillColor(250, 252, 255);
-          doc.rect(margin, yy - 5.5, W - margin * 2, 8, 'F');
-        }
-        doc.setTextColor(22, 53, 159);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8.5);
-        doc.text(item.senso, margin + 4, yy);
-        doc.text(item.mediaSemExternas !== null ? item.mediaSemExternas.toFixed(2) : '—', margin + 125, yy, { align: 'right' });
-        doc.text('0.00', margin + 170, yy, { align: 'right' });
-        doc.text(formatNotaComImpacto(item.mediaComExternas, item.mediaSemExternas), margin + 215, yy, { align: 'right' });
-        doc.text(String(item.impactos.length), W - margin - 4, yy, { align: 'right' });
-        yy += 8;
-      });
-
-    yy += 8;
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.text('Origem dos desvios recebidos sem débito de nota', margin, yy);
-    yy += 7;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    pontuacaoCorresponsavel.impactos.slice(0, 10).forEach((item, idx) => {
-      const linha = `${idx + 1}. ${item.senso} · Critério ${item.criterioIndice} · Origem: ${item.origemSetor} - ${item.origemLocal} · Sem débito para o corresponsável`;
-      const lines = doc.splitTextToSize(linha, W - margin * 2);
-      if (yy + lines.length * 4 > H - 14) return;
-      doc.text(lines, margin, yy);
-      yy += lines.length * 4 + 2;
-    });
-  }
-
   const gap = 8;
   const cardW = (W - margin * 2 - gap * 2) / 3;
   const cardH = 30;
@@ -13173,7 +13099,7 @@ async function gerarPDFSetorial(setor, options = {}) {
 
   drawDashCard(margin, row2Y, cardW, cardH, 'Desvios abertos', totalNCAbertas, 'Inclui períodos anteriores', [244, 63, 94]);
   drawDashCard(margin + cardW + gap, row2Y, cardW, cardH, 'Desvios resolvidos', totalResolvidas, 'Resolvidos no período', [16, 185, 129]);
-  drawDashCard(margin + (cardW + gap) * 2, row2Y, cardW, cardH, 'Desvios recebidos', totalNCRecebidas, 'Encaminhados de outros setores', [245, 158, 11]);
+  drawDashCard(margin + (cardW + gap) * 2, row2Y, cardW, cardH, 'Total de desvios', totalNCSetor, 'Abertos e resolvidos', [245, 158, 11]);
 
   const boxY = row2Y + cardH + 10;
   doc.setDrawColor(226, 232, 240);
@@ -13191,8 +13117,6 @@ async function gerarPDFSetorial(setor, options = {}) {
   const piorTxt = piorLocal ? `${piorLocal.label} (${piorLocal.media.toFixed(2)})` : 'Sem dados';
   doc.text(`Área melhor avaliada: ${melhorTxt}`, margin + 6, boxY + 16);
   doc.text(`Área com menor avaliação: ${piorTxt}`, margin + 6, boxY + 23);
-
-  renderSetorialImpactoNCExternaPage();
 
   if (ncList.length) {
     addNewPage();
@@ -13214,10 +13138,7 @@ async function gerarPDFSetorial(setor, options = {}) {
       const obsLines = doc.splitTextToSize(`Obs: ${nc.obs}`, W - margin * 2 - 8);
       const sugLines = doc.splitTextToSize(`Sugestão: ${nc.sugestao}`, W - margin * 2 - 8);
       const reincLines = doc.splitTextToSize(`Reincidência: ${nc.reincidencia}ª ocorrência consecutiva`, W - margin * 2 - 8);
-      const correspTxt = (nc.origemTipo === 'encaminhada' || (nc.destinoSetor && nc.destinoSetor !== nc.origemSetor))
-        ? `Desvio corresponsável - Origem: ${nc.origemSetor} · ${nc.origemLocal} | Destino: ${nc.destinoSetor}`
-        : '';
-      const correspLines = correspTxt ? doc.splitTextToSize(correspTxt, W - margin * 2 - 8) : [];
+      const correspLines = [];
       const fotosPorLinha = 2;
       const fotoW = 118;
       const gapFoto = 8;
@@ -13348,10 +13269,7 @@ async function gerarPDFSetorial(setor, options = {}) {
       const agoraLines = doc.splitTextToSize(`Agora: ${item.obsAtual || 'Resolvido com evidência anexada.'}`, W - margin * 2 - 8);
       const sugLines = doc.splitTextToSize(`Ação/Sugestão: ${item.sugestaoAtual}`, W - margin * 2 - 8);
       const reincLines = doc.splitTextToSize(`Reincidências até conclusão: ${item.reincidencias} (ocorrências de desvio consecutivas: ${item.ocorrenciasNC})`, W - margin * 2 - 8);
-      const correspTxt = item.resolvidaPorCorresponsavel
-        ? `Resolvida pelo corresponsável - Origem: ${item.origemSetor} · ${item.origemLocal} | Destino: ${item.destinoSetor}`
-        : '';
-      const correspLines = correspTxt ? doc.splitTextToSize(correspTxt, W - margin * 2 - 8) : [];
+      const correspLines = [];
       const comparativoH = 108;
       const linhasBase = criterioLines.length + antesLines.length + agoraLines.length + sugLines.length + reincLines.length + correspLines.length;
       const lineH = 4.4;
@@ -13740,88 +13658,6 @@ async function gerarPDFInsp(id, options = {}) {
         }
       });
     });
-  }
-
-  if (pendenciasRecebidas.length) {
-    doc.addPage();
-    doc.setFillColor(255,255,255); doc.rect(0,0,W,297,'F');
-    doc.setFillColor(148,163,184); doc.rect(0,0,W,1,'F');
-    y = 14;
-    doc.setTextColor(22,53,159); doc.setFontSize(14); doc.setFont('helvetica','bold');
-    doc.text('PENDÊNCIAS RECEBIDAS DE OUTROS SETORES', margin, y+8); y += 22;
-
-    for (const item of pendenciasRecebidas) {
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      const origemLines = doc.splitTextToSize(`${item.origemSetor} · ${item.origemLocal}`, W - margin * 2 - 8);
-      const correspLines = doc.splitTextToSize(`Desvio corresponsável - Origem: ${item.origemSetor} · ${item.origemLocal} | Destino: ${insp.setor}`, W - margin * 2 - 8);
-      const critLines = doc.splitTextToSize(`${item.senso} · Critério ${item.criterioIndice} - ${item.criterioTexto}`, W - margin * 2 - 8);
-      const obsLines = item.obs ? doc.splitTextToSize(`Obs: ${item.obs}`, W - margin * 2 - 8) : [];
-      const fotosDataUrl = (await Promise.all((Array.isArray(item.fotos) ? item.fotos : []).map(imageUrlToDataURL))).filter(Boolean);
-      const fotosPorLinha = 2;
-      const linhasFotos = fotosDataUrl.length ? Math.ceil(fotosDataUrl.length / fotosPorLinha) : 0;
-      const imgH = linhasFotos ? (linhasFotos * 62 + (linhasFotos - 1) * 4) : 0;
-      const blocoH = 20 + origemLines.length * 4 + correspLines.length * 4 + critLines.length * 4 + obsLines.length * 4 + imgH;
-
-      if (y + blocoH > 280) {
-        doc.addPage();
-        doc.setFillColor(255,255,255); doc.rect(0,0,W,297,'F');
-        doc.setFillColor(148,163,184); doc.rect(0,0,W,1,'F');
-        y = 14;
-      }
-
-      doc.setFillColor(248,250,252); doc.roundedRect(margin, y, W-margin*2, blocoH, 3, 3, 'F');
-      doc.setTextColor(22,53,159); doc.setFontSize(9); doc.setFont('helvetica','bold');
-      doc.text(origemLines, margin+4, y+7);
-      doc.setTextColor(180,83,9); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
-      doc.text(correspLines, margin+4, y+11 + origemLines.length * 4);
-      doc.setTextColor(22,53,159); doc.setFontSize(8); doc.setFont('helvetica','normal');
-      doc.text(critLines, margin+4, y+15 + origemLines.length * 4 + correspLines.length * 4);
-      let blocoY = y + 15 + origemLines.length * 4 + correspLines.length * 4 + critLines.length * 4;
-      doc.setTextColor(22,53,159); doc.setFontSize(7.5);
-      doc.text(`${formatDate(item.origemData)} · ${item.origemPeriodo || 'sem período'} · ${item.tecnico} · Nota ${item.nota}`, margin+4, blocoY);
-      blocoY += 5;
-      if (obsLines.length) {
-        doc.setTextColor(22,53,159); doc.setFont('helvetica','italic');
-        doc.text(obsLines, margin+4, blocoY);
-        blocoY += obsLines.length * 4 + 2;
-      }
-      if (fotosDataUrl.length) {
-        const areaW = W - margin * 2 - 10;
-        const gap = 4;
-        const cellW = (areaW - (gap * (fotosPorLinha - 1))) / fotosPorLinha;
-        const thumbH = 62;
-        for (let i = 0; i < fotosDataUrl.length; i++) {
-          const fotoDataUrl = fotosDataUrl[i];
-          try {
-            const props = doc.getImageProperties(fotoDataUrl);
-            const ratio = props.width / props.height;
-            const col = i % fotosPorLinha;
-            const row = Math.floor(i / fotosPorLinha);
-            const boxX = margin + 5 + col * (cellW + gap);
-            const boxY = blocoY + row * (thumbH + gap);
-            let drawW = cellW;
-            let drawH = drawW / ratio;
-            if (drawH > thumbH) {
-              drawH = thumbH;
-              drawW = drawH * ratio;
-            }
-            const x = boxX + (cellW - drawW) / 2;
-            const yImg = boxY + (thumbH - drawH) / 2;
-            doc.addImage(fotoDataUrl, fotoDataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG', x, yImg, drawW, drawH, undefined, 'FAST');
-          } catch {
-            doc.setTextColor(22,53,159); doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
-            const col = i % fotosPorLinha;
-            const row = Math.floor(i / fotosPorLinha);
-            const boxX = margin + 5 + col * (cellW + gap);
-            const boxY = blocoY + row * (thumbH + gap);
-            doc.text('Foto indisponível.', boxX + 1, boxY + 5);
-          }
-        }
-      }
-
-      y += blocoH + 6;
-    }
   }
 
   if (pendenciasResolvidas.length) {
