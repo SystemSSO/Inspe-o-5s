@@ -2826,9 +2826,16 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
         <input class="form-input" id="power-automate-email-url" placeholder="https://prod-...logic.azure.com/..." value="https://default2864f69d77c34fbebbc09750205239.1a.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/87cbc033e57d41b5a7e83bc4909120c0/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=QyQX5C9nbmkYh3wwSMpV5Mizh9EU0ZyMe5_Qvm_uZCI">
       </div>
       <div id="smartsheet-status" style="font-size:12px;color:var(--text2);margin:-4px 0 12px"></div>
+      <div class="form-group">
+        <label class="form-label">Teste por setor</label>
+        <select class="form-select" id="smartsheet-setor-select"></select>
+      </div>
       <button class="btn-primary" onclick="salvarSmartsheetConfig()">
         <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 13l4 4L16 7"/></svg>
         Salvar conexão
+      </button>
+      <button class="btn-secondary" onclick="sincronizarSetorSmartsheet()" style="margin-top:8px">
+        Enviar setor selecionado
       </button>
       <button class="btn-secondary" onclick="testarSmartsheetConexao()" style="margin-top:8px">
         Testar conexão
@@ -3833,36 +3840,32 @@ const SMARTSHEET_MODEL_SENSOS = [
   }
 ];
 const SMARTSHEET_COLUMNS = [
-  { key: 'localizacao', title: 'Localização', aliases: ['Localizacao', 'Local Inspecionado', 'Local', 'Subárea', 'Subarea', 'Setor'] },
+  { key: 'localizacao', title: 'Localização', aliases: ['Localizacao', 'Local Inspecionado', 'Local', 'Subárea', 'Subarea', 'Ponto de inspeção', 'Ponto de inspecao'] },
   { key: 'site', title: 'Site', aliases: ['Unidade', 'UN'] },
   { key: 'data_envio', title: 'Data de Envio da Inspeção', aliases: ['Data Envio', 'Data de Envio', 'Enviado Em'] },
-  { key: 'data_original', title: 'Data Original', aliases: ['Período', 'Periodo', 'Mês', 'Mes', 'Referência', 'Referencia'] },
-  { key: 'nome', title: 'Nome', aliases: ['Técnico', 'Tecnico', 'Auditor', 'Responsável', 'Responsavel'] },
-  { key: 'area_dashboard', title: 'Área', aliases: ['Area', 'Housekeeping'] },
-  { key: 'responsavel_comunicado', title: 'Responsável Comunicado', aliases: ['Responsavel Comunicado'] },
-  { key: 'tempo', title: 'Tempo', aliases: ['Duração', 'Duracao', 'Tempo de Inspeção', 'Tempo de Inspecao'] },
-  ...SMARTSHEET_MODEL_SENSOS.flatMap((s, si) => [
-    ...s.criterioTitles.map((title, ci) => ({
+  { key: 'nome', title: 'Nome', aliases: ['Inspetor responsável', 'Inspetor responsavel', 'Técnico', 'Tecnico', 'Auditor', 'Responsável', 'Responsavel'] },
+  { key: 'area_dashboard', title: 'Área', aliases: ['Area', 'Setor', 'Housekeeping'] },
+  ...SMARTSHEET_MODEL_SENSOS.flatMap(s =>
+    s.criterioTitles.map((title, ci) => ({
       key: criterioSmartsheetKey(s.id, ci),
       title,
-      aliases: [
-        `${si + 1}S ${ci + 1}`,
-        `${SENSOS[si]?.nome || `Senso ${si + 1}`} - Critério ${ci + 1}`,
-        `${SENSOS[si]?.nome || `Senso ${si + 1}`} - C${ci + 1}`,
-        `Critério ${ci + 1} - ${SENSOS[si]?.nome || `Senso ${si + 1}`}`,
-        SENSOS[si]?.criterios?.[ci] || ''
-      ].filter(Boolean)
-    })),
-    { key: s.comentarioKey, title: s.comentarioTitle },
-    { key: s.recomendacaoKey, title: s.recomendacaoTitle },
-    { key: s.mediaKey, title: s.mediaTitle, aliases: [`Senso ${String(si + 1).padStart(2, '0')}`, `Senso ${si + 1}`] }
-  ]),
-  { key: 'pontuacao_final', title: 'Pontuação Final', aliases: ['Pontuacao Final', 'Nota Geral', 'Média Final', 'Media Final', 'Resultado'] },
-  { key: 'contato_gerente', title: 'Contato de Envio - Gerente' },
-  { key: 'contato_coordenador', title: 'Contato de Envio - Coordenador' },
-  { key: 'contato_supervisor', title: 'Contato de Envio - Supervisor' },
-  { key: 'contato_tecnico', title: 'Contato de Envio - Técnico' },
-  { key: 'contato_seguranca', title: 'Contato de Envio - Segurança', aliases: ['Contato de Envio - Seguranca'] }
+      aliases: [title]
+    }))
+  ),
+  ...SMARTSHEET_MODEL_SENSOS.map((s, si) => ({
+    key: s.mediaKey,
+    title: `Nota final do Senso ${si + 1}`,
+    aliases: [
+      s.mediaTitle,
+      `Senso ${String(si + 1).padStart(2, '0')}`,
+      `Senso ${si + 1}`,
+      `Senso ${si + 1} - ${s.mediaTitle.split(' - ')[1] || ''}`,
+      `Nota final do Senso ${String(si + 1).padStart(2, '0')}`,
+      `Nota final Senso ${si + 1}`,
+      `Nota final Senso ${String(si + 1).padStart(2, '0')}`,
+      `Nota Senso ${si + 1}`
+    ]
+  }))
 ];
 
 let areaEditorState = { setor: '', items: [] };
@@ -4226,6 +4229,86 @@ function normalizeColumnTitle(value) {
     .replace(/[\u0300-\u036f]/g, '')
     .trim()
     .toLowerCase();
+}
+
+// === Function: compactColumnTitle ===
+function compactColumnTitle(value) {
+  return normalizeColumnTitle(value).replace(/[^a-z0-9]/g, '');
+}
+
+const SMARTSHEET_AREA_LABELS = {
+  BA: {
+    'Administração e RH': 'BA - Administrativo e RH',
+    'Calcinação': 'BA - Calcinação',
+    'Desempenho de Contratadas e Infra': 'BA - Infraestrutura',
+    'Engenharia de Manutenção e Confiabilidade': 'BA - Engenharia de Manutenção',
+    'Expedição': 'BA - Expedição',
+    'Geotecnia': 'BA - Geotecnia',
+    'Laboratório Químico': 'BA - Laboratório Químico',
+    'Manutenção - Planta Industrial': 'BA - Oficina de Manutenção',
+    'Manutenção de Máquinas': 'BA - Oficina de Manutenção de Máquinas Pesadas',
+    'Meio Ambiente': 'BA - Meio Ambiente',
+    'Preparação de Minério': 'BA - Preparação de Cargas',
+    'Produção de Mina': 'BA - Produção de Mina',
+    'Projetos (Engenharia)': 'BA - Engenharia de Projetos',
+    'Redução': 'BA - Redução',
+    'Refino': 'BA - Refino',
+    'Riscos e Emergência': 'BA - Segurança, Risco e Emergência',
+    'Saúde': 'BA - Saúde',
+    'Segurança do Trabalho': 'BA - Segurança, Risco e Emergência',
+    'Serviços de Mina': 'BA - Serviços de Mina',
+    'Serviços Técnicos': 'BA - Serviços Técnicos',
+    'Suprimentos e Logística': 'BA - Almoxarifado',
+    'Transporte Auxiliar': 'BA - Transporte Auxiliar'
+  },
+  CD: {
+    'Administração, Refeitório e RH': 'CD - Administração',
+    'Calcinação e Redução': 'CD - Calcinação e Redução',
+    'Engenharia de Manutenção': 'CD - Engenharia de Manutenção',
+    'Engenharia de Projetos': 'CD - Engenharia e Projetos',
+    'Expedição': 'CD - Expedição',
+    'Infraestrutura': 'CD - Infraestrutura',
+    'Laboratório': 'CD - Laboratório',
+    'Manutenção Elétrica': 'CD - Manutenção Elétrica',
+    'Manutenção Mecânica': 'CD - Manutenção Mecânica',
+    'Meio Ambiente': 'CD - Meio Ambiente',
+    'Preparação de Carga': 'CD - Preparação de Cargas',
+    'Refino': 'CD - Refino',
+    'Reflorestamento': 'CD - Silvicultura',
+    'Segurança, Medicina e Resposta à Emergência': 'CD - Segurança e Brigada',
+    'Supply Chain - Físico': 'CD - Almoxarifado',
+    'Tecnologia da Informação': 'CD - TI'
+  }
+};
+
+// === Function: getSmartsheetAreaLabel ===
+function getSmartsheetAreaLabel(insp) {
+  const unidade = getUnidadeShortCode(getInspectionUnidade(insp));
+  const setor = String(insp?.setor || '').trim();
+  const subarea = normalizeColumnTitle(insp?.subarea || '');
+
+  if (unidade === 'BA') {
+    if (setor === 'Administração e RH' && subarea.includes('refeitorio')) return 'BA - Refeitório';
+    if (setor === 'Suprimentos e Logística') {
+      if (subarea.includes('posto')) return 'BA - Posto de Combustível';
+      if (subarea.includes('patio de carretas')) return 'BA - Pátio das Carretas';
+      return 'BA - Almoxarifado';
+    }
+    if (setor === 'Manutenção - Planta Industrial' && subarea.includes('utilidades')) return 'BA - Utilidades';
+  }
+
+  if (unidade === 'CD') {
+    if (setor === 'Reflorestamento') {
+      if (subarea.includes('administracao florestal')) return 'CD - Administração Florestal';
+      if (subarea.includes('colheita')) return 'CD - Colheita';
+      if (subarea.includes('viveiro')) return 'CD - Viveiro';
+      if (subarea.includes('manutencao') || subarea.includes('maquinas') || subarea.includes('oleo diesel')) return 'CD - Manutenção Florestal';
+      return 'CD - Silvicultura';
+    }
+    if (setor === 'Administração, Refeitório e RH' && subarea.includes('rh')) return 'CD - RH';
+  }
+
+  return SMARTSHEET_AREA_LABELS[unidade]?.[setor] || `${unidade} - ${setor}`.trim();
 }
 
 // === Function: criterioSmartsheetKey ===
@@ -5642,6 +5725,7 @@ function renderSmartsheetSettings() {
   if (sheetId) sheetId.value = cfg.sheetId || '';
   if (proxyUrl) proxyUrl.value = cfg.proxyUrl || SMARTSHEET_DEFAULT_PROXY_URL;
   if (powerAutomateUrl) powerAutomateUrl.value = getPowerAutomateEmailUrl() || POWER_AUTOMATE_DEFAULT_EMAIL_URL;
+  renderSmartsheetSetorSelect();
   const pending = normalizeAppState(APP).smartsheetQueue.length;
   const ready = hasSmartsheetConfig();
   setSmartsheetStatus(
@@ -5649,6 +5733,20 @@ function renderSmartsheetSettings() {
       ? `Conexão salva. ${pending} inspeção(ões) pendente(s) para envio.`
       : `Informe o Sheet ID e configure o proxy Smartsheet. ${pending} inspeção(ões) aguardando configuração.`
   );
+}
+
+// === Function: renderSmartsheetSetorSelect ===
+function renderSmartsheetSetorSelect() {
+  const select = document.getElementById('smartsheet-setor-select');
+  if (!select) return;
+  const previous = select.value;
+  const opts = getAllSetorNames()
+    .map(setor => `<option value="${escapeHtml(setor)}">${escapeHtml(setor)}</option>`)
+    .join('');
+  select.innerHTML = `<option value="">— Escolha um setor —</option>${opts}`;
+  if (previous && [...select.options].some(opt => opt.value === previous)) {
+    select.value = previous;
+  }
 }
 
 // === Function: salvarSmartsheetConfig ===
@@ -5700,16 +5798,52 @@ async function getSmartsheetColumnMap(autoCreate = true) {
   let columns = sortSmartsheetColumns(Array.isArray(data.data) ? data.data : []);
   const buildIndex = (cols) => {
     const byTitle = {};
+    const byCompactTitle = {};
     cols
       .filter(c => !c.systemColumnType)
-      .forEach(c => { byTitle[normalizeColumnTitle(c.title)] = c; });
-    return byTitle;
+      .forEach(c => {
+        const normalized = normalizeColumnTitle(c.title);
+        const compact = compactColumnTitle(c.title);
+        if (!byTitle[normalized]) byTitle[normalized] = c;
+        if (!byCompactTitle[compact]) byCompactTitle[compact] = c;
+      });
+    return { byTitle, byCompactTitle };
   };
-  let byTitle = buildIndex(columns);
+  let columnIndex = buildIndex(columns);
+
+  const findSensoColumnByNumber = (expected) => {
+    const matchKey = /^senso_(\d+)$/.exec(expected?.key || '');
+    if (!matchKey) return null;
+    const n = Number(matchKey[1]);
+    const padded = String(n).padStart(2, '0');
+    const editableColumns = columns.filter(c => !c.systemColumnType);
+    const candidates = editableColumns.filter(c => {
+      const title = compactColumnTitle(c.title);
+      return (
+        title.includes(`notafinaldosenso${n}`) ||
+        title.includes(`notafinaldosenso${padded}`) ||
+        title.includes(`notafinalsenso${n}`) ||
+        title.includes(`notafinalsenso${padded}`) ||
+        title.includes(`notadosenso${n}`) ||
+        title.includes(`notadosenso${padded}`) ||
+        title.includes(`notasenso${n}`) ||
+        title.includes(`notasenso${padded}`)
+      );
+    });
+    return candidates[0] || null;
+  };
+
+  const findColumnByExpected = (expected) => {
+    const exactMatch = [expected.title, ...(expected.aliases || [])]
+      .map(t => columnIndex.byTitle[normalizeColumnTitle(t)] || columnIndex.byCompactTitle[compactColumnTitle(t)])
+      .find(Boolean);
+    return exactMatch || findSensoColumnByNumber(expected);
+  };
 
   const expectedColumns = getSmartsheetColumns();
   const missing = expectedColumns
-    .filter(c => ![c.title, ...(c.aliases || [])].some(t => byTitle[normalizeColumnTitle(t)]))
+    .filter(c => !findColumnByExpected(c))
+    .filter(c => !/^senso_\d+$/.test(c.key))
     .map(c => ({ title: c.title, type: 'TEXT_NUMBER', index: columns.length, width: 160 }));
 
   if (autoCreate && missing.length) {
@@ -5719,24 +5853,32 @@ async function getSmartsheetColumnMap(autoCreate = true) {
     });
     const refreshed = await smartsheetFetch(`/sheets/${cfg.sheetId}/columns?includeAll=true`);
     columns = sortSmartsheetColumns(Array.isArray(refreshed.data) ? refreshed.data : []);
-    byTitle = buildIndex(columns);
+    columnIndex = buildIndex(columns);
   }
 
   const map = {};
+  const meta = {};
   const primary = columns.find(c => c.primary) || columns[0];
   expectedColumns.forEach(expected => {
-    const match = [expected.title, ...(expected.aliases || [])]
-      .map(t => byTitle[normalizeColumnTitle(t)])
-      .find(Boolean);
-    if (match) map[expected.key] = match.id;
+    const match = findColumnByExpected(expected);
+    if (match) {
+      map[expected.key] = match.id;
+      meta[expected.key] = {
+        title: match.title,
+        locked: !!match.locked,
+        hasFormula: !!(match.formula || match.columnFormula)
+      };
+    }
   });
   if (!map.localizacao && primary) map.localizacao = primary.id;
+  map.__meta = meta;
   return map;
 }
 
 // === Function: truncateSmartsheetValue ===
 function truncateSmartsheetValue(value) {
   if (value === null || value === undefined) return '';
+  if (typeof value === 'number' || typeof value === 'boolean') return value;
   const text = String(value);
   return text.length > 3900 ? `${text.slice(0, 3900)}...` : text;
 }
@@ -5755,39 +5897,37 @@ function getSensoSmartsheetText(insp, sId, field) {
 // === Function: buildSmartsheetRowsFromInspection ===
 function buildSmartsheetRowsFromInspection(insp, columnMap) {
   const rows = [];
-  const sentAt = new Date();
   const inspAnterior = getInspecaoAnteriorMesmoLocal(insp);
   const values = {
     site: UNIDADE_LABELS[getInspectionUnidade(insp)] || getInspectionUnidade(insp),
-    area_dashboard: getDashboardAreaLabel(insp),
-    data_original: formatPeriodoOriginal(insp.periodo, insp.data),
+    area_dashboard: getSmartsheetAreaLabel(insp),
+    data_envio: formatSmartsheetDateShort(insp.data),
     nome: insp.tecnico || '',
-    localizacao: insp.subarea || insp.setor || '',
-    responsavel_comunicado: '',
-    tempo: getInspectionDurationText(insp),
-    pontuacao_final: typeof insp.notaGeral === 'number' ? Number(insp.notaGeral.toFixed(2)) : '',
-    data_envio: sentAt.toLocaleString('pt-BR'),
-    contato_gerente: '',
-    contato_coordenador: '',
-    contato_supervisor: '',
-    contato_tecnico: '',
-    contato_seguranca: ''
+    localizacao: insp.subarea || insp.setor || ''
   };
 
   SENSOS.forEach((s, si) => {
-    const mediaSenso = calcMediaSFinal(insp, s.id, inspAnterior);
-    values[`senso_${si + 1}`] = Number(mediaSenso.toFixed(2));
-    values[`comentario_s${si + 1}`] = getSensoSmartsheetText(insp, s.id, 'obs');
-    values[`recomendacao_s${si + 1}`] = getSensoSmartsheetText(insp, s.id, 'sugestao');
-    (insp.sensos?.[s.id] || []).forEach((cr, ci) => {
-      values[criterioSmartsheetKey(s.id, ci)] = cr?.nota ?? '';
+    const criteriosDebitados = getPenalidadeCriteriosS(insp, s.id, inspAnterior);
+    (insp.sensos?.[s.id] || []).forEach((criterio, ci) => {
+      const notaCriterio = calcNotaCriterioFinal(criterio, criteriosDebitados.has(ci));
+      if (typeof notaCriterio === 'number' && Number.isFinite(notaCriterio)) {
+        values[criterioSmartsheetKey(s.id, ci)] = notaCriterio;
+      }
     });
+    const mediaSenso = calcMediaSFinal(insp, s.id, inspAnterior);
+    if (typeof mediaSenso === 'number' && Number.isFinite(mediaSenso)) {
+      values[`senso_${si + 1}`] = Number(mediaSenso.toFixed(2));
+    }
   });
 
   rows.push({
     toBottom: true,
     cells: Object.entries(values)
-      .filter(([key]) => columnMap[key])
+      .filter(([key]) => {
+        if (!columnMap[key]) return false;
+        if (/^senso_\d+$/.test(key) && columnMap.__meta?.[key]?.hasFormula) return false;
+        return true;
+      })
       .map(([key, value]) => ({
         columnId: columnMap[key],
         value: truncateSmartsheetValue(value),
@@ -5808,7 +5948,7 @@ async function syncSmartsheetInspection(insp) {
   }
   const createdRowIds = [];
   for (let i = 0; i < rows.length; i += 500) {
-    const response = await smartsheetFetch(`/sheets/${cfg.sheetId}/rows`, {
+    const response = await smartsheetFetch(`/sheets/${cfg.sheetId}/rows?overrideValidation=true`, {
       method: 'POST',
       body: JSON.stringify(rows.slice(i, i + 500))
     });
@@ -5825,6 +5965,48 @@ async function syncSmartsheetInspection(insp) {
     cells: totalCells
   });
   return createdRowIds;
+}
+
+// === Function: syncSmartsheetInspectionsScoped ===
+async function syncSmartsheetInspectionsScoped(inspecoes = [], options = {}) {
+  if (!hasSmartsheetConfig()) return 0;
+  if (!navigator.onLine) {
+    setSyncStatus('offline', 'Modo offline');
+    throw new Error('Sem conexão com a internet para enviar ao Smartsheet.');
+  }
+
+  APP = normalizeAppState(APP);
+  const label = options.label ? String(options.label) : '';
+  const seen = new Set();
+  const itens = [];
+
+  (Array.isArray(inspecoes) ? inspecoes : []).forEach(insp => {
+    if (!insp?.id || seen.has(insp.id)) return;
+    seen.add(insp.id);
+    itens.push(APP.inspecoes.find(item => item.id === insp.id) || insp);
+  });
+
+  if (!itens.length) return 0;
+
+  let enviadas = 0;
+  const scopeText = label ? ` (${label})` : '';
+  setSmartsheetStatus(`Enviando ${itens.length} inspeção(ões) ao Smartsheet${scopeText}...`);
+
+  for (const insp of itens) {
+    setSmartsheetStatus(`Enviando ao Smartsheet ${enviadas + 1}/${itens.length}: ${insp.subarea || insp.setor || insp.id}`);
+    await syncSmartsheetInspection(insp);
+    insp.smartsheetSent = true;
+    APP.smartsheetQueue = APP.smartsheetQueue.filter(id => id !== insp.id);
+    enviadas += 1;
+    persistLocalApp(APP);
+  }
+
+  renderSmartsheetSettings();
+  const cfg = getSmartsheetConfig();
+  if (enviadas) {
+    setSmartsheetStatus(`Smartsheet: ${enviadas} inspeção(ões) enviada(s)${scopeText} para Sheet ID ${cfg.sheetId}.`);
+  }
+  return enviadas;
 }
 
 // === Function: syncPendingSmartsheetQueue ===
@@ -5908,6 +6090,58 @@ async function sincronizarPendentesSmartsheet() {
     console.error('Erro ao enviar pendentes Smartsheet:', e);
     setSmartsheetStatus(`Falha ao enviar pendentes: ${e.message}`, true);
     toast('Falha ao enviar pendentes ao Smartsheet.');
+  }
+}
+
+// === Function: sincronizarSetorSmartsheet ===
+async function sincronizarSetorSmartsheet() {
+  salvarSmartsheetConfig(false);
+  if (!hasSmartsheetConfig()) return;
+
+  const setor = document.getElementById('smartsheet-setor-select')?.value || '';
+  if (!setor) {
+    toast('Selecione um setor para enviar ao Smartsheet.');
+    return;
+  }
+
+  APP = normalizeAppState(APP);
+  const unidade = normalizeUnidadeCode(currentUnidade, 'CD');
+  const inspecoesSetor = APP.inspecoes.filter(insp =>
+    getInspectionUnidade(insp) === unidade &&
+    insp.setor === setor &&
+    !insp.deleted &&
+    !insp.deletedAt
+  );
+
+  if (!inspecoesSetor.length) {
+    setSmartsheetStatus(`Nenhuma inspeção encontrada para o setor ${setor} na unidade ${UNIDADE_LABELS[unidade] || unidade}.`, true);
+    toast('Nenhuma inspeção encontrada para esse setor.');
+    return;
+  }
+
+  const confirmar = confirm([
+    'Enviar dados deste setor ao Smartsheet?',
+    '',
+    `Unidade: ${UNIDADE_LABELS[unidade] || unidade}`,
+    `Setor: ${setor}`,
+    `Inspeções encontradas: ${inspecoesSetor.length}`,
+    '',
+    'Serão criadas novas linhas na planilha para esse teste.'
+  ].join('\n'));
+  if (!confirmar) {
+    setSmartsheetStatus('Envio do setor cancelado.');
+    toast('Envio cancelado.');
+    return;
+  }
+
+  try {
+    const enviadas = await syncSmartsheetInspectionsScoped(inspecoesSetor, { label: `setor ${setor}` });
+    if (!enviadas) setSmartsheetStatus('Nenhuma inspeção foi enviada ao Smartsheet.');
+    toast(`${enviadas} inspeção(ões) do setor enviada(s) ao Smartsheet.`);
+  } catch (e) {
+    console.error('Erro ao enviar setor ao Smartsheet:', e);
+    setSmartsheetStatus(`Falha ao enviar setor: ${e.message}`, true);
+    toast(`Falha ao enviar setor: ${e.message}`);
   }
 }
 
@@ -8383,6 +8617,17 @@ function formatDate(iso) {
   if (!iso) return '—';
   const d = new Date(iso);
   return d.toLocaleDateString('pt-BR', { day:'2-digit', month:'short', year:'numeric' });
+}
+
+// === Function: formatSmartsheetDateShort ===
+function formatSmartsheetDateShort(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yy = String(d.getFullYear()).slice(-2);
+  return `${dd}/${mm}/${yy}`;
 }
 
 // === Function: localLabel ===
@@ -11209,6 +11454,7 @@ async function enviarRelatorioSetorialEmail() {
     `Período: ${periodoTitulo}`,
     `Inspeções incluídas: ${inspecoesRelatorio.length}`,
     `Já enviadas anteriormente: ${jaEnviadas}`,
+    hasSmartsheetConfig() ? 'Smartsheet: enviará somente as inspeções deste setor/período.' : 'Smartsheet: não configurado; somente o e-mail será enviado.',
     `Destinatário(s): ${destinatarios.join('; ')}`,
     '',
     'Após o envio, as inspeções incluídas ficarão bloqueadas para remoção.'
@@ -11230,6 +11476,10 @@ async function enviarRelatorioSetorialEmail() {
     payload.to = to;
     localStorage.setItem(EMAIL_AUTO_TO_KEY, to);
     const pdfKb = Math.round((contentBytes.length * 3 / 4) / 1024);
+    if (hasSmartsheetConfig()) {
+      if (status) status.textContent = `PDF gerado: ${report.fileName} (${pdfKb} KB). Enviando notas do setor ao Smartsheet...`;
+      await syncSmartsheetInspectionsScoped(inspecoesRelatorio, { label: `setor ${setor} - ${periodoTitulo}` });
+    }
     if (status) status.textContent = `PDF gerado: ${report.fileName} (${pdfKb} KB). Enviando ao Power Automate...`;
     toast('Enviando relatório por e-mail...');
     await sendPowerAutomateEmailPayload(payload);
@@ -11274,6 +11524,7 @@ async function enviarRelatorioGerenciaEmail() {
     `Setores mapeados: ${setores.length}`,
     `Inspeções incluídas: ${inspecoesRelatorio.length}`,
     `Já enviadas anteriormente: ${jaEnviadas}`,
+    hasSmartsheetConfig() ? 'Smartsheet: enviará somente as inspeções desta gerência/período.' : 'Smartsheet: não configurado; somente o e-mail será enviado.',
     `Destinatário(s): ${destinatarios.join('; ')}`,
     '',
     'Após o envio, as inspeções incluídas ficarão bloqueadas para remoção.'
@@ -11295,6 +11546,10 @@ async function enviarRelatorioGerenciaEmail() {
     const payload = buildGerenciaReportEmailPayload(gerencia, attachment, to, periodo);
     localStorage.setItem(EMAIL_AUTO_TO_KEY, to);
     const pdfKb = Math.round((contentBytes.length * 3 / 4) / 1024);
+    if (hasSmartsheetConfig()) {
+      if (status) status.textContent = `PDF gerado: ${report.fileName} (${pdfKb} KB). Enviando notas da gerência ao Smartsheet...`;
+      await syncSmartsheetInspectionsScoped(inspecoesRelatorio, { label: `gerência ${gerencia} - ${periodoTitulo}` });
+    }
     if (status) status.textContent = `PDF gerado: ${report.fileName} (${pdfKb} KB). Enviando ao Power Automate...`;
     toast('Enviando relatório gerencial por e-mail...');
     await sendPowerAutomateEmailPayload(payload);
