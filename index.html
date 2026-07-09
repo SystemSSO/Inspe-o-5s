@@ -291,8 +291,8 @@ html, body {
 .foto-area svg { width: 16px; height: 16px; }
 .foto-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
 .foto-item { min-width: 0; }
-.foto-thumb { aspect-ratio: 1; border-radius: 6px; overflow: hidden; position: relative; border: 1px solid var(--border); }
-.foto-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.foto-thumb { aspect-ratio: 1; border-radius: 6px; overflow: hidden; position: relative; border: 1px solid var(--border); background: rgba(0,0,0,0.72); cursor: zoom-in; }
+.foto-thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .foto-thumb .rm-foto {
   position: absolute; top: 3px; right: 3px; width: 18px; height: 18px;
   background: rgba(0,0,0,0.7); border-radius: 50%; border: none; color: white;
@@ -8794,7 +8794,22 @@ function restoreDraftUIState() {
   const body = document.getElementById('insp-form-body');
   if (body && typeof meta.scrollTop === 'number') body.scrollTop = meta.scrollTop;
 
-  if (meta.lastSensoId && Number.isInteger(meta.lastCriterioIndex)) {
+  const targetDesvioId = meta.fotoTarget?.desvioId || meta.lastDesvioId || '';
+  let restoredTarget = null;
+  if (meta.fotoTarget?.sId && Number.isInteger(meta.fotoTarget?.ci) && targetDesvioId) {
+    restoredTarget =
+      document.getElementById(`foto-grid-desvio-${meta.fotoTarget.kind || 'abertura'}-${meta.fotoTarget.sId}-${meta.fotoTarget.ci}-${targetDesvioId}`) ||
+      document.getElementById(`foto-desvio-${meta.fotoTarget.kind || 'abertura'}-${meta.fotoTarget.sId}-${meta.fotoTarget.ci}-${targetDesvioId}`) ||
+      document.getElementById(`desvio-${meta.fotoTarget.sId}-${meta.fotoTarget.ci}-${targetDesvioId}`);
+  }
+
+  if (!restoredTarget && meta.lastFieldId) {
+    restoredTarget = document.getElementById(meta.lastFieldId);
+  }
+
+  if (restoredTarget && meta.lastAction !== 'scroll') {
+    restoredTarget.scrollIntoView({ block: 'center', behavior: 'auto' });
+  } else if (!restoredTarget && meta.lastSensoId && Number.isInteger(meta.lastCriterioIndex) && meta.lastAction !== 'scroll') {
     const card = document.getElementById(`cr-${meta.lastSensoId}-${meta.lastCriterioIndex}`);
     if (card) card.scrollIntoView({ block: 'center', behavior: 'auto' });
   }
@@ -8807,7 +8822,7 @@ function restoreDraftUIState() {
   }
 
   if (meta.fotoModalOpen && meta.fotoTarget?.sId && Number.isInteger(meta.fotoTarget?.ci)) {
-    pendingFotoTarget = { sId: meta.fotoTarget.sId, ci: meta.fotoTarget.ci };
+    pendingFotoTarget = { ...meta.fotoTarget };
     document.getElementById('modal-foto-opcao')?.classList.add('open');
   }
 }
@@ -9319,16 +9334,17 @@ function renderDesvioFotosHtml(sId, ci, desvio, kind = 'abertura') {
   const legendas = isResolucao ? (desvio.resolucaoFotoLegendas || []) : (desvio.fotoLegendas || []);
   const title = isResolucao ? 'Fotos da resolução' : 'Fotos do desvio';
   const buttonId = `foto-desvio-${kind}-${sId}-${ci}-${desvio.id}`;
+  const gridId = `foto-grid-desvio-${kind}-${sId}-${ci}-${desvio.id}`;
   return `
     <div style="margin-top:8px">
       <div class="criterio-section-title" style="margin-bottom:5px">${title}</div>
       <button type="button" class="desvio-mini-btn" id="${buttonId}" onclick="triggerFotoDesvio('${sId}',${ci},'${desvio.id}','${kind}')">+ Foto</button>
-      <div class="foto-grid" style="margin-top:7px">
+      <div class="foto-grid" id="${gridId}" style="margin-top:7px">
         ${fotos.filter(f => typeof f === 'string' && f && f !== '__ref__').map((foto, fi) => `
           <div class="foto-item">
-            <div class="foto-thumb">
+            <div class="foto-thumb" onclick="openImageModal('${foto.replace(/'/g, "\\'")}')">
               <img src="${foto}" alt="foto">
-              <button class="rm-foto" onclick="removeFotoDesvio('${sId}',${ci},'${desvio.id}',${fi},'${kind}')">×</button>
+              <button class="rm-foto" onclick="event.stopPropagation();removeFotoDesvio('${sId}',${ci},'${desvio.id}',${fi},'${kind}')">×</button>
             </div>
             <textarea class="form-input foto-caption-input" maxlength="180" placeholder="Legenda da foto ${fi + 1}" oninput="setFotoLegendaDesvio('${sId}',${ci},'${desvio.id}',${fi},'${kind}',this.value)">${escapeHtml(legendas[fi] || '')}</textarea>
           </div>`).join('')}
@@ -9473,7 +9489,15 @@ function setDesvioStatus(sId, ci, desvioId, status) {
 // === Function: triggerFotoDesvio ===
 function triggerFotoDesvio(sId, ci, desvioId, kind = 'abertura') {
   pendingFotoTarget = { sId, ci, desvioId, kind };
-  touchDraftContext({ lastSensoId: sId, lastCriterioIndex: ci, lastAction: `foto_desvio_${kind}`, fotoModalOpen: true, fotoTarget: pendingFotoTarget });
+  touchDraftContext({
+    lastSensoId: sId,
+    lastCriterioIndex: ci,
+    lastDesvioId: desvioId,
+    lastAction: `foto_desvio_${kind}`,
+    lastFieldId: `foto-desvio-${kind}-${sId}-${ci}-${desvioId}`,
+    fotoModalOpen: true,
+    fotoTarget: pendingFotoTarget
+  });
   scheduleDraftSave();
   document.getElementById('modal-foto-opcao').classList.add('open');
 }
@@ -9492,6 +9516,15 @@ function setFotoLegendaDesvio(sId, ci, desvioId, fi, kind, val) {
 function removeFotoDesvio(sId, ci, desvioId, fi, kind = 'abertura') {
   const desvio = getDesvioAtual(sId, ci, desvioId);
   if (!desvio) return;
+  touchDraftContext({
+    lastSensoId: sId,
+    lastCriterioIndex: ci,
+    lastDesvioId: desvioId,
+    lastAction: 'foto_desvio_remove',
+    lastFieldId: `foto-grid-desvio-${kind}-${sId}-${ci}-${desvioId}`,
+    fotoModalOpen: false,
+    fotoTarget: { sId, ci, desvioId, kind }
+  });
   const fotosKey = kind === 'resolucao' ? 'resolucaoFotos' : 'fotos';
   const legendasKey = kind === 'resolucao' ? 'resolucaoFotoLegendas' : 'fotoLegendas';
   if (Array.isArray(desvio[fotosKey])) desvio[fotosKey].splice(fi, 1);
@@ -9767,11 +9800,11 @@ function toggleResolved(sId, ci) {
 // === Function: openImageModal ===
 function openImageModal(imageSrc) {
   const modal = document.createElement('div');
-  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;z-index:1000;cursor:pointer;';
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.92);display:flex;align-items:center;justify-content:center;z-index:1000;cursor:zoom-out;padding:14px;';
   modal.innerHTML = `
-    <div style="position:relative;max-width:90%;max-height:90%;">
-      <img src="${imageSrc}" style="max-width:100%;max-height:90vh;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,0.5);">
-      <button onclick="this.parentElement.parentElement.remove()" style="position:absolute;top:10px;right:10px;background:var(--red);color:white;border:none;width:40px;height:40px;border-radius:50%;font-size:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>
+    <div style="position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
+      <img src="${imageSrc}" style="max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,0.5);">
+      <button onclick="event.stopPropagation();this.parentElement.parentElement.remove()" style="position:absolute;top:10px;right:10px;background:var(--red);color:white;border:none;width:40px;height:40px;border-radius:50%;font-size:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>
     </div>
   `;
   modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
@@ -9800,7 +9833,15 @@ function closeFotoModal() {
 function escolherFonteFoto(source) {
   if (!pendingFotoTarget) return;
   const { sId, ci, desvioId = '', kind = 'criterio' } = pendingFotoTarget;
-  touchDraftContext({ lastSensoId: sId, lastCriterioIndex: ci, lastAction: `foto_${source}`, fotoModalOpen: false, fotoTarget: { sId, ci } });
+  touchDraftContext({
+    lastSensoId: sId,
+    lastCriterioIndex: ci,
+    lastDesvioId: desvioId,
+    lastAction: `foto_${source}`,
+    lastFieldId: desvioId ? `foto-desvio-${kind}-${sId}-${ci}-${desvioId}` : `foto-grid-${sId}-${ci}`,
+    fotoModalOpen: false,
+    fotoTarget: { sId, ci, desvioId, kind }
+  });
   scheduleDraftSave();
   const inputId = source === 'camera' ? `foto-inp-camera-${sId}-${ci}` : `foto-inp-gallery-${sId}-${ci}`;
   document.getElementById('modal-foto-opcao').classList.remove('open');
@@ -9839,10 +9880,24 @@ function comprimirImagem(file, maxPx = 800, quality = 0.65) {
 
 // === Function: addFotos ===
 async function addFotos(sId, ci, inp) {
-  touchDraftContext({ lastSensoId: sId, lastCriterioIndex: ci, lastAction: 'foto_add', lastFieldId: `foto-grid-${sId}-${ci}` });
   const files = Array.from(inp.files);
   const desvioId = inp.dataset.desvioId || '';
   const fotoKind = inp.dataset.fotoKind || 'criterio';
+  const targetMeta = {
+    sId,
+    ci,
+    desvioId,
+    kind: fotoKind
+  };
+  touchDraftContext({
+    lastSensoId: sId,
+    lastCriterioIndex: ci,
+    lastDesvioId: desvioId,
+    lastAction: 'foto_add',
+    lastFieldId: desvioId ? `foto-grid-desvio-${fotoKind}-${sId}-${ci}-${desvioId}` : `foto-grid-${sId}-${ci}`,
+    fotoModalOpen: false,
+    fotoTarget: targetMeta
+  });
   for (const file of files) {
     try {
       toast('Processando foto...');
@@ -9876,7 +9931,18 @@ async function addFotos(sId, ci, inp) {
   inp.dataset.desvioId = '';
   inp.dataset.fotoKind = '';
   inp.value = '';
-  if (desvioId) renderInspecaoForm();
+  if (desvioId) {
+    touchDraftContext({
+      lastSensoId: sId,
+      lastCriterioIndex: ci,
+      lastDesvioId: desvioId,
+      lastAction: 'foto_add_done',
+      lastFieldId: `foto-grid-desvio-${fotoKind}-${sId}-${ci}-${desvioId}`,
+      fotoModalOpen: false,
+      fotoTarget: targetMeta
+    });
+    renderInspecaoForm();
+  }
   toast('Fotos adicionadas!');
 }
 
@@ -9889,9 +9955,9 @@ function renderFotoGrid(sId, ci) {
   if (!grid) return;
   grid.innerHTML = fotos.map((f, fi) => `
     <div class="foto-item">
-      <div class="foto-thumb">
+      <div class="foto-thumb" onclick="openImageModal('${f.replace(/'/g, "\\'")}')">
         <img src="${f}" alt="foto">
-        <button class="rm-foto" onclick="removeFoto('${sId}',${ci},${fi})">×</button>
+        <button class="rm-foto" onclick="event.stopPropagation();removeFoto('${sId}',${ci},${fi})">×</button>
       </div>
       <textarea class="form-input foto-caption-input" maxlength="180" placeholder="Legenda da foto ${fi + 1}" oninput="setFotoLegenda('${sId}',${ci},${fi},this.value)">${escapeHtml(criterio.fotoLegendas[fi] || '')}</textarea>
     </div>`).join('');
