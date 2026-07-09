@@ -3717,6 +3717,8 @@ const AUTH_CACHE_KEY = 'aa5s_offline_auth_v1';
 const AUTH_SESSION_KEY = 'aa5s_auth_session_v1';
 const PENDING_OFFLINE_AUTH_KEY = 'aa5s_pending_offline_auth_v1';
 const LAST_SYNC_ERROR_KEY = 'aa5s_last_sync_error_v1';
+const TECNICOS_DIRTY_KEY = 'aa5s_tecnicos_dirty_v1';
+const TECNICOS_LAST_SYNC_HASH_KEY = 'aa5s_tecnicos_last_sync_hash_v1';
 const CLOUD_AUTO_REFRESH_MS = 3 * 60 * 1000;
 const CLOUD_MIN_SYNC_INTERVAL_MS = 60 * 1000;
 const EMAIL_AUTO_ENABLED_KEY = 'aa5s_email_auto_enabled';
@@ -6440,11 +6442,7 @@ async function syncPendingQueue() {
   let syncStage = 'fila pendente';
 
   try {
-    // Evita sobrescrever técnicos no Firebase com lista vazia após limpeza local.
-    if (Array.isArray(APP.tecnicos) && APP.tecnicos.length > 0) {
-      syncStage = 'enviando técnicos';
-      await db.collection("config").doc("geral").set({ tecnicos: APP.tecnicos }, { merge: true });
-    }
+    await syncTecnicosIfNeeded();
 
     const deletados = [...APP.deleteQueue];
     for (const inspId of deletados) {
@@ -6540,7 +6538,10 @@ async function syncFromCloud(options = {}) {
     // Buscar técnicos
     syncStage = 'buscando configuração';
     const config = await db.collection("config").doc("geral").get();
-    if (config.exists && Array.isArray(config.data().tecnicos)) APP.tecnicos = config.data().tecnicos;
+    if (config.exists && Array.isArray(config.data().tecnicos)) {
+      APP.tecnicos = config.data().tecnicos;
+      clearTecnicosDirty();
+    }
 
     // Buscar todas as inspeções (paginação automática)
     const cloudInsps = [];
@@ -6678,6 +6679,43 @@ function setSyncErrorStatus(error, context = '') {
   const label = getSyncErrorLabel(error);
   setSyncStatus(navigator.onLine ? 'syncing' : 'offline', context ? `${label} - ${context}` : label);
   return info;
+}
+
+function getTecnicosSyncHash(tecnicos = APP.tecnicos) {
+  return JSON.stringify([...(Array.isArray(tecnicos) ? tecnicos : [])].map(t => String(t || '').trim()).filter(Boolean).sort());
+}
+
+function markTecnicosDirty() {
+  try {
+    localStorage.setItem(TECNICOS_DIRTY_KEY, '1');
+  } catch {}
+}
+
+function clearTecnicosDirty() {
+  try {
+    localStorage.removeItem(TECNICOS_DIRTY_KEY);
+    localStorage.setItem(TECNICOS_LAST_SYNC_HASH_KEY, getTecnicosSyncHash());
+  } catch {}
+}
+
+function shouldSyncTecnicos() {
+  try {
+    if (localStorage.getItem(TECNICOS_DIRTY_KEY) !== '1') return false;
+    return localStorage.getItem(TECNICOS_LAST_SYNC_HASH_KEY) !== getTecnicosSyncHash();
+  } catch {
+    return false;
+  }
+}
+
+async function syncTecnicosIfNeeded() {
+  if (!Array.isArray(APP.tecnicos) || !APP.tecnicos.length || !shouldSyncTecnicos()) return;
+  try {
+    await db.collection("config").doc("geral").set({ tecnicos: APP.tecnicos }, { merge: true });
+    clearTecnicosDirty();
+  } catch (error) {
+    console.warn('Não foi possível sincronizar técnicos agora. As inspeções continuarão sincronizando.', error);
+    rememberLastSyncError(error, 'enviando técnicos');
+  }
 }
 
 // === Function: ensureCurrentTecInList ===
@@ -7559,6 +7597,7 @@ function addTecnico() {
   if (!nome) return;
   if (!APP.tecnicos.includes(nome)) {
     APP.tecnicos.push(nome);
+    markTecnicosDirty();
     saveData(APP);
   }
   inp.value = '';
