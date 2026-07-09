@@ -3704,6 +3704,8 @@ function inspectionIsCurrentUnit(insp) {
 //  STORAGE (IndexedDB com fallback localStorage)
 // ════════════════════════════════════════════════
 const DB_KEY = 'aa5s_data';
+const LOCAL_PHOTOS_DB_NAME = 'aa5s_local_photos_v1';
+const LOCAL_PHOTOS_STORE = 'inspection_photos';
 const DRAFT_KEY = 'aa5s_draft';
 const DRAFTS_KEY = 'aa5s_drafts_v2';
 const FINALIZED_BACKUPS_KEY = 'aa5s_finalized_backups_v1';
@@ -3938,9 +3940,114 @@ function normalizeAppState(data) {
   };
 }
 
+// === Function: openLocalPhotosDb ===
+function openLocalPhotosDb() {
+  return new Promise((resolve, reject) => {
+    if (!window.indexedDB) {
+      reject(new Error('IndexedDB indisponível neste navegador.'));
+      return;
+    }
+    const req = indexedDB.open(LOCAL_PHOTOS_DB_NAME, 1);
+    req.onupgradeneeded = () => {
+      const database = req.result;
+      if (!database.objectStoreNames.contains(LOCAL_PHOTOS_STORE)) {
+        database.createObjectStore(LOCAL_PHOTOS_STORE, { keyPath: 'id' });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error || new Error('Falha ao abrir IndexedDB.'));
+  });
+}
+
+// === Function: withLocalPhotosStore ===
+async function withLocalPhotosStore(mode, action) {
+  const database = await openLocalPhotosDb();
+  try {
+    return await new Promise((resolve, reject) => {
+      const tx = database.transaction(LOCAL_PHOTOS_STORE, mode);
+      const store = tx.objectStore(LOCAL_PHOTOS_STORE);
+      let result;
+      tx.oncomplete = () => resolve(result);
+      tx.onerror = () => reject(tx.error || new Error('Falha no IndexedDB.'));
+      tx.onabort = () => reject(tx.error || new Error('Operação IndexedDB cancelada.'));
+      try {
+        result = action(store);
+      } catch (error) {
+        tx.abort();
+        reject(error);
+      }
+    });
+  } finally {
+    database.close();
+  }
+}
+
+// === Function: requestToPromise ===
+function requestToPromise(req) {
+  return new Promise((resolve, reject) => {
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error || new Error('Falha no IndexedDB.'));
+  });
+}
+
+// === Function: saveLocalInspectionPhotos ===
+async function saveLocalInspectionPhotos(inspId, fotosDoc) {
+  if (!inspId || !fotosDoc || !Object.keys(fotosDoc).length) return;
+  await withLocalPhotosStore('readwrite', store => {
+    store.put({
+      id: inspId,
+      fotos: fotosDoc,
+      updatedAt: new Date().toISOString()
+    });
+  });
+}
+
+// === Function: getLocalInspectionPhotos ===
+async function getLocalInspectionPhotos(inspId) {
+  if (!inspId) return null;
+  return await withLocalPhotosStore('readonly', store => {
+    const req = store.get(inspId);
+    req.onsuccess = () => {};
+    return req;
+  }).then(req => req?.result || null);
+}
+
+// === Function: deleteLocalInspectionPhotos ===
+async function deleteLocalInspectionPhotos(inspId) {
+  if (!inspId) return;
+  await withLocalPhotosStore('readwrite', store => store.delete(inspId));
+}
+
+// === Function: prepareLocalPersistState ===
+function prepareLocalPersistState(data = APP) {
+  const state = normalizeAppState(JSON.parse(JSON.stringify(normalizeAppState(data))));
+  const photoDocs = [];
+  state.inspecoes.forEach(insp => {
+    if (!insp?.id) return;
+    const fotosDoc = extractInspectionPhotosForSync(insp);
+    if (Object.keys(fotosDoc).length) photoDocs.push({ id: insp.id, fotosDoc });
+  });
+  return { state, photoDocs };
+}
+
 // === Function: persistLocalApp ===
 function persistLocalApp(data = APP) {
-  localStorage.setItem(DB_KEY, JSON.stringify(normalizeAppState(data)));
+  const { state, photoDocs } = prepareLocalPersistState(data);
+  localStorage.setItem(DB_KEY, JSON.stringify(state));
+  photoDocs.forEach(item => {
+    saveLocalInspectionPhotos(item.id, item.fotosDoc).catch(e => {
+      console.warn('Não foi possível salvar fotos locais no IndexedDB:', e);
+    });
+  });
+}
+
+// === Function: persistLocalAppDurable ===
+async function persistLocalAppDurable(data = APP) {
+  const { state, photoDocs } = prepareLocalPersistState(data);
+  for (const item of photoDocs) {
+    await saveLocalInspectionPhotos(item.id, item.fotosDoc);
+  }
+  localStorage.setItem(DB_KEY, JSON.stringify(state));
 }
 
 // === Function: loadData ===
@@ -3973,7 +4080,7 @@ let draftUIState = {
 async function saveData(d) {
   try {
     APP = normalizeAppState(d);
-    persistLocalApp(APP);
+    await persistLocalAppDurable(APP);
     scheduleSyncQueue();
     return true;
   } catch (e) {
@@ -4008,6 +4115,7 @@ function enqueueDeleteInspection(inspId) {
   APP.smartsheetQueue = APP.smartsheetQueue.filter(id => id !== inspId);
   clearFinalizedInspectionBackup(inspId);
   clearDraft({ id: inspId, __isEditing: true, __originalId: inspId });
+  deleteLocalInspectionPhotos(inspId).catch(() => {});
   persistLocalApp(APP);
 }
 
@@ -4027,6 +4135,7 @@ async function deleteInspectionFromFirebaseNow(inspId) {
     await db.collection("inspecoes").doc(inspId).set(deletedPayload, { merge: true });
   }
   await db.collection("inspecoes_fotos").doc(inspId).delete().catch(() => {});
+  deleteLocalInspectionPhotos(inspId).catch(() => {});
   APP.deleteQueue = APP.deleteQueue.filter(id => id !== inspId);
   APP.syncQueue = APP.syncQueue.filter(id => id !== inspId);
   APP.smartsheetQueue = APP.smartsheetQueue.filter(id => id !== inspId);
@@ -6265,6 +6374,55 @@ function restoreInspectionPhotosFromDoc(insp, fotosDoc) {
   });
 }
 
+// === Function: restoreLocalPhotosForInspection ===
+async function restoreLocalPhotosForInspection(insp) {
+  if (!insp?.id || !inspectionHasPhotoRefs(insp)) return insp;
+  try {
+    const localPhotos = await getLocalInspectionPhotos(insp.id);
+    if (localPhotos?.fotos) restoreInspectionPhotosFromDoc(insp, localPhotos.fotos);
+  } catch (e) {
+    console.warn('Não foi possível restaurar fotos locais:', e);
+  }
+  return insp;
+}
+
+// === Function: restoreLocalPhotosForAppState ===
+async function restoreLocalPhotosForAppState(appState = APP) {
+  const app = normalizeAppState(appState);
+  const withRefs = app.inspecoes.filter(inspectionHasPhotoRefs);
+  if (!withRefs.length) return app;
+  await Promise.all(withRefs.map(restoreLocalPhotosForInspection));
+  APP = normalizeAppState(app);
+  refreshAfterDataSync();
+  return APP;
+}
+
+// === Function: ensureInspectionPhotosAvailable ===
+async function ensureInspectionPhotosAvailable(insp, options = {}) {
+  if (!insp?.id || !inspectionHasPhotoRefs(insp)) return true;
+  await restoreLocalPhotosForInspection(insp);
+  if (!inspectionHasPhotoRefs(insp)) return true;
+  if (!navigator.onLine || !hasFirebaseConfig() || !auth.currentUser) return false;
+
+  const showStatus = options.showStatus !== false;
+  const syncStage = `buscando fotos ${insp.id}`;
+  try {
+    if (showStatus) setSyncStatus('syncing', 'Buscando fotos da inspeção...');
+    const fotosDoc = await db.collection("inspecoes_fotos").doc(insp.id).get();
+    const fotos = fotosDoc.exists ? fotosDoc.data() : {};
+    restoreInspectionPhotosFromDoc(insp, fotos);
+    if (Object.keys(fotos || {}).length) {
+      await saveLocalInspectionPhotos(insp.id, fotos).catch(() => {});
+    }
+    return true;
+  } catch (e) {
+    console.warn('Erro ao buscar fotos da inspeção:', e);
+    setSyncErrorStatus(e, syncStage);
+    if (options.toastOnError !== false) toast(`Não foi possível carregar as fotos: ${getSyncErrorLabel(e)}.`);
+    return false;
+  }
+}
+
 // === Function: syncPendingQueue ===
 async function syncPendingQueue() {
   if (syncInProgress) return;
@@ -6322,6 +6480,7 @@ async function syncPendingQueue() {
         continue;
       }
       if (!isUnitAllowed(getInspectionUnidade(insp))) continue;
+      await restoreLocalPhotosForInspection(insp);
 
       // Separa os dados: inspeção sem fotos + fotos em doc separado (evita limite 1MB)
       const inspSemFotos = JSON.parse(JSON.stringify(insp));
@@ -6377,6 +6536,7 @@ async function syncFromCloud(options = {}) {
   let syncStage = 'iniciando sincronização';
   try {
     APP = restoreFinalizedInspectionBackups(APP);
+    await restoreLocalPhotosForAppState(APP);
     // Buscar técnicos
     syncStage = 'buscando configuração';
     const config = await db.collection("config").doc("geral").get();
@@ -6398,22 +6558,6 @@ async function syncFromCloud(options = {}) {
       });
       if (snapshot.size < pageSize) break;
       lastDoc = snapshot.docs[snapshot.docs.length - 1];
-    }
-
-    // Restaurar fotos de documentos separados
-    for (const insp of cloudInsps) {
-      if (!insp?.id) continue;
-      if (inspectionHasPhotoRefs(insp)) {
-        try {
-          syncStage = `buscando fotos ${insp.id}`;
-          const fotosDoc = await db.collection("inspecoes_fotos").doc(insp.id).get();
-          if (fotosDoc.exists) {
-            restoreInspectionPhotosFromDoc(insp, fotosDoc.data());
-          } else {
-            restoreInspectionPhotosFromDoc(insp, {});
-          }
-        } catch(e) { console.warn("Erro ao buscar fotos:", e); }
-      }
     }
 
     const merged = {};
@@ -6768,7 +6912,8 @@ function startAppAfterLogin(profile = null) {
     applyUnitAccess(getAllowedUnitsFromProfile(profile || getAuthSession()));
     navTo('home');
     if (auth.currentUser) {
-      syncFromCloud({ force: true }).finally(() => scheduleSyncQueue(0));
+      restoreLocalPhotosForAppState()
+        .finally(() => syncFromCloud({ force: true }).finally(() => scheduleSyncQueue(0)));
     }
     return;
   }
@@ -6783,7 +6928,8 @@ function startAppAfterLogin(profile = null) {
   if (currentTec) document.getElementById('home-tec-name').textContent = currentTec;
   renderHome();
   navTo('home');
-  syncFromCloud({ force: true }).finally(() => scheduleSyncQueue(0));
+  restoreLocalPhotosForAppState()
+    .finally(() => syncFromCloud({ force: true }).finally(() => scheduleSyncQueue(0)));
   startCloudAutoRefresh();
 }
 
@@ -10263,6 +10409,7 @@ async function salvarInspecao() {
     delete currentInsp.__draftKindLabel;
 
     const savedInsp = JSON.parse(JSON.stringify(currentInsp));
+    const appBeforeSave = JSON.parse(JSON.stringify(APP));
     if (isEditing) {
       const idx = APP.inspecoes.findIndex(i => i.id === originalId);
       if (idx >= 0) APP.inspecoes[idx] = savedInsp;
@@ -10270,12 +10417,15 @@ async function salvarInspecao() {
     } else {
       APP.inspecoes.push(savedInsp);
     }
-    enqueueSyncInspection(savedInsp.id);
-    enqueueSmartsheetInspection(savedInsp.id);
+    APP = normalizeAppState(APP);
+    if (!APP.syncQueue.includes(savedInsp.id)) APP.syncQueue.push(savedInsp.id);
+    APP.deleteQueue = APP.deleteQueue.filter(id => id !== savedInsp.id);
+    if (!APP.smartsheetQueue.includes(savedInsp.id)) APP.smartsheetQueue.push(savedInsp.id);
 
     const savedLocally = await saveData(APP);
     const persistedForSync = savedLocally && isInspectionPersistedForSync(savedInsp.id);
     if (!persistedForSync) {
+      APP = normalizeAppState(appBeforeSave);
       toast('Não foi possível confirmar o salvamento local. O rascunho foi mantido para evitar perda.');
       return;
     }
@@ -10362,9 +10512,15 @@ function renderHistorico() {
 //  DETALHE / COMPARAÇÃO
 
 // === Function: openDetalhe ===
-function openDetalhe(id) {
+async function openDetalhe(id) {
   const insp = APP.inspecoes.find(i => i.id === id);
   if (!insp) return;
+  if (inspectionHasPhotoRefs(insp)) {
+    const modalBody = document.getElementById('modal-detalhe-body');
+    if (modalBody) modalBody.innerHTML = '<div style="padding:18px;text-align:center;color:var(--text2)">Carregando fotos da inspeção...</div>';
+    document.getElementById('modal-detalhe')?.classList.add('open');
+    await ensureInspectionPhotosAvailable(insp, { toastOnError: true });
+  }
   const baseRef = insp.baseId ? APP.inspecoes.find(i => i.id === insp.baseId) : null;
   const base = sameLocal(insp, baseRef) ? baseRef : null;
   const recebidas = getPendenciasRecebidas(insp.setor, insp.data);
@@ -10979,13 +11135,14 @@ async function enviarRelatorioGerenciaEmail() {
 }
 
 // === Function: editarInspecao ===
-function editarInspecao(id) {
+async function editarInspecao(id) {
   const insp = APP.inspecoes.find(i => i.id === id);
   if (!insp) { toast('Inspeção não encontrada.'); return; }
   if (isInspectionEmailSent(insp)) {
     toast('Esta inspeção já foi enviada por e-mail e não pode ser editada.');
     return;
   }
+  await ensureInspectionPhotosAvailable(insp, { toastOnError: true });
   document.getElementById('modal-detalhe').classList.remove('open');
   currentInsp = JSON.parse(JSON.stringify(insp));
   currentInsp.__isEditing = true;
@@ -13204,6 +13361,8 @@ async function gerarPDFInsp(id, options = {}) {
   const baseRef = insp.baseId ? APP.inspecoes.find(i => i.id === insp.baseId) : null;
   const base = sameLocal(insp, baseRef) ? baseRef : null;
   const baseComparativa = base || getInspecaoAnteriorMesmoLocal(insp);
+  await ensureInspectionPhotosAvailable(insp, { toastOnError: shouldToast });
+  if (baseComparativa) await ensureInspectionPhotosAvailable(baseComparativa, { toastOnError: false });
   const pendenciasResolvidas = getPendenciasResolvidas(insp, baseComparativa);
   const pendenciasRecebidas = getPendenciasRecebidas(insp.setor, insp.data);
 
