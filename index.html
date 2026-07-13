@@ -1388,6 +1388,24 @@ body:not(.light-mode) .form-label {
   color: #f1f5f9;
 }
 .sector-card-head:hover .sector-sub { color: var(--text); }
+.sector-general-score {
+  margin-left: auto;
+  text-align: right;
+  white-space: nowrap;
+}
+.sector-general-score-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text2);
+}
+.sector-general-score-value {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 800;
+}
 .sector-chevron {
   width: 24px; height: 24px;
   display: flex; align-items: center; justify-content: center;
@@ -5901,7 +5919,7 @@ function buildSmartsheetRowsFromInspection(insp, columnMap) {
   const values = {
     site: UNIDADE_LABELS[getInspectionUnidade(insp)] || getInspectionUnidade(insp),
     area_dashboard: getSmartsheetAreaLabel(insp),
-    data_envio: formatSmartsheetDateShort(insp.data),
+    data_envio: formatSmartsheetDateShort(new Date()),
     nome: insp.tecnico || '',
     localizacao: insp.subarea || insp.setor || ''
   };
@@ -5914,7 +5932,9 @@ function buildSmartsheetRowsFromInspection(insp, columnMap) {
         values[criterioSmartsheetKey(s.id, ci)] = notaCriterio;
       }
     });
-    const mediaSenso = calcMediaSFinal(insp, s.id, inspAnterior);
+    const criteriosSenso = insp.sensos?.[s.id] || [];
+    const temNotaNumerica = criteriosSenso.some(criterio => typeof criterio?.nota === 'number');
+    const mediaSenso = temNotaNumerica ? calcMediaSFinal(insp, s.id, inspAnterior) : null;
     if (typeof mediaSenso === 'number' && Number.isFinite(mediaSenso)) {
       values[`senso_${si + 1}`] = Number(mediaSenso.toFixed(2));
     }
@@ -5935,6 +5955,86 @@ function buildSmartsheetRowsFromInspection(insp, columnMap) {
       }))
   });
   return rows;
+}
+
+// Gera uma unica linha com a media das subareas do mesmo setor e periodo.
+// As notas dos sensos consolidadas fazem a formula de nota final do Smartsheet
+// representar a media geral do setor, em vez da nota isolada de cada subarea.
+function buildSmartsheetSectorAverageRows(inspecoes, columnMap) {
+  const itens = (Array.isArray(inspecoes) ? inspecoes : []).filter(Boolean);
+  if (!itens.length) return [];
+
+  const referencia = itens[0];
+  const tecnicos = [...new Set(itens.map(item => String(item.tecnico || '').trim()).filter(Boolean))];
+  const values = {
+    site: UNIDADE_LABELS[getInspectionUnidade(referencia)] || getInspectionUnidade(referencia),
+    area_dashboard: getSmartsheetAreaLabel(referencia),
+    data_envio: formatSmartsheetDateShort(new Date()),
+    nome: tecnicos.join('; '),
+    localizacao: referencia.setor || ''
+  };
+
+  SENSOS.forEach((s, si) => {
+    const totalCriterios = Math.max(0, ...itens.map(item => item.sensos?.[s.id]?.length || 0));
+    for (let ci = 0; ci < totalCriterios; ci++) {
+      const mediaCriterio = averageNumbers(itens.map(item => {
+        const criterio = item.sensos?.[s.id]?.[ci];
+        if (!criterio) return null;
+        const debitados = getPenalidadeCriteriosS(
+          item,
+          s.id,
+          getInspecaoAnteriorMesmoLocal(item)
+        );
+        return calcNotaCriterioFinal(criterio, debitados.has(ci));
+      }));
+      if (typeof mediaCriterio === 'number' && Number.isFinite(mediaCriterio)) {
+        values[criterioSmartsheetKey(s.id, ci)] = Number(mediaCriterio.toFixed(2));
+      } else if (itens.every(item => item.sensos?.[s.id]?.[ci]?.nota === 'NA')) {
+        values[criterioSmartsheetKey(s.id, ci)] = 'N/A';
+      }
+    }
+
+    const mediasSensoNumericas = itens.map(item => {
+      const criterios = item.sensos?.[s.id] || [];
+      if (!criterios.some(criterio => typeof criterio?.nota === 'number')) return null;
+      return calcMediaSFinal(item, s.id, getInspecaoAnteriorMesmoLocal(item));
+    });
+    const mediaSetor = averageNumbers(mediasSensoNumericas);
+    if (typeof mediaSetor === 'number' && Number.isFinite(mediaSetor)) {
+      values[`senso_${si + 1}`] = Number(mediaSetor.toFixed(2));
+    }
+  });
+
+  return [{
+    toBottom: true,
+    cells: Object.entries(values)
+      .filter(([key]) => {
+        if (!columnMap[key]) return false;
+        if (/^senso_\d+$/.test(key) && columnMap.__meta?.[key]?.hasFormula) return false;
+        return true;
+      })
+      .map(([key, value]) => ({
+        columnId: columnMap[key],
+        value: truncateSmartsheetValue(value),
+        strict: false
+      }))
+  }];
+}
+
+async function syncSmartsheetSectorAverage(inspecoes) {
+  const columnMap = await getSmartsheetColumnMap(true);
+  const rows = buildSmartsheetSectorAverageRows(inspecoes, columnMap);
+  const cfg = getSmartsheetConfig();
+  if (!rows[0]?.cells?.length) {
+    throw new Error('Nenhuma coluna do Smartsheet foi reconhecida para envio.');
+  }
+  const response = await smartsheetFetch(`/sheets/${cfg.sheetId}/rows?overrideValidation=true`, {
+    method: 'POST',
+    body: JSON.stringify(rows)
+  });
+  const createdRows = Array.isArray(response?.result) ? response.result : [];
+  if (!createdRows.length) throw new Error('O Smartsheet não confirmou a criação da linha.');
+  return createdRows.map(row => row.id).filter(Boolean);
 }
 
 // === Function: syncSmartsheetInspection ===
@@ -5988,15 +6088,25 @@ async function syncSmartsheetInspectionsScoped(inspecoes = [], options = {}) {
 
   if (!itens.length) return 0;
 
+  const grupos = new Map();
+  itens.forEach(insp => {
+    const chave = [getInspectionUnidade(insp), insp.setor || '', insp.periodo || ''].join('||');
+    if (!grupos.has(chave)) grupos.set(chave, []);
+    grupos.get(chave).push(insp);
+  });
+
   let enviadas = 0;
   const scopeText = label ? ` (${label})` : '';
-  setSmartsheetStatus(`Enviando ${itens.length} inspeção(ões) ao Smartsheet${scopeText}...`);
+  setSmartsheetStatus(`Enviando ${grupos.size} média(s) de setor ao Smartsheet${scopeText}...`);
 
-  for (const insp of itens) {
-    setSmartsheetStatus(`Enviando ao Smartsheet ${enviadas + 1}/${itens.length}: ${insp.subarea || insp.setor || insp.id}`);
-    await syncSmartsheetInspection(insp);
-    insp.smartsheetSent = true;
-    APP.smartsheetQueue = APP.smartsheetQueue.filter(id => id !== insp.id);
+  for (const grupo of grupos.values()) {
+    const referencia = grupo[0];
+    setSmartsheetStatus(`Enviando ao Smartsheet ${enviadas + 1}/${grupos.size}: média geral de ${referencia.setor || referencia.id}`);
+    await syncSmartsheetSectorAverage(grupo);
+    grupo.forEach(insp => {
+      insp.smartsheetSent = true;
+      APP.smartsheetQueue = APP.smartsheetQueue.filter(id => id !== insp.id);
+    });
     enviadas += 1;
     persistLocalApp(APP);
   }
@@ -6004,7 +6114,7 @@ async function syncSmartsheetInspectionsScoped(inspecoes = [], options = {}) {
   renderSmartsheetSettings();
   const cfg = getSmartsheetConfig();
   if (enviadas) {
-    setSmartsheetStatus(`Smartsheet: ${enviadas} inspeção(ões) enviada(s)${scopeText} para Sheet ID ${cfg.sheetId}.`);
+    setSmartsheetStatus(`Smartsheet: ${enviadas} média(s) geral(is) de setor enviada(s)${scopeText} para Sheet ID ${cfg.sheetId}.`);
   }
   return enviadas;
 }
@@ -6020,28 +6130,15 @@ async function syncPendingSmartsheetQueue() {
   const pendentes = [...APP.smartsheetQueue];
   if (!pendentes.length) return 0;
 
-  let enviadas = 0;
-  setSmartsheetStatus(`Enviando ${pendentes.length} inspeção(ões) ao Smartsheet...`);
-  for (const inspId of pendentes) {
-    const insp = APP.inspecoes.find(i => i.id === inspId);
-    if (!insp) {
-      APP.smartsheetQueue = APP.smartsheetQueue.filter(id => id !== inspId);
-      persistLocalApp(APP);
-      continue;
-    }
-    setSmartsheetStatus(`Enviando ao Smartsheet ${enviadas + 1}/${pendentes.length}: ${insp.subarea || insp.setor || insp.id}`);
-    await syncSmartsheetInspection(insp);
-    insp.smartsheetSent = true;
-    enviadas += 1;
-    APP.smartsheetQueue = APP.smartsheetQueue.filter(id => id !== inspId);
-    persistLocalApp(APP);
-  }
-  renderSmartsheetSettings();
-  const cfg = getSmartsheetConfig();
-  if (enviadas) {
-    setSmartsheetStatus(`Smartsheet: ${enviadas} inspeção(ões) enviada(s) para Sheet ID ${cfg.sheetId}.`);
-    toast(`${enviadas} inspeção(ões) enviada(s) ao Smartsheet.`);
-  }
+  const inspecoesPendentes = pendentes
+    .map(inspId => APP.inspecoes.find(item => item.id === inspId))
+    .filter(Boolean);
+  const idsExistentes = new Set(inspecoesPendentes.map(item => item.id));
+  APP.smartsheetQueue = APP.smartsheetQueue.filter(id => idsExistentes.has(id));
+  persistLocalApp(APP);
+
+  const enviadas = await syncSmartsheetInspectionsScoped(inspecoesPendentes, { label: 'pendentes' });
+  if (enviadas) toast(`${enviadas} média(s) geral(is) de setor enviada(s) ao Smartsheet.`);
   return enviadas;
 }
 
@@ -8406,6 +8503,22 @@ function sectorCardListHTML() {
 
     const areaKeys = Object.keys(areasMap);
     const ultimaSetor = inspecoesSetor[0];
+    const ultimoPeriodoCodigo = getInspectionPeriodCodeForReport(ultimaSetor);
+    const inspecoesUltimoPeriodo = inspecoesSetor.filter(insp =>
+      getInspectionPeriodCodeForReport(insp) === ultimoPeriodoCodigo
+    );
+    const notasPorArea = {};
+    inspecoesUltimoPeriodo.forEach(insp => {
+      if (typeof insp.notaGeral !== 'number' || !Number.isFinite(insp.notaGeral)) return;
+      const areaKey = insp.subarea || '__setor__';
+      if (!notasPorArea[areaKey]) notasPorArea[areaKey] = [];
+      notasPorArea[areaKey].push(insp.notaGeral);
+    });
+    const notaGeralSetor = averageNumbers(
+      Object.values(notasPorArea).map(notas => averageNumbers(notas))
+    );
+    const notaGeralSetorTxt = notaGeralSetor !== null ? notaGeralSetor.toFixed(2) : '—';
+    const notaGeralSetorCor = notaGeralSetor !== null ? notaCor(notaGeralSetor) : 'var(--text2)';
     const areasInspecionadas = new Set(
       areaKeys.map(k => k === '__setor__' ? 'Área geral do setor' : k)
     );
@@ -8480,6 +8593,10 @@ function sectorCardListHTML() {
           <div>
             <div class="sector-title">${setor}</div>
             <div class="sector-sub">${resumoSetor}</div>
+          </div>
+          <div class="sector-general-score" title="Média das subáreas no último período">
+            <span class="sector-general-score-label">Nota geral do setor</span>
+            <span class="sector-general-score-value" style="color:${notaGeralSetorCor}">${notaGeralSetorTxt}</span>
           </div>
           <div class="sector-chevron">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
