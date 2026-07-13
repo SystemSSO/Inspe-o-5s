@@ -2848,12 +2848,19 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
         <label class="form-label">Teste por setor</label>
         <select class="form-select" id="smartsheet-setor-select"></select>
       </div>
+      <div class="form-group">
+        <label class="form-label">Teste por gerência</label>
+        <select class="form-select" id="smartsheet-gerencia-select"></select>
+      </div>
       <button class="btn-primary" onclick="salvarSmartsheetConfig()">
         <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 13l4 4L16 7"/></svg>
         Salvar conexão
       </button>
       <button class="btn-secondary" onclick="sincronizarSetorSmartsheet()" style="margin-top:8px">
         Enviar setor selecionado
+      </button>
+      <button class="btn-secondary" onclick="sincronizarGerenciaSmartsheet()" style="margin-top:8px">
+        Enviar gerência selecionada
       </button>
       <button class="btn-secondary" onclick="testarSmartsheetConexao()" style="margin-top:8px">
         Testar conexão
@@ -5744,6 +5751,7 @@ function renderSmartsheetSettings() {
   if (proxyUrl) proxyUrl.value = cfg.proxyUrl || SMARTSHEET_DEFAULT_PROXY_URL;
   if (powerAutomateUrl) powerAutomateUrl.value = getPowerAutomateEmailUrl() || POWER_AUTOMATE_DEFAULT_EMAIL_URL;
   renderSmartsheetSetorSelect();
+  renderSmartsheetGerenciaSelect();
   const pending = normalizeAppState(APP).smartsheetQueue.length;
   const ready = hasSmartsheetConfig();
   setSmartsheetStatus(
@@ -5762,6 +5770,21 @@ function renderSmartsheetSetorSelect() {
     .map(setor => `<option value="${escapeHtml(setor)}">${escapeHtml(setor)}</option>`)
     .join('');
   select.innerHTML = `<option value="">— Escolha um setor —</option>${opts}`;
+  if (previous && [...select.options].some(opt => opt.value === previous)) {
+    select.value = previous;
+  }
+}
+
+// === Function: renderSmartsheetGerenciaSelect ===
+function renderSmartsheetGerenciaSelect() {
+  const select = document.getElementById('smartsheet-gerencia-select');
+  if (!select) return;
+  const previous = select.value;
+  const opts = Object.keys(getGerenciasMap())
+    .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+    .map(gerencia => `<option value="${escapeHtml(gerencia)}">${escapeHtml(gerencia)}</option>`)
+    .join('');
+  select.innerHTML = `<option value="">— Escolha uma gerência —</option>${opts}`;
   if (previous && [...select.options].some(opt => opt.value === previous)) {
     select.value = previous;
   }
@@ -6239,6 +6262,67 @@ async function sincronizarSetorSmartsheet() {
     console.error('Erro ao enviar setor ao Smartsheet:', e);
     setSmartsheetStatus(`Falha ao enviar setor: ${e.message}`, true);
     toast(`Falha ao enviar setor: ${e.message}`);
+  }
+}
+
+// === Function: sincronizarGerenciaSmartsheet ===
+async function sincronizarGerenciaSmartsheet() {
+  salvarSmartsheetConfig(false);
+  if (!hasSmartsheetConfig()) return;
+
+  const gerencia = document.getElementById('smartsheet-gerencia-select')?.value || '';
+  if (!gerencia) {
+    toast('Selecione uma gerência para enviar ao Smartsheet.');
+    return;
+  }
+
+  APP = normalizeAppState(APP);
+  const unidade = normalizeUnidadeCode(currentUnidade, 'CD');
+  const setores = getGerenciaSetoresAtivos(gerencia);
+  const setoresSet = new Set(setores);
+  const inspecoesGerencia = APP.inspecoes.filter(insp =>
+    getInspectionUnidade(insp) === unidade &&
+    setoresSet.has(insp.setor) &&
+    !insp.deleted &&
+    !insp.deletedAt
+  );
+
+  if (!setores.length) {
+    setSmartsheetStatus(`Nenhum setor ativo está vinculado à gerência ${gerencia}.`, true);
+    toast('Nenhum setor ativo encontrado para essa gerência.');
+    return;
+  }
+
+  if (!inspecoesGerencia.length) {
+    setSmartsheetStatus(`Nenhuma inspeção encontrada para a gerência ${gerencia} na unidade ${UNIDADE_LABELS[unidade] || unidade}.`, true);
+    toast('Nenhuma inspeção encontrada para essa gerência.');
+    return;
+  }
+
+  const confirmar = confirm([
+    'Enviar dados desta gerência ao Smartsheet?',
+    '',
+    `Unidade: ${UNIDADE_LABELS[unidade] || unidade}`,
+    `Gerência: ${gerencia}`,
+    `Setores vinculados: ${setores.join(', ')}`,
+    `Inspeções encontradas: ${inspecoesGerencia.length}`,
+    '',
+    'Serão criadas novas linhas na planilha para esse teste.'
+  ].join('\n'));
+  if (!confirmar) {
+    setSmartsheetStatus('Envio da gerência cancelado.');
+    toast('Envio cancelado.');
+    return;
+  }
+
+  try {
+    const enviadas = await syncSmartsheetInspectionsScoped(inspecoesGerencia, { label: `gerência ${gerencia}` });
+    if (!enviadas) setSmartsheetStatus('Nenhuma inspeção da gerência foi enviada ao Smartsheet.');
+    toast(`${enviadas} média(s) de setor da gerência enviada(s) ao Smartsheet.`);
+  } catch (e) {
+    console.error('Erro ao enviar gerência ao Smartsheet:', e);
+    setSmartsheetStatus(`Falha ao enviar gerência: ${e.message}`, true);
+    toast(`Falha ao enviar gerência: ${e.message}`);
   }
 }
 
