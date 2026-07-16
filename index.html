@@ -8143,7 +8143,7 @@ function getSetoresSemInspecaoMeses(meses) {
 }
 
 // === Function: getPendenciasSnapshot ===
-function getPendenciasSnapshot() {
+function getPendenciaItemsAtualizados() {
   const itens = [];
   const ord = [...APP.inspecoes]
     .filter(inspectionIsCurrentUnit)
@@ -8152,30 +8152,76 @@ function getPendenciasSnapshot() {
 
   ord.forEach(insp => {
     SENSOS.forEach(s => {
-      (insp.sensos[s.id] || []).forEach((cr, ci) => {
+      (insp.sensos?.[s.id] || []).forEach((cr, ci) => {
         const pendKey = `${localKey(insp)}||${s.id}||${ci}`;
         if (latestPendKeys.has(pendKey)) return;
 
-        const isNC = criterioTemNCAberta(cr);
         const inspAnterior = getInspecaoAnteriorMesmoLocal(insp);
-        const wasNC = inspAnterior && criterioTemNCAberta(inspAnterior.sensos?.[s.id]?.[ci]);
-        const isResolvida = wasNC && !isNC;
-        if (!isNC && !isResolvida) return;
+        const crAnterior = inspAnterior?.sensos?.[s.id]?.[ci] || null;
+        const desvios = getCriterioDesvios(cr, { includeLegacy: false });
+        const desviosAnteriores = getCriterioDesvios(crAnterior);
+        const itensCriterio = [];
 
+        if (desvios.length) {
+          desvios.forEach((desvio, desvioIndex) => {
+            if (!desvioTemConteudo(desvio)) return;
+            const origemId = desvio.origemId || desvio.id;
+            const desvioAnterior = desviosAnteriores.find(item =>
+              item.id === origemId || item.origemId === origemId
+            ) || desviosAnteriores[desvioIndex] || null;
+            const aberta = isDesvioAberto(desvio);
+            const resolvida = !aberta && !!desvioAnterior && isDesvioAberto(desvioAnterior);
+            if (!aberta && !resolvida) return;
+            const destinoSetor = String(desvio.encaminharSetor || desvioAnterior?.encaminharSetor || '').trim();
+            itensCriterio.push({
+              insp, inspAnterior, s, ci, cr, crAnterior,
+              desvio, desvioAnterior,
+              desvioIndice: desvioIndex + 1,
+              aberta, resolvida,
+              origemSetor: insp.setor,
+              setor: destinoSetor || insp.setor,
+              destinoSetor
+            });
+          });
+        } else {
+          const aberta = criterioTemNCAberta(cr);
+          const estavaAberta = !!crAnterior && criterioTemNCAberta(crAnterior);
+          const resolvida = estavaAberta && !aberta;
+          if (aberta || resolvida) {
+            const destinoSetor = String(
+              getDestinoPrincipalCriterio(aberta ? cr : crAnterior) || ''
+            ).trim();
+            itensCriterio.push({
+              insp, inspAnterior, s, ci, cr, crAnterior,
+              desvio: null, desvioAnterior: null, desvioIndice: null,
+              aberta, resolvida,
+              origemSetor: insp.setor,
+              setor: destinoSetor || insp.setor,
+              destinoSetor
+            });
+          }
+        }
+
+        if (!itensCriterio.length) return;
         latestPendKeys.add(pendKey);
-        itens.push({
-          setor: insp.setor,
-          local: localLabel(insp),
-          aberta: isNC,
-          resolvida: isResolvida,
-          data: insp.data,
-          nota: cr.nota ?? null
-        });
+        itens.push(...itensCriterio);
       });
     });
   });
 
   return itens;
+}
+
+function getPendenciasSnapshot() {
+  return getPendenciaItemsAtualizados().map(item => ({
+    setor: item.setor,
+    origemSetor: item.origemSetor,
+    local: localLabel(item.insp),
+    aberta: item.aberta,
+    resolvida: item.resolvida,
+    data: item.insp.data,
+    nota: item.cr?.nota ?? null
+  }));
 }
 
 // === Function: renderDashboard ===
@@ -8906,23 +8952,27 @@ function getPendenciasRecebidas(setorDestino, limitDateIso = null) {
   getLatestInspecoesByLocal(limitDateIso).forEach(inspOrigem => {
     if (inspOrigem.setor === setorDestino) return;
     SENSOS.forEach(s => {
-      inspOrigem.sensos[s.id].forEach((cr, ci) => {
-        if ((cr.nota || 0) >= 4) return;
-        if (!criterioEncaminhadoPara(cr, setorDestino)) return;
-        recebidas.push({
-          origemSetor: inspOrigem.setor,
-          origemLocal: localLabel(inspOrigem),
-          origemData: inspOrigem.data,
-          origemPeriodo: inspOrigem.periodo || '',
-          tecnico: inspOrigem.tecnico,
-          senso: s.nome,
-          sensoId: s.id,
-          criterioIndice: ci + 1,
-          criterioArrayIndex: ci,
-          criterioTexto: s.criterios[ci],
-          nota: cr.nota,
-          obs: cr.obs || '',
-          fotos: getFotosNCAbertaComFallback(inspOrigem, s.id, ci, cr)
+      (inspOrigem.sensos?.[s.id] || []).forEach((cr, ci) => {
+        getDesviosAbertosEncaminhadosCriterio(cr, setorDestino).forEach(item => {
+          recebidas.push({
+            origemSetor: inspOrigem.setor,
+            origemLocal: localLabel(inspOrigem),
+            origemData: inspOrigem.data,
+            origemPeriodo: inspOrigem.periodo || '',
+            tecnico: inspOrigem.tecnico,
+            senso: s.nome,
+            sensoId: s.id,
+            criterioIndice: ci + 1,
+            criterioArrayIndex: ci,
+            criterioTexto: s.criterios[ci],
+            desvioId: item.desvioId,
+            desvioIndice: item.desvioIndice,
+            nota: cr.nota,
+            obs: item.obs || cr.obs || '',
+            sugestao: item.sugestao || cr.sugestao || '',
+            fotos: item.fotos.length ? item.fotos : getFotosNCAbertaComFallback(inspOrigem, s.id, ci, cr),
+            fotoLegendas: item.fotoLegendas || []
+          });
         });
       });
     });
@@ -11349,33 +11399,28 @@ function togglePendSetor(id) {
 // === Function: renderPendList ===
 function renderPendList() {
   const list = document.getElementById('pend-list');
-  const itens = [];
-  const ord = [...APP.inspecoes]
-    .filter(inspectionIsCurrentUnit)
-    .sort((a, b) => new Date(b.data) - new Date(a.data));
-  const latestPendKeys = new Set();
-
-  ord.forEach(insp => {
-    SENSOS.forEach(s => {
-      insp.sensos[s.id].forEach((cr, ci) => {
-        const pendKey = `${localKey(insp)}||${s.id}||${ci}`;
-        if (latestPendKeys.has(pendKey)) return;
-
-        const isNC = criterioTemNCAberta(cr);
-        const inspAnterior = getInspecaoAnteriorMesmoLocal(insp);
-        const wasNC = inspAnterior && criterioTemNCAberta(inspAnterior.sensos?.[s.id]?.[ci]);
-        const isResolvida = wasNC && !isNC;
-
-        if (!isNC && !isResolvida) return;
-        latestPendKeys.add(pendKey);
-
-        const crAnterior = inspAnterior?.sensos?.[s.id]?.[ci] || null;
+  const itens = getPendenciaItemsAtualizados().map(item => {
+        const { insp, inspAnterior, s, ci, cr, crAnterior, desvio, desvioAnterior } = item;
+        const isNC = item.aberta;
+        const isResolvida = item.resolvida;
         const reinc = getReincidenciaCount(insp, s.id, ci);
         const reincTxt = (isNC && reinc > 1) ? ` <span style="color:var(--orange2);font-weight:700">[REINCIDÊNCIA: ${reinc}ª vez]</span>` : '';
         const reincResolvida = isResolvida ? getReincidenciasAteConclusao(insp, s.id, ci) : null;
-        const fotosNC = isNC ? getFotosNCAbertaComFallback(insp, s.id, ci, cr) : [];
-        const fotosAntesResolucao = isResolvida ? getFotosNCAbertaComFallback(inspAnterior, s.id, ci, crAnterior) : [];
-        const fotosResolucao = isResolvida ? getFotosValidasCriterio(cr) : [];
+        const fotosNC = isNC
+          ? (desvio ? getFotosValidasArray(desvio.fotos) : getFotosNCAbertaComFallback(insp, s.id, ci, cr))
+          : [];
+        const fotosAntesResolucao = isResolvida
+          ? (desvio ? (getFotosValidasArray(desvio.fotos).length ? getFotosValidasArray(desvio.fotos) : getFotosValidasArray(desvioAnterior?.fotos)) : getFotosNCAbertaComFallback(inspAnterior, s.id, ci, crAnterior))
+          : [];
+        const fotosResolucao = isResolvida
+          ? (desvio ? getFotosValidasArray(desvio.resolucaoFotos) : getFotosValidasCriterio(cr))
+          : [];
+        const descricaoAberta = String(desvio?.descricao || cr?.obs || '').trim() || 'Sem observação';
+        const descricaoAnterior = String(desvio?.descricao || desvioAnterior?.descricao || crAnterior?.obs || '').trim() || 'Sem observação';
+        const descricaoResolucao = String(desvio?.resolucaoObs || cr?.obs || '').trim() || 'Sem observação';
+        const origemTxt = item.destinoSetor && item.destinoSetor !== item.origemSetor
+          ? `<div style="font-size:11px;color:var(--text2);margin-top:4px">Origem: ${item.origemSetor} · ${localLabel(insp)}</div>`
+          : '';
         const antesDepoisResolvida = isResolvida ? `
           <div class="nc-compare" style="margin-top:8px">
             <div class="nc-compare-head">
@@ -11402,30 +11447,29 @@ function renderPendList() {
         ` : '';
 
         const itemHtml = `<div class="pend-item ${isResolvida?'resolvida':''}" ${isNC ? `onclick="iniciarNovaComBase('${insp.id}')" style="cursor:pointer"` : ''}>
-          <div class="pend-setor">${insp.setor} · ${s.nome}</div>
+          <div class="pend-setor">${item.setor} · ${s.nome}${item.desvioIndice ? ` · Desvio ${item.desvioIndice}` : ''}</div>
           <div class="pend-desc">${SENSOS.find(x=>x.id===s.id).criterios[ci]}</div>
+          ${origemTxt}
           <div style="font-size:11px;color:var(--text2);margin-top:4px">${formatDate(insp.data)} · ${insp.tecnico}</div>
-          ${isNC ? `<div class="pend-status" style="color:var(--red)">Nota ${cr.nota} - ${cr.obs || 'Sem observação'}${reincTxt}</div>` : ''}
-          ${getDestinoPrincipalCriterio(cr) ? `<div style="font-size:11px;color:var(--gold);margin-top:4px">Desvio com corresponsável: ${getDestinoPrincipalCriterio(cr)}</div>` : ''}
+          ${isNC ? `<div class="pend-status" style="color:var(--red)">Nota ${cr.nota} - ${descricaoAberta}${reincTxt}</div>` : ''}
+          ${item.destinoSetor ? `<div style="font-size:11px;color:var(--gold);margin-top:4px">Setor responsável: ${item.destinoSetor}</div>` : ''}
           ${isNC ? `<div style="font-size:11px;color:var(--text2);margin-top:3px">Toque para abrir inspeção e corrigir esta pendência.</div>` : ''}
           ${isNC && fotosNC.length ? `<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:8px">${fotosNC.map((foto, idx) => `<img src="${foto}" alt="Evidência do desvio ${idx + 1}" onclick="event.stopPropagation();openImageModal('${foto.replace(/'/g, "\\'")}')" style="width:100%;height:68px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer">`).join('')}</div>` : ''}
           ${isNC && !fotosNC.length ? `<div style="font-size:11px;color:var(--text2);margin-top:4px">Foto do desvio: não anexada.</div>` : ''}
           ${isResolvida ? `<div class="pend-status" style="color:var(--green)">✓ Resolvida em ${formatDate(insp.data)}</div>` : ''}
           ${isResolvida ? `<div style="font-size:11px;color:var(--text2);margin-top:3px">Reincidências até concluir: <strong style="color:var(--green)">${reincResolvida?.reincidencias ?? 0}</strong> <span style="color:var(--text2)">(${reincResolvida?.ocorrenciasNC ?? 0} ocorrências de desvio consecutivas)</span></div>` : ''}
-          ${isResolvida ? `<div style="font-size:11px;color:var(--text2);margin-top:3px">Antes: ${crAnterior?.obs || 'Sem observação'}<br>Agora: ${cr.obs || 'Sem observação'}</div>` : ''}
+          ${isResolvida ? `<div style="font-size:11px;color:var(--text2);margin-top:3px">Antes: ${descricaoAnterior}<br>Agora: ${descricaoResolucao}</div>` : ''}
           ${antesDepoisResolvida}
           <div class="pend-status" style="margin-top:6px;color:${isNC ? 'var(--red)' : 'var(--green)'};font-weight:700">
             ${isNC ? 'Status: Aberta' : 'Status: Resolvida'}
           </div>
         </div>`;
 
-        itens.push({
-          setor: insp.setor,
+        return {
+          setor: item.setor,
           aberta: isNC,
           html: itemHtml
-        });
-      });
-    });
+        };
   });
 
   if (!itens.length) {
