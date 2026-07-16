@@ -436,22 +436,6 @@ html, body {
   border: 1px solid rgba(245, 158, 11, 0.35);
   background: rgba(245, 158, 11, 0.12);
 }
-.s-debito-corresp {
-  margin-top: 7px;
-  padding: 7px 9px;
-  border-radius: 8px;
-  border: 1px solid rgba(245, 158, 11, 0.45);
-  background: rgba(245, 158, 11, 0.14);
-  color: #fcd34d;
-  font-size: 11px;
-  line-height: 1.35;
-  font-weight: 700;
-}
-body.light-mode .s-debito-corresp {
-  color: #92400e;
-  background: rgba(245, 158, 11, 0.14);
-  border-color: rgba(245, 158, 11, 0.38);
-}
 .desvio-list {
   display: flex;
   flex-direction: column;
@@ -3153,8 +3137,7 @@ const SETORES = [
     subareas: [
       '1 – Britagem Primária / Casa de bombas / Pátio Armazenamento de Materia',
       '2 – Canteiro avançado / STMIL / HSAMAPIO',
-      '3 – Galpão de Lona',
-      '4 – Britagem Terciaria'
+      '3 – Galpão de Lona'
     ]
   },
   {
@@ -9268,30 +9251,6 @@ function renderInspecaoForm() {
   // se tem base, carrega para mostrar notas anteriores
   const baseRef = currentInsp.baseId ? APP.inspecoes.find(i => i.id === currentInsp.baseId) : null;
   const base = sameLocal(currentInsp, baseRef) ? baseRef : null;
-  const debitosCorresponsavelPorSenso = {};
-  uniqueDebitoRazoes(getDebitoRazoesInspecao(currentInsp))
-    .filter(item => item.tipo === 'corresponsavel' || item.tipo === 'misto' || item.tipos?.includes('corresponsavel'))
-    .forEach(item => {
-      if (!debitosCorresponsavelPorSenso[item.sensoId]) debitosCorresponsavelPorSenso[item.sensoId] = [];
-      debitosCorresponsavelPorSenso[item.sensoId].push(item);
-    });
-
-  const renderDebitoCorresponsavelHint = (sId) => {
-    const itens = debitosCorresponsavelPorSenso[sId] || [];
-    if (!itens.length) return '';
-    const detalhe = itens
-      .slice(0, 2)
-      .map(item => {
-        const origemCorresp = (item.origens || []).find(origem => origem.tipo === 'corresponsavel') || item;
-        return `${escapeHtml(origemCorresp.origemSetor)} - ${escapeHtml(origemCorresp.origemLocal)} · Critério ${item.criterioIndice}`;
-      })
-      .join('<br>');
-    const extra = itens.length > 2 ? `<br>+ ${itens.length - 2} outro(s) desvio(s) encaminhado(s)` : '';
-    return `<div class="s-debito-corresp">
-      Desvio(s) corresponsável(is) recebido(s) neste senso. Eles aparecerão nos relatórios do setor, sem débito na nota.<br>
-      Origem: ${detalhe}${extra}
-    </div>`;
-  };
 
   const renderSensoListMarker = (s, si) => `
     <div class="senso-list-marker" style="--senso-color:${s.cor};--senso-soft:${s.cor}1c">
@@ -9301,7 +9260,6 @@ function renderInspecaoForm() {
           <div class="s-title">${s.nome}</div>
           <div class="s-desc">${SENSO_DESCRICOES[s.id] || 'Avalie os critérios deste senso com atenção e registre evidências objetivas.'}</div>
           ${base ? `<div class="senso-list-meta">Nota anterior: ${calcMediaSFinal(base, s.id).toFixed(2)}</div>` : ''}
-          ${renderDebitoCorresponsavelHint(s.id)}
         </div>
         <div class="s-score-mini" id="score-mini-${s.id}" style="color:var(--text2)">—</div>
       </div>
