@@ -5278,6 +5278,14 @@ function getSetorialReportDashboardData(setor, periodo = getSetorialReportPeriod
       media: item.notas.reduce((a, b) => a + b, 0) / item.notas.length
     }))
     .sort((a, b) => b.media - a.media);
+  const totalNCAbertas = ncList.length;
+  const totalNCRecebidas = ncList.filter(n => n.origemTipo === 'encaminhada').length;
+  const totalResolvidas = resolvidasList.length;
+  const totalNCRecebidasResolvidas = resolvidasList.filter(item =>
+    item.origemSetor && item.origemSetor !== setor && item.destinoSetor === setor
+  ).length;
+  const totalDesvios = totalNCAbertas + totalResolvidas;
+  const totalDesviosRecebidos = totalNCRecebidas + totalNCRecebidasResolvidas;
 
   return {
     periodo,
@@ -5293,9 +5301,12 @@ function getSetorialReportDashboardData(setor, periodo = getSetorialReportPeriod
     mediaSemNCExterna: pontuacaoCorresponsavel.mediaSemExternas,
     impactoNCExterna: pontuacaoCorresponsavel.impactoExternas,
     pontuacaoCorresponsavel,
-    totalNCAbertas: ncList.length,
-    totalNCRecebidas: ncList.filter(n => n.origemTipo === 'encaminhada').length,
-    totalResolvidas: resolvidasList.length,
+    totalNCAbertas,
+    totalNCRecebidas,
+    totalResolvidas,
+    totalNCRecebidasResolvidas,
+    totalDesvios,
+    totalDesviosRecebidos,
     rankingMedias,
     melhorLocal: rankingMedias[0] || null,
     piorLocal: rankingMedias[rankingMedias.length - 1] || null,
@@ -13385,6 +13396,8 @@ async function gerarPDFSetorial(setor, options = {}) {
     totalNCAbertas,
     totalNCRecebidas,
     totalResolvidas,
+    totalDesvios,
+    totalDesviosRecebidos,
     melhorLocal,
     piorLocal
   } = setorialData;
@@ -13592,8 +13605,11 @@ async function gerarPDFSetorial(setor, options = {}) {
   const cardH = 30;
   const row1Y = 36;
   const row2Y = row1Y + cardH + 8;
-  const totalNCSetor = totalNCAbertas + totalResolvidas;
+  const totalNCSetor = totalDesvios;
   const taxaResolucaoSetor = totalNCSetor ? `${Math.round((totalResolvidas / totalNCSetor) * 100)}%` : '—';
+  const totalDesviosSubtitle = totalDesviosRecebidos > 0
+    ? `Inclui ${totalDesviosRecebidos} recebido(s)`
+    : 'Abertos e resolvidos';
 
   drawDashCard(margin, row1Y, cardW, cardH, 'Inspeções', totalInspecoes, 'No mês atual', [22, 53, 159]);
   drawDashCard(margin + cardW + gap, row1Y, cardW, cardH, 'Média Geral', mediaGeral !== null ? mediaGeral.toFixed(2) : '—', 'Nota média do setor', [14, 165, 233]);
@@ -13601,7 +13617,7 @@ async function gerarPDFSetorial(setor, options = {}) {
 
   drawDashCard(margin, row2Y, cardW, cardH, 'Desvios abertos', totalNCAbertas, 'Inclui períodos anteriores', [244, 63, 94]);
   drawDashCard(margin + cardW + gap, row2Y, cardW, cardH, 'Desvios resolvidos', totalResolvidas, 'Resolvidos no período', [16, 185, 129]);
-  drawDashCard(margin + (cardW + gap) * 2, row2Y, cardW, cardH, 'Total de desvios', totalNCSetor, 'Abertos e resolvidos', [245, 158, 11]);
+  drawDashCard(margin + (cardW + gap) * 2, row2Y, cardW, cardH, 'Total de desvios', totalNCSetor, totalDesviosSubtitle, [245, 158, 11]);
 
   const boxY = row2Y + cardH + 10;
   doc.setDrawColor(226, 232, 240);
