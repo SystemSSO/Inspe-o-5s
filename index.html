@@ -3131,7 +3131,8 @@ const SETORES = [
       '4 – Estacionamento Externo (Entrada da Usina)',
       '5 – Área de lazer',
       '6 – Vila residencial',
-      '7 – Estação de tratamento (Vila dos supervisores)'
+      '7 – Estação de tratamento (Vila dos supervisores)',
+      '8 – Viveiro'
     ]
   },
   {
@@ -13639,7 +13640,14 @@ async function gerarPDFSetorial(setor, options = {}) {
       const obsLines = doc.splitTextToSize(`Obs: ${nc.obs}`, W - margin * 2 - 8);
       const sugLines = doc.splitTextToSize(`Sugestão: ${nc.sugestao}`, W - margin * 2 - 8);
       const reincLines = doc.splitTextToSize(`Reincidência: ${nc.reincidencia}ª ocorrência consecutiva`, W - margin * 2 - 8);
-      const correspLines = [];
+      const isDesvioRecebido = nc.origemTipo === 'encaminhada';
+      const correspLines = isDesvioRecebido
+        ? [
+            'DESVIO RECEBIDO DE OUTRO SETOR',
+            `Setor de origem: ${nc.origemSetor || '—'} | Local de origem: ${nc.origemLocal || nc.local || '—'}`,
+            `Setor corresponsável: ${nc.destinoSetor || setor}`
+          ].flatMap(texto => doc.splitTextToSize(texto, W - margin * 2 - 14))
+        : [];
       const fotosPorLinha = 2;
       const fotoW = 118;
       const gapFoto = 8;
@@ -13660,7 +13668,7 @@ async function gerarPDFSetorial(setor, options = {}) {
           fotoH = Math.max(48, Math.min(78, Math.floor(availableFotosH / linhasFotos)));
         }
         const hFotos = linhasFotos ? (linhasFotos * fotoH) + ((linhasFotos - 1) * gapFoto) : 0;
-        const h = 14 + (linhasBase * lineH) + hFotos + 14;
+        const h = 14 + (linhasBase * lineH) + hFotos + 14 + (correspLines.length ? 5 : 0);
         if (part > 0) {
           addNewPage();
           y = 18;
@@ -13691,10 +13699,14 @@ async function gerarPDFSetorial(setor, options = {}) {
         doc.text(sugLines, margin + 3, by); by += sugLines.length * 4 + 1;
         doc.text(reincLines, margin + 3, by); by += reincLines.length * 4 + 1;
         if (correspLines.length) {
+          const correspBoxH = correspLines.length * 4 + 5;
+          doc.setFillColor(255, 251, 235);
+          doc.setDrawColor(245, 158, 11);
+          doc.roundedRect(margin + 3, by - 3, W - margin * 2 - 6, correspBoxH, 1.5, 1.5, 'FD');
           doc.setTextColor(180, 83, 9);
           doc.setFont('helvetica', 'bold');
-          doc.text(correspLines, margin + 3, by);
-          by += correspLines.length * 4 + 1;
+          doc.text(correspLines, margin + 6, by + 1);
+          by += correspBoxH + 1;
         }
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(22, 53, 159);
@@ -13770,14 +13782,21 @@ async function gerarPDFSetorial(setor, options = {}) {
       const agoraLines = doc.splitTextToSize(`Agora: ${item.obsAtual || 'Resolvido com evidência anexada.'}`, W - margin * 2 - 8);
       const sugLines = doc.splitTextToSize(`Ação/Sugestão: ${item.sugestaoAtual}`, W - margin * 2 - 8);
       const reincLines = doc.splitTextToSize(`Reincidências até conclusão: ${item.reincidencias} (ocorrências de desvio consecutivas: ${item.ocorrenciasNC})`, W - margin * 2 - 8);
-      const correspLines = [];
+      const isDesvioRecebido = item.origemSetor && item.origemSetor !== setor && item.destinoSetor === setor;
+      const correspLines = isDesvioRecebido
+        ? [
+            'DESVIO RECEBIDO DE OUTRO SETOR',
+            `Setor de origem: ${item.origemSetor || '—'} | Local de origem: ${item.origemLocal || item.local || '—'}`,
+            `Setor corresponsável: ${item.destinoSetor || setor}`
+          ].flatMap(texto => doc.splitTextToSize(texto, W - margin * 2 - 14))
+        : [];
       const comparativoH = 108;
       const linhasBase = criterioLines.length + antesLines.length + agoraLines.length + sugLines.length + reincLines.length + correspLines.length;
       const lineH = 4.4;
       const blocos = [0];
 
       for (let part = 0; part < blocos.length; part++) {
-        const h = 14 + (linhasBase * lineH) + comparativoH + 16;
+        const h = 14 + (linhasBase * lineH) + comparativoH + 16 + (correspLines.length ? 5 : 0);
         if (idx > 0 && y + h + 10 > H - 14) {
           addNewPage();
           drawResolvedSectionHeader();
@@ -13811,9 +13830,13 @@ async function gerarPDFSetorial(setor, options = {}) {
         doc.setFont('helvetica', 'bold');
         doc.text(reincLines, margin + 3, by); by += reincLines.length * 4 + 1;
         if (correspLines.length) {
+          const correspBoxH = correspLines.length * 4 + 5;
+          doc.setFillColor(255, 251, 235);
+          doc.setDrawColor(245, 158, 11);
+          doc.roundedRect(margin + 3, by - 3, W - margin * 2 - 6, correspBoxH, 1.5, 1.5, 'FD');
           doc.setTextColor(180, 83, 9);
-          doc.text(correspLines, margin + 3, by);
-          by += correspLines.length * 4 + 1;
+          doc.text(correspLines, margin + 6, by + 1);
+          by += correspBoxH + 1;
         }
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(22, 53, 159);
