@@ -10054,6 +10054,8 @@ function setDesvioField(sId, ci, desvioId, field, value) {
 function setDesvioStatus(sId, ci, desvioId, status) {
   const desvio = getDesvioAtual(sId, ci, desvioId);
   if (!desvio) return;
+  const formBody = document.getElementById('insp-form-body');
+  const scrollTopAntes = formBody?.scrollTop || 0;
   const podeResolver = desvio.herdado || desvio.origemId;
   if (status === 'resolvido' && !podeResolver) {
     toast('A resolução fica disponível na próxima inspeção, quando o desvio já existir no histórico.');
@@ -10064,7 +10066,24 @@ function setDesvioStatus(sId, ci, desvioId, status) {
   if (desvio.status === 'aberto') desvio.resolvidoEm = '';
   if (desvio.status === 'resolvido') aplicarNotaMaximaSeUnicoDesvioResolvido(sId, ci);
   refreshCriterioAfterDesvioChange(sId, ci);
+  touchDraftContext({
+    lastSensoId: sId,
+    lastCriterioIndex: ci,
+    lastDesvioId: desvioId,
+    lastAction: 'scroll',
+    lastFieldId: '',
+    scrollTop: scrollTopAntes
+  });
+  currentInsp.__draftMeta = {
+    ...(currentInsp.__draftMeta || {}),
+    ...draftUIState,
+    scrollTop: scrollTopAntes,
+    lastAction: 'scroll',
+    lastFieldId: ''
+  };
   renderInspecaoForm();
+  const restoredBody = document.getElementById('insp-form-body');
+  if (restoredBody) restoredBody.scrollTop = scrollTopAntes;
 }
 
 // === Function: triggerFotoDesvio ===
