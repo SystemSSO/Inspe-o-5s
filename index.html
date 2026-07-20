@@ -489,6 +489,32 @@ html, body {
   color: var(--red);
   background: rgba(244, 63, 94, 0.08);
 }
+.desvio-resolve-btn {
+  min-height: 40px;
+  border: 2px solid #f59e0b;
+  border-radius: 9px;
+  padding: 8px 14px;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #fff;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.18), 0 5px 14px rgba(245, 158, 11, 0.24);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.25px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+.desvio-resolve-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.22), 0 7px 18px rgba(245, 158, 11, 0.3);
+}
+.desvio-resolve-btn.resolvido {
+  border-color: #10b981;
+  background: linear-gradient(135deg, #10b981, #047857);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18), 0 5px 14px rgba(16, 185, 129, 0.24);
+}
+.desvio-resolve-btn.resolvido:hover {
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.22), 0 7px 18px rgba(16, 185, 129, 0.3);
+}
 .desvio-resolution {
   margin-top: 8px;
   padding-top: 8px;
@@ -9908,8 +9934,7 @@ function renderDesviosCriterioHtml(s, ci, criterio) {
               <div class="desvio-head">
                 <div class="desvio-title">${inherited ? 'Desvio anterior' : 'Novo desvio'} ${idx + 1}</div>
                 <div class="desvio-actions">
-                  <button type="button" class="desvio-mini-btn ${!resolvido ? 'active' : ''}" onclick="setDesvioStatus('${s.id}',${ci},'${desvio.id}','aberto')">Aberto</button>
-                  ${inherited ? `<button type="button" class="desvio-mini-btn ${resolvido ? 'active' : ''}" onclick="setDesvioStatus('${s.id}',${ci},'${desvio.id}','resolvido')">Resolvido</button>` : ''}
+                  ${inherited ? `<button type="button" class="desvio-resolve-btn ${resolvido ? 'resolvido' : ''}" onclick="setDesvioStatus('${s.id}',${ci},'${desvio.id}','${resolvido ? 'aberto' : 'resolvido'}')" title="${resolvido ? 'Clique para desfazer a validação' : 'Confirme somente após verificar que o desvio foi resolvido'}">${resolvido ? '✓ RESOLVIDO · DESFAZER' : '☐ VALIDAR: MARCAR COMO RESOLVIDO'}</button>` : ''}
                   ${!inherited ? `<button type="button" class="desvio-mini-btn danger" onclick="removeDesvioCriterio('${s.id}',${ci},'${desvio.id}')">Remover</button>` : ''}
                 </div>
               </div>
