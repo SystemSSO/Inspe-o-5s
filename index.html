@@ -307,6 +307,26 @@ html, body {
   padding: 7px;
   border-radius: 6px;
 }
+.desvio-fotos-referencia {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.desvio-fotos-referencia .foto-item {
+  width: 86px;
+  flex: 0 0 86px;
+}
+.desvio-fotos-referencia .foto-thumb {
+  aspect-ratio: 4 / 3;
+  opacity: 0.82;
+}
+.desvio-foto-legenda-referencia {
+  margin-top: 3px;
+  color: var(--text2);
+  font-size: 9px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
 
 /* PROGRESSO */
 .progress-bar { height: 6px; background: var(--navy3); border-radius: 100px; overflow: hidden; }
@@ -9888,7 +9908,7 @@ function syncAllDesvioDomFieldsToState() {
   });
 }
 
-function renderDesvioFotosHtml(sId, ci, desvio, kind = 'abertura') {
+function renderDesvioFotosHtml(sId, ci, desvio, kind = 'abertura', somenteReferencia = false) {
   const isResolucao = kind === 'resolucao';
   const fotos = isResolucao ? (desvio.resolucaoFotos || []) : (desvio.fotos || []);
   const legendas = isResolucao ? (desvio.resolucaoFotoLegendas || []) : (desvio.fotoLegendas || []);
@@ -9897,16 +9917,18 @@ function renderDesvioFotosHtml(sId, ci, desvio, kind = 'abertura') {
   const gridId = `foto-grid-desvio-${kind}-${sId}-${ci}-${desvio.id}`;
   return `
     <div style="margin-top:8px">
-      <div class="criterio-section-title" style="margin-bottom:5px">${title}</div>
-      <button type="button" class="desvio-mini-btn" id="${buttonId}" onclick="triggerFotoDesvio('${sId}',${ci},'${desvio.id}','${kind}')">+ Foto</button>
-      <div class="foto-grid" id="${gridId}" style="margin-top:7px">
+      <div class="criterio-section-title" style="margin-bottom:5px">${somenteReferencia ? 'Fotos anteriores do desvio (referência)' : title}</div>
+      ${somenteReferencia ? '' : `<button type="button" class="desvio-mini-btn" id="${buttonId}" onclick="triggerFotoDesvio('${sId}',${ci},'${desvio.id}','${kind}')">+ Foto</button>`}
+      <div class="${somenteReferencia ? 'desvio-fotos-referencia' : 'foto-grid'}" id="${gridId}" style="margin-top:7px">
         ${fotos.filter(f => typeof f === 'string' && f && f !== '__ref__').map((foto, fi) => `
           <div class="foto-item">
             <div class="foto-thumb" onclick="openImageModal('${foto.replace(/'/g, "\\'")}')">
               <img src="${foto}" alt="foto">
-              <button class="rm-foto" onclick="event.stopPropagation();removeFotoDesvio('${sId}',${ci},'${desvio.id}',${fi},'${kind}')">×</button>
+              ${somenteReferencia ? '' : `<button class="rm-foto" onclick="event.stopPropagation();removeFotoDesvio('${sId}',${ci},'${desvio.id}',${fi},'${kind}')">×</button>`}
             </div>
-            <textarea class="form-input foto-caption-input" maxlength="180" placeholder="Legenda da foto ${fi + 1}" oninput="setFotoLegendaDesvio('${sId}',${ci},'${desvio.id}',${fi},'${kind}',this.value)">${escapeHtml(legendas[fi] || '')}</textarea>
+            ${somenteReferencia
+              ? (legendas[fi] ? `<div class="desvio-foto-legenda-referencia">${escapeHtml(legendas[fi])}</div>` : '')
+              : `<textarea class="form-input foto-caption-input" maxlength="180" placeholder="Legenda da foto ${fi + 1}" oninput="setFotoLegendaDesvio('${sId}',${ci},'${desvio.id}',${fi},'${kind}',this.value)">${escapeHtml(legendas[fi] || '')}</textarea>`}
           </div>`).join('')}
       </div>
     </div>`;
@@ -9944,7 +9966,7 @@ function renderDesviosCriterioHtml(s, ci, criterio) {
                 <option value="">— Responsabilidade local —</option>
                 ${setoresCorresponsaveis.map(nome => `<option value="${escapeHtml(nome)}" ${desvio.encaminharSetor === nome ? 'selected' : ''}>${escapeHtml(nome)}</option>`).join('')}
               </select>
-              ${renderDesvioFotosHtml(s.id, ci, desvio, 'abertura')}
+              ${renderDesvioFotosHtml(s.id, ci, desvio, 'abertura', resolvido)}
               ${inherited && resolvido ? `
                 <div class="desvio-resolution">
                   <textarea class="form-textarea" id="desvio-resolucao-${s.id}-${ci}-${desvio.id}" rows="2" placeholder="Observação da resolução deste desvio (opcional)" oninput="setDesvioField('${s.id}',${ci},'${desvio.id}','resolucaoObs',this.value)">${escapeHtml(desvio.resolucaoObs || '')}</textarea>
