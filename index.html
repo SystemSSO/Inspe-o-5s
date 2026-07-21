@@ -2804,7 +2804,7 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
       </div>
       <div class="form-group">
         <label class="form-label">Período do relatório</label>
-        <input type="month" class="form-input" id="rel-periodo-setorial" min="2026-01" aria-label="Selecionar mês e ano do relatório setorial">
+        <input type="month" class="form-input" id="rel-periodo-setorial" min="2026-01" aria-label="Selecionar mês e ano do relatório setorial" onclick="openReportMonthPicker(this)">
       </div>
       <div class="form-group">
         <label class="form-label">Destinatário do e-mail</label>
@@ -2830,7 +2830,7 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
       </div>
       <div class="form-group">
         <label class="form-label">Período do relatório</label>
-        <input type="month" class="form-input" id="rel-periodo-gerencia" min="2026-01" aria-label="Selecionar mês e ano do relatório gerencial">
+        <input type="month" class="form-input" id="rel-periodo-gerencia" min="2026-01" aria-label="Selecionar mês e ano do relatório gerencial" onclick="openReportMonthPicker(this)">
       </div>
       <div class="form-group">
         <label class="form-label">Destinatário do e-mail</label>
@@ -4910,6 +4910,15 @@ function getAvailableReportPeriodCodes(selectedValue = '') {
 }
 
 // === Function: renderReportPeriodSelect ===
+function openReportMonthPicker(input) {
+  if (!input || typeof input.showPicker !== 'function') return;
+  try {
+    input.showPicker();
+  } catch (error) {
+    // O navegador ainda permite abrir pelo ícone caso não ofereça showPicker.
+  }
+}
+
 function renderReportPeriodSelect(inputId, fallbackValue = getCurrentReportPeriodCode()) {
   const input = document.getElementById(inputId);
   if (!input) return;
