@@ -11439,7 +11439,9 @@ function togglePendSetor(id) {
 // === Function: renderPendList ===
 function renderPendList() {
   const list = document.getElementById('pend-list');
-  const itens = getPendenciaItemsAtualizados().map(item => {
+  const itens = getPendenciaItemsAtualizados()
+    .filter(item => item.aberta)
+    .map(item => {
         const { insp, inspAnterior, s, ci, cr, crAnterior, desvio, desvioAnterior } = item;
         const isNC = item.aberta;
         const isResolvida = item.resolvida;
@@ -12373,6 +12375,8 @@ async function gerarPDFGerencia(options = {}) {
   const setoresComNCExterna = gerenciaData.setoresComNCExterna || [];
   const ncDetalhes = gerenciaData.ncDetalhes;
   const inspsPeriodo = gerenciaData.inspsPeriodo || [];
+  const unidadeCodigoGerencial = normalizeUnidadeCode(currentUnidade, 'CD');
+  const unidadeSiteGerencial = `${UNIDADE_LABELS[unidadeCodigoGerencial] || unidadeCodigoGerencial} (${unidadeCodigoGerencial})`;
 
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' });
@@ -12675,6 +12679,17 @@ async function gerarPDFGerencia(options = {}) {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10.5);
     doc.text(periodoTxt, cardX + 15, 127);
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(cardX + 10, 142, cardW - 20, 18, 4, 4, 'F');
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(cardX + 10, 142, cardW - 20, 18, 4, 4);
+    doc.setTextColor(100, 116, 139);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.text('SITE / UNIDADE', cardX + 15, 149);
+    doc.setTextColor(22, 53, 159);
+    doc.setFontSize(9.5);
+    doc.text(unidadeSiteGerencial, cardX + cardW - 15, 149, { align: 'right' });
     doc.setDrawColor(22, 53, 159);
     doc.setLineWidth(0.7);
     doc.line(cardX + 10, 166, cardX + cardW - 10, 166);
@@ -12726,6 +12741,7 @@ async function gerarPDFGerencia(options = {}) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(11);
   doc.text(`Período: ${mesAnoAtual}`, margin, 23);
+  doc.text(`Site / Unidade: ${unidadeSiteGerencial}`, W - margin, 23, { align: 'right' });
 
   const gap = 8;
   const cardW = (W - margin * 2 - gap * 2) / 3;
@@ -13133,6 +13149,8 @@ async function gerarPDFSetorial(setor, options = {}) {
   const anoAtual = periodoSelecionado.ano;
   const periodoAtual = periodoSelecionado.periodoCodigo;
   const mesAnoAtual = `${mesAtual.charAt(0).toUpperCase() + mesAtual.slice(1)} de ${anoAtual}`;
+  const unidadeCodigoSetorial = normalizeUnidadeCode(currentUnidade, 'CD');
+  const unidadeSiteSetorial = `${UNIDADE_LABELS[unidadeCodigoSetorial] || unidadeCodigoSetorial} (${unidadeCodigoSetorial})`;
   let y = 0;
 
   // === Function: renderSetorialCover ===
@@ -13261,6 +13279,10 @@ async function gerarPDFSetorial(setor, options = {}) {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10.5);
     doc.text(periodoTxt, cardX + 55, 149);
+    doc.setTextColor(71, 85, 105);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.text(`SITE / UNIDADE: ${unidadeSiteSetorial}`, cardCenter, 164, { align: 'center' });
 
     doc.setDrawColor(22, 53, 159);
     doc.setLineWidth(0.7);
@@ -13541,6 +13563,7 @@ async function gerarPDFSetorial(setor, options = {}) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(11);
   doc.text(`Período: ${mesAnoAtual}`, margin, 23);
+  doc.text(`Site / Unidade: ${unidadeSiteSetorial}`, W - margin, 23, { align: 'right' });
 
   // === Function: drawDashCard ===
   function drawDashCard(x, yPos, w, h, title, value, subtitle, tone) {
