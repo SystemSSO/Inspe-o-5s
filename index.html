@@ -2984,7 +2984,7 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
     </div>
     <div class="form-group">
       <label class="form-label">Período de referência</label>
-      <input type="month" class="form-input" id="nova-periodo" value="">
+      <input type="month" class="form-input" id="nova-periodo" value="" onclick="openReportMonthPicker(this)">
     </div>
     <div id="nova-drafts-wrap" class="draft-panel" style="display:none">
       <div class="draft-panel-header">
@@ -12503,7 +12503,6 @@ async function gerarPDFGerencia(options = {}) {
         setor: insp.setor || '',
         area: localLabel(insp),
         data: formatDate(insp.data),
-        tecnico: insp.tecnico || 'Não informado',
         nota: typeof insp.notaGeral === 'number' ? insp.notaGeral.toFixed(2) : '—'
       }));
 
@@ -12543,8 +12542,7 @@ async function gerarPDFGerencia(options = {}) {
       doc.setFontSize(8.5);
       doc.text('Setor', margin + 4, yy + 6);
       doc.text('Área', margin + 82, yy + 6);
-      doc.text('Data', margin + 168, yy + 6);
-      doc.text('Técnico(a)', margin + 202, yy + 6);
+      doc.text('Data', margin + 202, yy + 6);
       doc.text('Nota', W - margin - 4, yy + 6, { align: 'right' });
       yy += 12;
     }
@@ -12554,9 +12552,8 @@ async function gerarPDFGerencia(options = {}) {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
       const setorLines = doc.splitTextToSize(row.setor, 72);
-      const areaLines = doc.splitTextToSize(row.area, 80);
-      const tecnicoLines = doc.splitTextToSize(row.tecnico, 50);
-      const rowH = Math.max(8, 4 * Math.max(setorLines.length, areaLines.length, tecnicoLines.length) + 4);
+      const areaLines = doc.splitTextToSize(row.area, 112);
+      const rowH = Math.max(8, 4 * Math.max(setorLines.length, areaLines.length) + 4);
 
       if (yy + rowH > H - 14) {
         yy = novaPaginaComCabecalho('Áreas Inspecionadas', `${gerencia} · ${mesAnoAtual}`);
@@ -12571,23 +12568,16 @@ async function gerarPDFGerencia(options = {}) {
       doc.setFontSize(8);
       doc.text(setorLines, margin + 4, yy);
       doc.text(areaLines, margin + 82, yy);
-      doc.text(row.data, margin + 168, yy);
-      doc.text(tecnicoLines, margin + 202, yy);
+      doc.text(row.data, margin + 202, yy);
       doc.text(row.nota, W - margin - 4, yy, { align: 'right' });
       yy += rowH;
     });
   }
 
-  const inspRefCapaGerencial = [...inspsPeriodo]
-    .filter(i => i.tecnico)
-    .sort((a, b) => new Date(b.data) - new Date(a.data))[0] || null;
-  const tecnicoGerencialTxt = String(inspRefCapaGerencial?.tecnico || 'Não informado');
-
   // === Function: renderGerenciaCover ===
   async function renderGerenciaCover() {
     const gerenciaTxt = String(gerencia || '').toUpperCase();
     const periodoTxt = mesAnoAtual.toUpperCase();
-    const tecnicoTxt = tecnicoGerencialTxt;
     try {
       async function loadCoverDataUrl(src) {
         return await new Promise((resolve, reject) => {
@@ -12680,25 +12670,11 @@ async function gerarPDFGerencia(options = {}) {
     doc.setTextColor(100, 116, 139);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
-    doc.text('TÉCNICO(A)', cardX + 15, 116);
-    doc.setTextColor(22, 53, 159);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(11);
-    const tecnicoLines = doc.splitTextToSize(tecnicoTxt, cardW - 30);
-    doc.text(tecnicoLines, cardX + 15, 124);
-
-    doc.setFillColor(248, 250, 252);
-    doc.roundedRect(cardX + 10, 142, cardW - 20, 18, 4, 4, 'F');
-    doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(cardX + 10, 142, cardW - 20, 18, 4, 4);
-    doc.setTextColor(100, 116, 139);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.text('PERÍODO', cardX + 15, 149);
+    doc.text('PERÍODO', cardX + 15, 116);
     doc.setTextColor(22, 53, 159);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10.5);
-    doc.text(periodoTxt, cardX + 55, 149);
+    doc.text(periodoTxt, cardX + 15, 127);
     doc.setDrawColor(22, 53, 159);
     doc.setLineWidth(0.7);
     doc.line(cardX + 10, 166, cardX + cardW - 10, 166);
@@ -12837,46 +12813,6 @@ async function gerarPDFGerencia(options = {}) {
     doc.text(String(r.ncResolvidas), resumoColX.ncResolvidas, y, { align: 'right' });
     y += rowH;
   });
-
-  // Página de ranking por setor (média)
-  y = novaPaginaComCabecalho('Ranking por Setor', `${gerencia} · ${mesAnoAtual}`);
-  const ranking = resumo
-    .filter(r => typeof r.media === 'number')
-    .sort((a, b) => b.media - a.media || a.setor.localeCompare(b.setor, 'pt-BR'));
-  if (!ranking.length) {
-    doc.setTextColor(22, 53, 159);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(11);
-    doc.text('Não há dados de média para o período selecionado.', margin, y);
-  } else {
-    const chartX = margin;
-    const chartY = y;
-    const chartW = W - margin * 2;
-    const rowH = 9;
-    const maxMedia = Math.max(...ranking.map(r => r.media), 0.1);
-    let currentChartY = chartY;
-    ranking.forEach((r, i) => {
-      if (currentChartY + rowH > H - 14) {
-        currentChartY = novaPaginaComCabecalho('Ranking por Setor', `${gerencia} · ${mesAnoAtual}`);
-      }
-      const yy = currentChartY;
-      const barW = (Math.max(0, r.media) / maxMedia) * (chartW - 96);
-      if (i % 2 === 0) {
-        doc.setFillColor(248, 250, 252);
-        doc.rect(chartX, yy - 5.5, chartW, rowH, 'F');
-      }
-      doc.setTextColor(22, 53, 159);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8.5);
-      doc.text(r.setor, chartX + 2, yy);
-      doc.setFillColor(22, 53, 159);
-      doc.roundedRect(chartX + 88, yy - 4.5, barW, 5.5, 1.5, 1.5, 'F');
-      doc.setTextColor(22, 53, 159);
-      doc.setFont('helvetica', 'bold');
-      doc.text(r.media.toFixed(2), chartX + chartW - 2, yy, { align: 'right' });
-      currentChartY += rowH;
-    });
-  }
 
   const ncsOrdenadas = [...ncDetalhes].sort((a, b) => {
     const setorCmp = a.setor.localeCompare(b.setor, 'pt-BR');
