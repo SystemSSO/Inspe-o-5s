@@ -2804,7 +2804,7 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
       </div>
       <div class="form-group">
         <label class="form-label">Período do relatório</label>
-        <select class="form-select" id="rel-periodo-setorial"></select>
+        <input type="month" class="form-input" id="rel-periodo-setorial" min="2026-01" aria-label="Selecionar mês e ano do relatório setorial">
       </div>
       <div class="form-group">
         <label class="form-label">Destinatário do e-mail</label>
@@ -2830,7 +2830,7 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
       </div>
       <div class="form-group">
         <label class="form-label">Período do relatório</label>
-        <select class="form-select" id="rel-periodo-gerencia"></select>
+        <input type="month" class="form-input" id="rel-periodo-gerencia" min="2026-01" aria-label="Selecionar mês e ano do relatório gerencial">
       </div>
       <div class="form-group">
         <label class="form-label">Destinatário do e-mail</label>
@@ -4911,18 +4911,13 @@ function getAvailableReportPeriodCodes(selectedValue = '') {
 
 // === Function: renderReportPeriodSelect ===
 function renderReportPeriodSelect(inputId, fallbackValue = getCurrentReportPeriodCode()) {
-  const select = document.getElementById(inputId);
-  if (!select) return;
+  const input = document.getElementById(inputId);
+  if (!input) return;
 
-  const selected = select.value || fallbackValue || getCurrentReportPeriodCode();
-  select.innerHTML = getAvailableReportPeriodCodes(selected)
-    .map(periodo => `<option value="${periodo}">${getReportPeriodLabel(periodo)}</option>`)
-    .join('');
-  select.value = selected;
-
-  if (select.value !== selected) {
-    select.value = getCurrentReportPeriodCode();
-  }
+  const selected = input.value || fallbackValue || getCurrentReportPeriodCode();
+  input.value = /^\d{4}-\d{2}$/.test(selected)
+    ? selected
+    : getCurrentReportPeriodCode();
 }
 
 // === Function: getReportPeriodInputValue ===
