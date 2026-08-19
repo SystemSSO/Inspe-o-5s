@@ -3944,6 +3944,63 @@ function getSetorSubareasAtivas(setorNome, unidade = currentUnidade) {
   if (Array.isArray(override) && override.length) return override;
   return Array.isArray(base?.subareas) ? [...base.subareas] : [];
 }
+
+const REFLORESTAMENTO_AREAS_ATIVAS = {
+  administracao: '1 – Administração',
+  silvicultura: '2 – Silvicultura',
+  manutencao: '3 – Manutenção Mecânica',
+  colheita: '4 – Colheita',
+  viveiro: '5 – Viveiro'
+};
+
+function getAreaReflorestamentoMigrada(areaAnterior) {
+  const area = normalizeColumnTitle(areaAnterior || '');
+  if (!area) return '';
+  if (area.includes('administracao')) return REFLORESTAMENTO_AREAS_ATIVAS.administracao;
+  if (area.includes('colheita')) return REFLORESTAMENTO_AREAS_ATIVAS.colheita;
+  if (area.includes('viveiro') || area.includes('produtos quimicos') || area.includes('casa de defensivos')) {
+    return REFLORESTAMENTO_AREAS_ATIVAS.viveiro;
+  }
+  if (
+    area.includes('manutencao') ||
+    area.includes('implementos') ||
+    area.includes('estacionamento de maquinas') ||
+    area.includes('lavador') ||
+    area.includes('oleo diesel')
+  ) {
+    return REFLORESTAMENTO_AREAS_ATIVAS.manutencao;
+  }
+  if (area.includes('silvicultura') || area.includes('horto') || area.includes('sala de treinamentos')) {
+    return REFLORESTAMENTO_AREAS_ATIVAS.silvicultura;
+  }
+  return '';
+}
+
+function migrarInspecoesReflorestamentoJunhoJulho2026(appState, options = {}) {
+  const inspecoes = Array.isArray(appState?.inspecoes) ? appState.inspecoes : [];
+  const idsAlterados = [];
+
+  inspecoes.forEach(insp => {
+    if (!insp?.id || getInspectionUnidade(insp) !== 'CD' || insp.setor !== 'Reflorestamento') return;
+    const periodo = String(insp.periodo || '').slice(0, 7);
+    const data = new Date(insp.data);
+    const pertenceAoPeriodo = periodo
+      ? periodo === '2026-06' || periodo === '2026-07'
+      : Number.isFinite(data.getTime()) && data.getFullYear() === 2026 && [5, 6].includes(data.getMonth());
+    if (!pertenceAoPeriodo) return;
+
+    const novaArea = getAreaReflorestamentoMigrada(insp.subarea);
+    if (!novaArea || novaArea === insp.subarea) return;
+    insp.subarea = novaArea;
+    idsAlterados.push(insp.id);
+  });
+
+  if (options.queueSync && idsAlterados.length) {
+    if (!Array.isArray(appState.syncQueue)) appState.syncQueue = [];
+    appState.syncQueue = [...new Set([...appState.syncQueue, ...idsAlterados])];
+  }
+  return idsAlterados;
+}
 // ConfiguraÃ§Ã£o do Firebase (Substitua pelos seus dados do console do Firebase)
 const firebaseConfig = {
   apiKey: "AIzaSyDY4GZmEg6cZwqxMELGY7AlOOBEPngampA",
@@ -7048,6 +7105,11 @@ async function syncFromCloud(options = {}) {
       lastDoc = snapshot.docs[snapshot.docs.length - 1];
     }
 
+    const idsReflorestamentoMigrados = migrarInspecoesReflorestamentoJunhoJulho2026(
+      { inspecoes: cloudInsps },
+      { queueSync: false }
+    );
+
     const merged = {};
     cloudInsps.forEach(i => { if (i?.id) merged[i.id] = i; });
     const deletadosLocais = new Set(APP.deleteQueue || []);
@@ -7060,6 +7122,9 @@ async function syncFromCloud(options = {}) {
       if (APP.syncQueue.includes(i.id)) merged[i.id] = i;
     });
     APP.inspecoes = Object.values(merged).sort((a, b) => new Date(a.data) - new Date(b.data));
+    if (idsReflorestamentoMigrados.length) {
+      APP.syncQueue = [...new Set([...APP.syncQueue, ...idsReflorestamentoMigrados])];
+    }
     persistLocalApp(APP);
     refreshAfterDataSync();
     scheduleSyncQueue(0);
@@ -7097,6 +7162,8 @@ function refreshAfterDataSync() {
 }
 
 let APP = restoreFinalizedInspectionBackups(loadData());
+const idsReflorestamentoMigradosLocal = migrarInspecoesReflorestamentoJunhoJulho2026(APP, { queueSync: true });
+if (idsReflorestamentoMigradosLocal.length) persistLocalApp(APP);
 let currentTec = '';
 let currentUnidade = localStorage.getItem('aa5s_unit') || 'CD';
 let currentUserEmail = sessionStorage.getItem('aa5s_auth_email') || '';
