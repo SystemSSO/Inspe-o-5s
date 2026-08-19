@@ -8660,14 +8660,19 @@ function sectorCardListHTML() {
   const setoresOrdenados = [...getSetoresAtivos().map(s => s.nome)];
 
   return setoresOrdenados.map(setor => {
-    const inspecoesSetor = APP.inspecoes
-      .filter(i => inspectionIsCurrentUnit(i) && i.setor === setor)
-      .sort(compareInspectionsByPeriodDesc);
-    const areasMap = {};
     const setorCfg = getSetorConfigAtivo(setor);
     const areasEsperadas = (setorCfg?.subareas && setorCfg.subareas.length)
       ? [...setorCfg.subareas]
       : ['Área geral do setor'];
+    const mostrarSomenteAreasAtivas = currentUnidade === 'CD' && setor === 'Reflorestamento';
+    const inspecoesSetor = APP.inspecoes
+      .filter(i =>
+        inspectionIsCurrentUnit(i) &&
+        i.setor === setor &&
+        (!mostrarSomenteAreasAtivas || areasEsperadas.includes(i.subarea || 'Área geral do setor'))
+      )
+      .sort(compareInspectionsByPeriodDesc);
+    const areasMap = {};
 
     inspecoesSetor.forEach(insp => {
       const chave = insp.subarea || '__setor__';
