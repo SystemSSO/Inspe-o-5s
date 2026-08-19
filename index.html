@@ -3322,22 +3322,10 @@ const SETORES = [
   {
     nome: 'Reflorestamento',
     subareas: [
-      '1 – Administração Florestal',
-      '2 – Área de estoque de implementos agrícolas (atrás do armazém)',
-      '3 – Área de estacionamento de máquinas pesadas',
-      '4 – Galpão de reunião (Silvicultura)',
-      '5 – Container da colheita florestal',
-      '6 – Área de estoque de produtos químicos no viveiro florestal',
-      '7 – Vestiário do viveiro florestal',
-      '8 – Sala de treinamentos (próximo à casa de defensivos)',
-      '9 – Manutenção mecânica',
-      '10 – Viveiro florestal (casa de defensivos)',
-      '11 – Silvicultura',
-      '13 – Colheita florestal',
-      '14 – Horto Cristo Redentor',
-      '15 – Horto Rosariana',
-      '16 – Lavador de veículos',
-      '18 – Tanque de abastecimento de óleo diesel'
+      '1 – Administração',
+      '2 – Silvicultura',
+      '3 – Manutenção Mecânica',
+      '4 – Colheita'
     ]
   }
 ];
@@ -3944,10 +3932,15 @@ function saveAreaOverridesStore(store) {
 // === Function: getSetorSubareasAtivas ===
 function getSetorSubareasAtivas(setorNome, unidade = currentUnidade) {
   const unit = normalizeUnidadeCode(unidade, currentUnidade || 'CD');
+  const base = getSetoresBasePorUnidade(unit).find(s => s.nome === setorNome);
+  // A estrutura de Reflorestamento é fixa. Ignora personalizações locais
+  // antigas para que as subáreas removidas não reapareçam no seletor.
+  if (unit === 'CD' && setorNome === 'Reflorestamento') {
+    return Array.isArray(base?.subareas) ? [...base.subareas] : [];
+  }
   const store = getAreaOverridesStore();
   const override = store?.[unit]?.[setorNome];
   if (Array.isArray(override) && override.length) return override;
-  const base = getSetoresBasePorUnidade(unit).find(s => s.nome === setorNome);
   return Array.isArray(base?.subareas) ? [...base.subareas] : [];
 }
 // ConfiguraÃ§Ã£o do Firebase (Substitua pelos seus dados do console do Firebase)
@@ -4354,7 +4347,7 @@ function getSmartsheetAreaLabel(insp) {
 
   if (unidade === 'CD') {
     if (setor === 'Reflorestamento') {
-      if (subarea.includes('administracao florestal')) return 'CD - Administração Florestal';
+      if (subarea.includes('administracao')) return 'CD - Administração Florestal';
       if (subarea.includes('colheita')) return 'CD - Colheita';
       if (subarea.includes('viveiro')) return 'CD - Viveiro';
       if (subarea.includes('manutencao') || subarea.includes('maquinas') || subarea.includes('oleo diesel')) return 'CD - Manutenção Florestal';
