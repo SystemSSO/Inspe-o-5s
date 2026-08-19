@@ -6768,6 +6768,12 @@ function isPhotoRefArray(value) {
   return Array.isArray(value) && value[0] === '__ref__';
 }
 
+// Uma referência só é criada depois que a foto foi persistida no documento
+// separado. Portanto, ela também deve valer como evidência nas validações.
+function temEvidenciaFoto(fotos) {
+  return isPhotoRefArray(fotos) || getFotosValidasArray(fotos).length > 0;
+}
+
 function getPhotoDocKey(sId, ci, parts = []) {
   const cleanParts = parts
     .map(part => String(part || '')
@@ -9587,10 +9593,10 @@ function getCamposFaltantesResolucao(crAtual) {
   const faltantes = [];
   const resolvidos = getDesviosResolvidosCriterio(crAtual);
   if (resolvidos.length) {
-    if (resolvidos.some(desvio => !Array.isArray(desvio.resolucaoFotos) || !desvio.resolucaoFotos.filter(f => typeof f === 'string' && f && f !== '__ref__').length)) faltantes.push('evidência da resolução');
+    if (resolvidos.some(desvio => !temEvidenciaFoto(desvio.resolucaoFotos))) faltantes.push('evidência da resolução');
     return [...new Set(faltantes)];
   }
-  if (!getFotosValidasCriterio(crAtual).length) faltantes.push('evidência da resolução');
+  if (!temEvidenciaFoto(crAtual?.fotos) && !getFotosValidasCriterio(crAtual).length) faltantes.push('evidência da resolução');
   return faltantes;
 }
 
@@ -10028,13 +10034,33 @@ function aplicarNotaMaximaSeUnicoDesvioResolvido(sId, ci) {
 function addDesvioCriterio(sId, ci) {
   const criterio = currentInsp?.sensos?.[sId]?.[ci];
   if (!criterio) return;
+  const formBody = document.getElementById('insp-form-body');
+  const scrollTopAntes = formBody?.scrollTop || 0;
   const desvios = ensureCriterioDesvios(criterio);
-  desvios.push(normalizeDesvio({ status: 'aberto' }));
+  const novoDesvio = normalizeDesvio({ status: 'aberto' });
+  desvios.push(novoDesvio);
   if (!(typeof criterio.nota === 'number' && criterio.nota <= 3)) {
     criterio.nota = 3;
   }
   refreshCriterioAfterDesvioChange(sId, ci);
+  touchDraftContext({
+    lastSensoId: sId,
+    lastCriterioIndex: ci,
+    lastDesvioId: novoDesvio.id,
+    lastAction: 'scroll',
+    lastFieldId: '',
+    scrollTop: scrollTopAntes
+  });
+  currentInsp.__draftMeta = {
+    ...(currentInsp.__draftMeta || {}),
+    ...draftUIState,
+    scrollTop: scrollTopAntes,
+    lastAction: 'scroll',
+    lastFieldId: ''
+  };
   renderInspecaoForm();
+  const restoredBody = document.getElementById('insp-form-body');
+  if (restoredBody) restoredBody.scrollTop = scrollTopAntes;
 }
 
 // === Function: removeDesvioCriterio ===
@@ -11017,6 +11043,9 @@ async function salvarInspecao() {
   }
   if (isSavingInspecao) return;
 
+  // Garante que a validação abaixo use os campos e anexos mais recentes.
+  syncAllDesvioDomFieldsToState();
+
   // validaÃ§Ã£o
   let ok = true;
   let faltamObs = [];
@@ -11040,8 +11069,7 @@ async function salvarInspecao() {
       }
       if (desviosResolvidos.length) {
         const primeiroSemFotoResolucao = desviosResolvidos.find(desvio =>
-          !Array.isArray(desvio.resolucaoFotos) ||
-          !desvio.resolucaoFotos.filter(f => typeof f === 'string' && f && f !== '__ref__').length
+          !temEvidenciaFoto(desvio.resolucaoFotos)
         );
         if (primeiroSemFotoResolucao) {
           faltamFotoResolucao.push(`${s.nome} - Critério ${ci+1}`);
@@ -11049,7 +11077,7 @@ async function salvarInspecao() {
         }
       } else if (criterioResolvidoNoFormulario(s.id, ci, cr)) {
         const fotos = getFotosValidasCriterio(cr);
-        if (!fotos.length) {
+        if (!fotos.length && !temEvidenciaFoto(cr.fotos)) {
           faltamFotoResolucao.push(`${s.nome} - Critério ${ci+1}`);
           if (!primeiraPendencia) primeiraPendencia = { sId: s.id, ci, campo: 'foto' };
         }
