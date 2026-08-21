@@ -4309,7 +4309,7 @@ async function deleteInspectionFromFirebaseNow(inspId) {
     console.warn('Exclusão física bloqueada; marcando inspeção como excluída no Firebase.', e);
     await db.collection("inspecoes").doc(inspId).set(deletedPayload, { merge: true });
   }
-  await db.collection("inspecoes_fotos").doc(inspId).delete().catch(() => {});
+  await deleteCloudInspectionPhotos(inspId).catch(() => {});
   deleteLocalInspectionPhotos(inspId).catch(() => {});
   APP.deleteQueue = APP.deleteQueue.filter(id => id !== inspId);
   APP.syncQueue = APP.syncQueue.filter(id => id !== inspId);
@@ -7045,6 +7045,111 @@ function restoreInspectionPhotosFromDoc(insp, fotosDoc) {
   });
 }
 
+const CLOUD_PHOTO_FORMAT_VERSION = 2;
+const CLOUD_PHOTO_CHUNK_MAX_BYTES = 600 * 1024;
+
+function buildCloudPhotoPackage(inspId, fotosDoc) {
+  const parts = [];
+  let current = {};
+  let currentBytes = 0;
+  let totalPhotos = 0;
+
+  const flush = () => {
+    if (!Object.keys(current).length) return;
+    parts.push(current);
+    current = {};
+    currentBytes = 0;
+  };
+
+  Object.entries(fotosDoc || {}).forEach(([key, photos]) => {
+    (Array.isArray(photos) ? photos : []).forEach(photo => {
+      if (typeof photo !== 'string' || !photo || photo === '__ref__') return;
+      const estimatedBytes = photo.length + key.length + 96;
+      if (currentBytes > 0 && currentBytes + estimatedBytes > CLOUD_PHOTO_CHUNK_MAX_BYTES) flush();
+      if (!Array.isArray(current[key])) current[key] = [];
+      current[key].push(photo);
+      currentBytes += estimatedBytes;
+      totalPhotos += 1;
+    });
+  });
+  flush();
+
+  const partIds = parts.map((_, index) => `${inspId}__parte_${String(index + 1).padStart(3, '0')}`);
+  return {
+    manifest: {
+      inspectionId: inspId,
+      formatVersion: CLOUD_PHOTO_FORMAT_VERSION,
+      partIds,
+      totalParts: parts.length,
+      totalPhotos,
+      updatedAt: new Date().toISOString()
+    },
+    parts: parts.map((fotos, index) => ({
+      id: partIds[index],
+      data: {
+        inspectionId: inspId,
+        formatVersion: CLOUD_PHOTO_FORMAT_VERSION,
+        partIndex: index,
+        fotos
+      }
+    }))
+  };
+}
+
+function combineCloudPhotoParts(parts = []) {
+  const fotosDoc = {};
+  [...parts]
+    .sort((a, b) => (a?.partIndex ?? 0) - (b?.partIndex ?? 0))
+    .forEach(part => {
+      Object.entries(part?.fotos || {}).forEach(([key, photos]) => {
+        if (!Array.isArray(fotosDoc[key])) fotosDoc[key] = [];
+        fotosDoc[key].push(...(Array.isArray(photos) ? photos : []));
+      });
+    });
+  return fotosDoc;
+}
+
+async function loadCloudInspectionPhotos(inspId, options = {}) {
+  const getOptions = options.server === true ? { source: 'server' } : undefined;
+  const mainRef = db.collection('inspecoes_fotos').doc(inspId);
+  const mainSnap = getOptions ? await mainRef.get(getOptions) : await mainRef.get();
+  if (!mainSnap.exists) return { exists: false, fotos: {}, manifest: null };
+  const mainData = mainSnap.data() || {};
+  if (mainData.formatVersion !== CLOUD_PHOTO_FORMAT_VERSION || !Array.isArray(mainData.partIds)) {
+    return { exists: true, fotos: mainData, manifest: null };
+  }
+  const partSnaps = await Promise.all(mainData.partIds.map(partId => {
+    const ref = db.collection('inspecoes_fotos').doc(partId);
+    return getOptions ? ref.get(getOptions) : ref.get();
+  }));
+  const missingPart = partSnaps.findIndex(snap => !snap.exists);
+  if (missingPart >= 0) {
+    const error = new Error(`Parte ${missingPart + 1} das fotos não foi encontrada no Firebase.`);
+    error.code = 'photos-part-missing';
+    throw error;
+  }
+  return {
+    exists: true,
+    fotos: combineCloudPhotoParts(partSnaps.map(snap => snap.data() || {})),
+    manifest: mainData
+  };
+}
+
+async function deleteCloudInspectionPhotos(inspId) {
+  if (!inspId) return;
+  const mainRef = db.collection('inspecoes_fotos').doc(inspId);
+  let partIds = [];
+  try {
+    const snap = await mainRef.get();
+    const data = snap.exists ? (snap.data() || {}) : {};
+    if (Array.isArray(data.partIds)) partIds = data.partIds;
+  } catch (_) {}
+  const batch = db.batch();
+  batch.delete(mainRef);
+  partIds.forEach(partId => batch.delete(db.collection('inspecoes_fotos').doc(partId)));
+  await batch.commit();
+}
+
 // === Function: restoreLocalPhotosForInspection ===
 async function restoreLocalPhotosForInspection(insp) {
   if (!insp?.id || !inspectionHasPhotoRefs(insp)) return insp;
@@ -7082,8 +7187,8 @@ async function ensureInspectionPhotosAvailable(insp, options = {}) {
   const syncStage = `buscando fotos ${insp.id}`;
   try {
     if (showStatus) setSyncStatus('syncing', 'Buscando fotos da inspeção...');
-    const fotosDoc = await db.collection("inspecoes_fotos").doc(insp.id).get();
-    const fotos = fotosDoc.exists ? fotosDoc.data() : {};
+    const cloudPhotos = await loadCloudInspectionPhotos(insp.id);
+    const fotos = cloudPhotos.fotos;
     restoreInspectionPhotosFromDoc(insp, fotos);
     if (Object.keys(fotos || {}).length) {
       await saveLocalInspectionPhotos(insp.id, fotos).catch(() => {});
@@ -7164,7 +7269,7 @@ async function syncPendingQueue() {
           }, { merge: true });
           deleteSynced = true;
         });
-      await db.collection("inspecoes_fotos").doc(inspId).delete().catch(() => {});
+      await deleteCloudInspectionPhotos(inspId).catch(() => {});
       if (deleteSynced) {
         APP.deleteQueue = APP.deleteQueue.filter(id => id !== inspId);
         APP.syncQueue = APP.syncQueue.filter(id => id !== inspId);
@@ -7184,7 +7289,7 @@ async function syncPendingQueue() {
       if (!isUnitAllowed(getInspectionUnidade(insp))) continue;
       await restoreLocalPhotosForInspection(insp);
 
-      // Separa os dados: inspeção sem fotos + fotos em doc separado (evita limite 1MB)
+      // Separa os dados da inspeção e divide as fotos em documentos menores.
       const inspSemFotos = JSON.parse(JSON.stringify(insp));
       const fotosDoc = extractInspectionPhotosForSync(inspSemFotos);
 
@@ -7192,16 +7297,20 @@ async function syncPendingQueue() {
       const batch = db.batch();
       batch.set(db.collection("inspecoes").doc(insp.id), inspSemFotos, { merge: true });
       if (fotosDocTemConteudo) {
-        // Os dados e as fotos precisam chegar juntos. Assim, uma falha no envio
-        // não deixa a inspeção resolvida na nuvem sem a respectiva evidência.
-        batch.set(db.collection("inspecoes_fotos").doc(insp.id), fotosDoc, { merge: true });
+        // Cada documento do Firestore tem limite de aproximadamente 1 MiB.
+        // O manifesto e todas as partes entram no mesmo commit atômico.
+        const photoPackage = buildCloudPhotoPackage(insp.id, fotosDoc);
+        batch.set(db.collection("inspecoes_fotos").doc(insp.id), photoPackage.manifest);
+        photoPackage.parts.forEach(part => {
+          batch.set(db.collection("inspecoes_fotos").doc(part.id), part.data);
+        });
       }
       await batch.commit();
 
       if (fotosDocTemConteudo) {
         if (typeof db.waitForPendingWrites === 'function') await db.waitForPendingWrites();
-        const fotosConfirmadas = await db.collection("inspecoes_fotos").doc(insp.id).get({ source: 'server' });
-        if (!fotosConfirmadas.exists || !photoDocumentMatches(fotosDoc, fotosConfirmadas.data())) {
+        const fotosConfirmadas = await loadCloudInspectionPhotos(insp.id, { server: true });
+        if (!fotosConfirmadas.exists || !photoDocumentMatches(fotosDoc, fotosConfirmadas.fotos)) {
           const error = new Error('As fotos gravadas na nuvem não correspondem às fotos da inspeção.');
           error.code = 'photos-not-confirmed';
           throw error;
@@ -7382,6 +7491,7 @@ function getSyncErrorLabel(error) {
   if (code === 'permission-denied' || text.includes('permission')) return 'Sem permissão no Firebase';
   if (code === 'unauthenticated' || text.includes('auth')) return 'Login online necessário';
   if (code === 'unavailable' || code === 'deadline-exceeded' || text.includes('offline') || text.includes('network')) return 'Servidor/conexão instável';
+  if (text.includes('maximum size') || text.includes('too large') || text.includes('longer than') || text.includes('1048576')) return 'Pacote de fotos acima do limite do Firebase';
   if (code === 'resource-exhausted' || text.includes('quota')) return 'Limite/quota do Firebase';
   if (code === 'failed-precondition') return 'Cache offline indisponível';
   if (code === 'quota_exceeded_err' || text.includes('quotaexceeded')) return 'Armazenamento do aparelho cheio';
