@@ -377,6 +377,55 @@ html, body {
 .checklist-unico {
   padding: 0 16px;
 }
+
+/* Formulário em desktop: mantém uma coluna de leitura estável mesmo quando o
+   usuário reduz o zoom do navegador. Celulares continuam ocupando 100%. */
+@media (min-width: 900px) {
+  #screen-inspecao {
+    --inspection-content-width: min(1180px, calc(100vw - 48px));
+    background: #eef2f7;
+  }
+  body:not(.light-mode) #screen-inspecao {
+    background: #0b1220;
+  }
+  #screen-inspecao > .app-header,
+  #screen-inspecao > .insp-progress-wrap,
+  #screen-inspecao > #insp-form-body,
+  #screen-inspecao > .insp-actions {
+    width: var(--inspection-content-width);
+    margin-inline: auto;
+  }
+  #screen-inspecao > .app-header {
+    border-inline: 1px solid var(--border);
+    border-radius: 0 0 12px 12px;
+  }
+  #screen-inspecao > .insp-progress-wrap {
+    background: var(--navy2);
+    border-inline: 1px solid var(--border);
+  }
+  #screen-inspecao > #insp-form-body {
+    flex: 1 1 auto;
+    background: var(--navy);
+    border-inline: 1px solid var(--border);
+    scrollbar-gutter: stable;
+  }
+  #screen-inspecao > .insp-actions {
+    background: var(--navy2);
+    border-inline: 1px solid var(--border);
+    border-radius: 12px 12px 0 0;
+  }
+  #screen-inspecao .checklist-unico {
+    padding-inline: 20px;
+  }
+  #screen-inspecao .foto-grid {
+    grid-template-columns: repeat(auto-fill, minmax(190px, 270px));
+    justify-content: start;
+  }
+  #screen-inspecao .foto-grid > .foto-item {
+    width: 100%;
+    max-width: 270px;
+  }
+}
 .senso-list-marker {
   margin: 4px 0 10px;
   padding: 12px;
@@ -2688,7 +2737,7 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
     <div style="font-family:var(--font-display);font-size:22px;font-weight:700;color:var(--orange2)" id="insp-nota-geral">—</div>
   </div>
 
-  <div style="padding: 10px 16px 0; flex-shrink:0">
+  <div class="insp-progress-wrap" style="padding: 10px 16px 0; flex-shrink:0">
     <div class="progress-bar">
       <div class="progress-fill" id="insp-progress" style="width:0%"></div>
     </div>
@@ -2702,7 +2751,7 @@ body.accessible-mode .dash-line-legend-item { font-size: 14px; }
     <!-- DINAMICO -->
   </div>
 
-  <div style="padding:12px 16px; flex-shrink:0; border-top:1px solid var(--border)">
+  <div class="insp-actions" style="padding:12px 16px; flex-shrink:0; border-top:1px solid var(--border)">
     <button class="btn-primary" id="btn-salvar-insp" onclick="salvarInspecao()">
       <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 13l4 4L16 7"/></svg>
       Finalizar e Salvar
