@@ -4124,6 +4124,19 @@ async function getLocalInspectionPhotos(inspId) {
   }).then(req => req?.result || null);
 }
 
+// Acrescenta/atualiza chaves sem apagar fotos de outros critérios já salvas.
+async function mergeLocalInspectionPhotos(inspId, fotosDoc) {
+  if (!inspId || !fotosDoc || !Object.keys(fotosDoc).length) return;
+  let existing = null;
+  try {
+    existing = await getLocalInspectionPhotos(inspId);
+  } catch (_) {}
+  await saveLocalInspectionPhotos(inspId, {
+    ...(existing?.fotos || {}),
+    ...fotosDoc
+  });
+}
+
 // === Function: deleteLocalInspectionPhotos ===
 async function deleteLocalInspectionPhotos(inspId) {
   if (!inspId) return;
@@ -4177,6 +4190,7 @@ let cloudSyncInProgress = false;
 let lastCloudSyncAt = 0;
 let syncRetryTimer = null;
 let draftSaveTimer = null;
+let draftSavePromise = Promise.resolve(true);
 let draftUIState = {
   lastFieldId: null,
   lastSensoId: null,
@@ -6609,7 +6623,7 @@ function listDraftEntries() {
 }
 
 // === Function: resumeDraftByKey ===
-function resumeDraftByKey(key) {
+async function resumeDraftByKey(key) {
   if (!key) return;
   const store = getDraftStore();
   const draft = store.byKey?.[key];
@@ -6618,6 +6632,7 @@ function resumeDraftByKey(key) {
     return;
   }
   currentInsp = draft;
+  await restoreLocalPhotosForInspection(currentInsp);
   draftUIState = {
     ...draftUIState,
     ...(draft.__draftMeta || {})
@@ -6748,35 +6763,66 @@ function touchDraftContext(data = {}) {
 
 // === Function: saveDraftNow ===
 function saveDraftNow() {
-  if (!currentInsp) return;
+  if (!currentInsp) return Promise.resolve(false);
+  clearTimeout(draftSaveTimer);
   try {
     syncAllDesvioDomFieldsToState();
-    const store = getDraftStore();
     const key = getDraftKeyFromInspection(currentInsp) || `id||${currentInsp.id}`;
     if (isEditDraft(currentInsp)) {
       currentInsp.__draftKind = 'saved_inspection_edit';
       currentInsp.__draftKindLabel = getDraftKindLabel(currentInsp);
       currentInsp.__originalId = currentInsp.__originalId || currentInsp.id;
     }
-    const payload = {
+    const meta = captureDraftMeta();
+    const updatedAt = new Date().toISOString();
+    currentInsp.__draftMeta = meta;
+    currentInsp.__draftUpdatedAt = updatedAt;
+    const payload = JSON.parse(JSON.stringify({
       ...currentInsp,
-      __draftMeta: captureDraftMeta(),
-      __draftUpdatedAt: new Date().toISOString()
-    };
-    store.byKey[key] = payload;
-    store.lastKey = key;
-    saveDraftStore(store);
-    // Compatibilidade com versão antiga
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(payload));
+      __draftMeta: meta,
+      __draftUpdatedAt: updatedAt
+    }));
+
+    // Serializa as gravações para impedir que um salvamento mais antigo
+    // termine depois do mais novo. As fotos ficam no IndexedDB; o localStorage
+    // recebe somente referências leves e não estoura a cota do navegador.
+    draftSavePromise = draftSavePromise.catch(() => true).then(async () => {
+      const store = getDraftStore();
+      store.byKey[key] = payload;
+      const compactByKey = {};
+      for (const [draftKey, draft] of Object.entries(store.byKey || {})) {
+        if (!draft?.id || !draft?.sensos) {
+          compactByKey[draftKey] = draft;
+          continue;
+        }
+        const compactDraft = JSON.parse(JSON.stringify(draft));
+        const fotosDoc = extractInspectionPhotosForSync(compactDraft);
+        if (Object.keys(fotosDoc).length) {
+          await mergeLocalInspectionPhotos(draft.id, fotosDoc);
+        }
+        compactByKey[draftKey] = compactDraft;
+      }
+      store.byKey = compactByKey;
+      store.lastKey = key;
+      saveDraftStore(store);
+      // Compatibilidade com versão antiga, também sem base64 pesado.
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(compactByKey[key]));
+      return true;
+    }).catch(e => {
+      console.warn("Não foi possível salvar rascunho:", e);
+      return false;
+    });
+    return draftSavePromise;
   } catch (e) {
     console.warn("Não foi possível salvar rascunho:", e);
+    return Promise.resolve(false);
   }
 }
 
 // === Function: scheduleDraftSave ===
 function scheduleDraftSave() {
   clearTimeout(draftSaveTimer);
-  draftSaveTimer = setTimeout(saveDraftNow, 350);
+  draftSaveTimer = setTimeout(() => { void saveDraftNow(); }, 450);
 }
 
 // === Function: saveCurrentFormDraftOnExit ===
@@ -6870,10 +6916,12 @@ function restorePhotoArrayFromFotosDoc(holder, prop, key, fotosDoc) {
 
 // Recupera anexos de uma edição anterior pelo ID estável de cada desvio.
 // Isso preserva a associação correta mesmo que a ordem dos desvios mude.
-function restoreInspectionPhotosFromEditDraft(insp) {
+async function restoreInspectionPhotosFromEditDraft(insp) {
   if (!insp?.id) return 0;
-  const draft = getDraftStore().byKey?.[`edit||${insp.id}`];
+  const storedDraft = getDraftStore().byKey?.[`edit||${insp.id}`];
+  const draft = storedDraft ? JSON.parse(JSON.stringify(storedDraft)) : null;
   if (!draft?.sensos) return 0;
+  await restoreLocalPhotosForInspection(draft);
   let restored = 0;
 
   SENSOS.forEach(s => {
@@ -9365,7 +9413,7 @@ function checkInspAnterior() {
 }
 
 // === Function: iniciarInspecao ===
-function iniciarInspecao() {
+async function iniciarInspecao() {
   if (!currentTec) {
     toast('Selecione um técnico antes de iniciar a inspeção.');
     openTecModal();
@@ -9387,6 +9435,7 @@ function iniciarInspecao() {
   const draftMesmoLocal = getDraftBySetorLocal(setor, subarea || '');
   if (draftMesmoLocal && draftMesmoLocal.id && draftMesmoLocal.sensos) {
     currentInsp = draftMesmoLocal;
+    await restoreLocalPhotosForInspection(currentInsp);
     draftUIState = {
       ...draftUIState,
       ...(draftMesmoLocal.__draftMeta || {})
@@ -10065,10 +10114,31 @@ function syncAllDesvioDomFieldsToState() {
   });
 }
 
-function renderDesvioFotosHtml(sId, ci, desvio, kind = 'abertura', somenteReferencia = false) {
+function renderDesvioFotoGridItemsHtml(sId, ci, desvio, kind = 'abertura', somenteReferencia = false) {
   const isResolucao = kind === 'resolucao';
   const fotos = isResolucao ? (desvio.resolucaoFotos || []) : (desvio.fotos || []);
   const legendas = isResolucao ? (desvio.resolucaoFotoLegendas || []) : (desvio.fotoLegendas || []);
+  return fotos.filter(f => typeof f === 'string' && f && f !== '__ref__').map((foto, fi) => `
+    <div class="foto-item">
+      <div class="foto-thumb" onclick="openImageModal('${foto.replace(/'/g, "\\'")}')">
+        <img src="${foto}" alt="foto">
+        ${somenteReferencia ? '' : `<button class="rm-foto" onclick="event.stopPropagation();removeFotoDesvio('${sId}',${ci},'${desvio.id}',${fi},'${kind}')">×</button>`}
+      </div>
+      ${somenteReferencia
+        ? (legendas[fi] ? `<div class="desvio-foto-legenda-referencia">${escapeHtml(legendas[fi])}</div>` : '')
+        : `<textarea class="form-input foto-caption-input" maxlength="180" placeholder="Legenda da foto ${fi + 1}" oninput="setFotoLegendaDesvio('${sId}',${ci},'${desvio.id}',${fi},'${kind}',this.value)">${escapeHtml(legendas[fi] || '')}</textarea>`}
+    </div>`).join('');
+}
+
+function renderDesvioFotoGrid(sId, ci, desvioId, kind = 'abertura') {
+  const desvio = getDesvioAtual(sId, ci, desvioId);
+  const grid = document.getElementById(`foto-grid-desvio-${kind}-${sId}-${ci}-${desvioId}`);
+  if (!desvio || !grid) return;
+  grid.innerHTML = renderDesvioFotoGridItemsHtml(sId, ci, desvio, kind, false);
+}
+
+function renderDesvioFotosHtml(sId, ci, desvio, kind = 'abertura', somenteReferencia = false) {
+  const isResolucao = kind === 'resolucao';
   const title = isResolucao ? 'Fotos da resolução' : 'Fotos do desvio';
   const buttonId = `foto-desvio-${kind}-${sId}-${ci}-${desvio.id}`;
   const gridId = `foto-grid-desvio-${kind}-${sId}-${ci}-${desvio.id}`;
@@ -10077,16 +10147,7 @@ function renderDesvioFotosHtml(sId, ci, desvio, kind = 'abertura', somenteRefere
       <div class="criterio-section-title" style="margin-bottom:5px">${somenteReferencia ? 'Fotos anteriores do desvio (referência)' : title}</div>
       ${somenteReferencia ? '' : `<button type="button" class="desvio-mini-btn" id="${buttonId}" onclick="triggerFotoDesvio('${sId}',${ci},'${desvio.id}','${kind}')">+ Foto</button>`}
       <div class="${somenteReferencia ? 'desvio-fotos-referencia' : 'foto-grid'}" id="${gridId}" style="margin-top:7px">
-        ${fotos.filter(f => typeof f === 'string' && f && f !== '__ref__').map((foto, fi) => `
-          <div class="foto-item">
-            <div class="foto-thumb" onclick="openImageModal('${foto.replace(/'/g, "\\'")}')">
-              <img src="${foto}" alt="foto">
-              ${somenteReferencia ? '' : `<button class="rm-foto" onclick="event.stopPropagation();removeFotoDesvio('${sId}',${ci},'${desvio.id}',${fi},'${kind}')">×</button>`}
-            </div>
-            ${somenteReferencia
-              ? (legendas[fi] ? `<div class="desvio-foto-legenda-referencia">${escapeHtml(legendas[fi])}</div>` : '')
-              : `<textarea class="form-input foto-caption-input" maxlength="180" placeholder="Legenda da foto ${fi + 1}" oninput="setFotoLegendaDesvio('${sId}',${ci},'${desvio.id}',${fi},'${kind}',this.value)">${escapeHtml(legendas[fi] || '')}</textarea>`}
-          </div>`).join('')}
+        ${renderDesvioFotoGridItemsHtml(sId, ci, desvio, kind, somenteReferencia)}
       </div>
     </div>`;
 }
@@ -10138,7 +10199,7 @@ function renderDesviosCriterioHtml(s, ci, criterio) {
 }
 
 // === Function: refreshCriterioAfterDesvioChange ===
-function refreshCriterioAfterDesvioChange(sId, ci) {
+function refreshCriterioAfterDesvioChange(sId, ci, options = {}) {
   const criterio = currentInsp?.sensos?.[sId]?.[ci];
   if (!criterio) return;
   syncCriterioResumoFromDesvios(criterio);
@@ -10147,7 +10208,7 @@ function refreshCriterioAfterDesvioChange(sId, ci) {
   updateScoreMini(sId);
   updateProgresso();
   updateNotaGeral();
-  scheduleDraftSave();
+  if (options.saveDraft !== false) scheduleDraftSave();
 }
 
 // === Function: getDesviosComConteudoDoSenso ===
@@ -10590,6 +10651,7 @@ function openImageModal(imageSrc) {
 }
 
 let pendingFotoTarget = null;
+let fotoWorkflowAtivo = false;
 
 // === Function: triggerFoto ===
 function triggerFoto(sId, ci) {
@@ -10603,6 +10665,7 @@ function triggerFoto(sId, ci) {
 function closeFotoModal() {
   touchDraftContext({ lastAction: 'foto_modal_close', fotoModalOpen: false, fotoTarget: pendingFotoTarget });
   pendingFotoTarget = null;
+  fotoWorkflowAtivo = false;
   scheduleDraftSave();
   document.getElementById('modal-foto-opcao').classList.remove('open');
 }
@@ -10622,6 +10685,7 @@ function escolherFonteFoto(source) {
   });
   scheduleDraftSave();
   const inputId = source === 'camera' ? `foto-inp-camera-${sId}-${ci}` : `foto-inp-gallery-${sId}-${ci}`;
+  fotoWorkflowAtivo = true;
   document.getElementById('modal-foto-opcao').classList.remove('open');
   pendingFotoTarget = null;
   const inp = document.getElementById(inputId);
@@ -10629,6 +10693,13 @@ function escolherFonteFoto(source) {
     inp.dataset.desvioId = desvioId;
     inp.dataset.fotoKind = kind;
     inp.click();
+    window.addEventListener('focus', () => {
+      setTimeout(() => {
+        if (!inp.files?.length) fotoWorkflowAtivo = false;
+      }, 800);
+    }, { once: true });
+  } else {
+    fotoWorkflowAtivo = false;
   }
 }
 
@@ -10677,9 +10748,13 @@ async function addFotos(sId, ci, inp) {
     fotoModalOpen: false,
     fotoTarget: targetMeta
   });
-  for (const file of files) {
+  let adicionadas = 0;
+  let falhas = 0;
+  fotoWorkflowAtivo = true;
+  for (let fileIndex = 0; fileIndex < files.length; fileIndex++) {
+    const file = files[fileIndex];
     try {
-      toast('Processando foto...');
+      toast(`Processando foto ${fileIndex + 1} de ${files.length}...`);
       const fotoSrc = await comprimirImagem(file);
       const criterio = currentInsp.sensos[sId][ci];
       if (desvioId) {
@@ -10691,7 +10766,7 @@ async function addFotos(sId, ci, inp) {
         if (!Array.isArray(desvio[legendasKey])) desvio[legendasKey] = [];
         desvio[fotosKey].push(fotoSrc);
         desvio[legendasKey].push('');
-        refreshCriterioAfterDesvioChange(sId, ci);
+        refreshCriterioAfterDesvioChange(sId, ci, { saveDraft: false });
       } else {
         if (!Array.isArray(criterio.fotos)) criterio.fotos = [];
         if (!Array.isArray(criterio.fotoLegendas)) criterio.fotoLegendas = [];
@@ -10700,11 +10775,10 @@ async function addFotos(sId, ci, inp) {
       }
       const fotoArea = document.getElementById(`foto-area-${sId}-${ci}`);
       if (fotoArea) fotoArea.style.borderColor = '';
-      if (!desvioId) renderFotoGrid(sId, ci);
-      scheduleDraftSave();
+      adicionadas += 1;
     } catch (e) {
       console.error("Erro ao processar foto:", e);
-      toast('Erro ao processar foto');
+      falhas += 1;
     }
   }
   inp.dataset.desvioId = '';
@@ -10720,9 +10794,21 @@ async function addFotos(sId, ci, inp) {
       fotoModalOpen: false,
       fotoTarget: targetMeta
     });
-    renderInspecaoForm();
+    renderDesvioFotoGrid(sId, ci, desvioId, fotoKind);
+  } else {
+    renderFotoGrid(sId, ci);
   }
-  toast('Fotos adicionadas!');
+  const rascunhoConfirmado = adicionadas > 0 ? await saveDraftNow() : true;
+  fotoWorkflowAtivo = false;
+  if (!rascunhoConfirmado) {
+    toast('As fotos estão na tela, mas não foi possível confirmá-las no armazenamento local. Não feche o formulário.');
+    return;
+  }
+  if (falhas) {
+    toast(`${adicionadas} foto(s) salva(s); ${falhas} não puderam ser processadas.`);
+    return;
+  }
+  toast(`${adicionadas} foto(s) adicionada(s) e salva(s) no aparelho.`);
 }
 
 // === Function: renderFotoGrid ===
@@ -11190,6 +11276,10 @@ async function salvarInspecao() {
     return;
   }
   if (isSavingInspecao) return;
+  if (fotoWorkflowAtivo) {
+    toast('Aguarde a foto terminar de ser processada e salva no aparelho.');
+    return;
+  }
 
   // Garante que a validação abaixo use os campos e anexos mais recentes.
   syncAllDesvioDomFieldsToState();
@@ -11559,7 +11649,7 @@ async function openDetalhe(id) {
 }
 
 // === Function: iniciarNovaComBase ===
-function iniciarNovaComBase(baseId) {
+async function iniciarNovaComBase(baseId) {
   if (!currentTec) {
     toast('Selecione um técnico antes de iniciar a inspeção.');
     openTecModal();
@@ -11570,6 +11660,7 @@ function iniciarNovaComBase(baseId) {
   const draftMesmoLocal = getDraftBySetorLocal(base.setor, base.subarea || '');
   if (draftMesmoLocal && draftMesmoLocal.id && draftMesmoLocal.sensos) {
     currentInsp = draftMesmoLocal;
+    await restoreLocalPhotosForInspection(currentInsp);
     draftUIState = {
       ...draftUIState,
       ...(draftMesmoLocal.__draftMeta || {})
@@ -12058,7 +12149,7 @@ async function editarInspecao(id) {
     return;
   }
   await ensureInspectionPhotosAvailable(insp, { toastOnError: true });
-  const fotosRecuperadas = restoreInspectionPhotosFromEditDraft(insp);
+  const fotosRecuperadas = await restoreInspectionPhotosFromEditDraft(insp);
   document.getElementById('modal-detalhe').classList.remove('open');
   currentInsp = JSON.parse(JSON.stringify(insp));
   currentInsp.__isEditing = true;
@@ -14773,17 +14864,19 @@ window.addEventListener('online', async () => {
   checkOnline();
   await handleOnlineAuthRecheck();
   if (isUsuarioLogado()) {
-    syncFromCloud({ force: true });
+    if (getActiveScreenId() !== 'inspecao' && !fotoWorkflowAtivo) syncFromCloud({ force: true });
     scheduleSyncQueue(0);
   }
 });
 window.addEventListener('offline', checkOnline);
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') {
-    saveCurrentFormDraftOnExit();
+    // Abrir câmera/galeria também oculta a página. Nesse caso o rascunho será
+    // salvo logo após a foto, sem competir com o processamento da imagem.
+    if (!fotoWorkflowAtivo) saveCurrentFormDraftOnExit();
     return;
   }
-  if (navigator.onLine && isUsuarioLogado()) {
+  if (navigator.onLine && isUsuarioLogado() && getActiveScreenId() !== 'inspecao' && !fotoWorkflowAtivo) {
     handleOnlineAuthRecheck().finally(() => syncFromCloud());
   }
 });
@@ -14795,7 +14888,7 @@ checkOnline();
 function startCloudAutoRefresh() {
   clearInterval(cloudRefreshTimer);
   cloudRefreshTimer = setInterval(() => {
-    if (document.visibilityState === 'visible' && navigator.onLine && isUsuarioLogado()) syncFromCloud();
+    if (document.visibilityState === 'visible' && navigator.onLine && isUsuarioLogado() && getActiveScreenId() !== 'inspecao' && !fotoWorkflowAtivo) syncFromCloud();
   }, CLOUD_AUTO_REFRESH_MS);
 }
 
