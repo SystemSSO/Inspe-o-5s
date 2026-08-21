@@ -6863,7 +6863,60 @@ function extractInspectionPhotosForSync(inspSemFotos) {
 
 function restorePhotoArrayFromFotosDoc(holder, prop, key, fotosDoc) {
   if (!holder || !isPhotoRefArray(holder[prop])) return;
-  holder[prop] = Array.isArray(fotosDoc?.[key]) ? fotosDoc[key] : [];
+  // Cache parcial não deve apagar a referência: mantendo-a, o fluxo ainda
+  // pode buscar a foto no Firebase ou em um rascunho de recuperação.
+  if (Array.isArray(fotosDoc?.[key])) holder[prop] = fotosDoc[key];
+}
+
+// Recupera anexos de uma edição anterior pelo ID estável de cada desvio.
+// Isso preserva a associação correta mesmo que a ordem dos desvios mude.
+function restoreInspectionPhotosFromEditDraft(insp) {
+  if (!insp?.id) return 0;
+  const draft = getDraftStore().byKey?.[`edit||${insp.id}`];
+  if (!draft?.sensos) return 0;
+  let restored = 0;
+
+  SENSOS.forEach(s => {
+    const targetCriteria = insp.sensos?.[s.id];
+    const sourceCriteria = draft.sensos?.[s.id];
+    if (!Array.isArray(targetCriteria) || !Array.isArray(sourceCriteria)) return;
+
+    targetCriteria.forEach((targetCriterion, ci) => {
+      const sourceCriterion = sourceCriteria[ci];
+      if (!sourceCriterion) return;
+
+      const sourceDirectPhotos = getFotosValidasArray(sourceCriterion.fotos);
+      if (!getFotosValidasArray(targetCriterion.fotos).length && sourceDirectPhotos.length) {
+        targetCriterion.fotos = [...sourceDirectPhotos];
+        targetCriterion.fotoLegendas = Array.isArray(sourceCriterion.fotoLegendas)
+          ? [...sourceCriterion.fotoLegendas]
+          : [];
+        restored += sourceDirectPhotos.length;
+      }
+
+      const targetDeviations = Array.isArray(targetCriterion.desvios) ? targetCriterion.desvios : [];
+      const sourceDeviations = Array.isArray(sourceCriterion.desvios) ? sourceCriterion.desvios : [];
+      targetDeviations.forEach(targetDeviation => {
+        const sourceDeviation = sourceDeviations.find(item => item?.id && item.id === targetDeviation?.id);
+        if (!sourceDeviation) return;
+
+        [
+          ['fotos', 'fotoLegendas'],
+          ['resolucaoFotos', 'resolucaoFotoLegendas']
+        ].forEach(([photosProp, captionsProp]) => {
+          const sourcePhotos = getFotosValidasArray(sourceDeviation[photosProp]);
+          if (getFotosValidasArray(targetDeviation[photosProp]).length || !sourcePhotos.length) return;
+          targetDeviation[photosProp] = [...sourcePhotos];
+          targetDeviation[captionsProp] = Array.isArray(sourceDeviation[captionsProp])
+            ? [...sourceDeviation[captionsProp]]
+            : [];
+          restored += sourcePhotos.length;
+        });
+      });
+    });
+  });
+
+  return restored;
 }
 
 function inspectionHasPhotoRefs(insp) {
@@ -6969,16 +7022,26 @@ async function ensureReportPhotosAvailable(inspections = [], options = {}) {
   return true;
 }
 
+function photoDocumentMatches(expected, actual) {
+  return Object.entries(expected || {}).every(([key, expectedPhotos]) => {
+    const actualPhotos = actual?.[key];
+    return Array.isArray(expectedPhotos) &&
+      Array.isArray(actualPhotos) &&
+      actualPhotos.length === expectedPhotos.length &&
+      expectedPhotos.every((photo, index) => actualPhotos[index] === photo);
+  });
+}
+
 // === Function: syncPendingQueue ===
 async function syncPendingQueue() {
-  if (syncInProgress) return;
+  if (syncInProgress) return false;
   if (!navigator.onLine || !hasFirebaseConfig()) {
     setSyncStatus('offline', 'Modo offline');
-    return;
+    return false;
   }
   if (!auth.currentUser) {
     setSyncStatus('offline', 'Login online necessário para sincronizar');
-    return;
+    return false;
   }
   APP = normalizeAppState(APP);
   syncInProgress = true;
@@ -7032,6 +7095,13 @@ async function syncPendingQueue() {
 
       if (Object.keys(fotosDoc).length > 0) {
         await db.collection("inspecoes_fotos").doc(insp.id).set(fotosDoc, { merge: true });
+        if (typeof db.waitForPendingWrites === 'function') await db.waitForPendingWrites();
+        const fotosConfirmadas = await db.collection("inspecoes_fotos").doc(insp.id).get({ source: 'server' });
+        if (!fotosConfirmadas.exists || !photoDocumentMatches(fotosDoc, fotosConfirmadas.data())) {
+          const error = new Error('As fotos gravadas na nuvem não correspondem às fotos da inspeção.');
+          error.code = 'photos-not-confirmed';
+          throw error;
+        }
       }
 
       APP.syncQueue = APP.syncQueue.filter(id => id !== inspId);
@@ -7045,9 +7115,11 @@ async function syncPendingQueue() {
       setSmartsheetStatus(`${smartsheetPendentes} inspeção(ões) pendente(s) para envio manual ao Smartsheet.`);
     }
     setSyncStatus('synced', 'Sincronizado');
+    return true;
   } catch (e) {
     console.warn("Falha ao sincronizar agora. Tentaremos novamente ao reconectar.", e);
     setSyncErrorStatus(e, syncStage);
+    return false;
   } finally {
     syncInProgress = false;
   }
@@ -11077,6 +11149,7 @@ function destacarCriterioPendente(sId, ci, campo = 'obs') {
   let target = null;
   if (campo && typeof campo === 'object') {
     const desvioId = campo.desvioId || '';
+    if (campo.tipo === 'foto') target = document.getElementById(`foto-desvio-abertura-${sId}-${ci}-${desvioId}`);
     if (campo.tipo === 'fotoResolucao') target = document.getElementById(`foto-desvio-resolucao-${sId}-${ci}-${desvioId}`);
     if (campo.tipo === 'resolucao') target = document.getElementById(`desvio-resolucao-${sId}-${ci}-${desvioId}`);
     if (campo.tipo === 'descricao') target = document.getElementById(`desvio-desc-${sId}-${ci}-${desvioId}`);
@@ -11115,6 +11188,7 @@ async function salvarInspecao() {
   // validaÃ§Ã£o
   let ok = true;
   let faltamObs = [];
+  let faltamFotoDesvio = [];
   let faltamFotoResolucao = [];
   let primeiraPendencia = null;
   SENSOS.forEach(s => {
@@ -11133,9 +11207,19 @@ async function salvarInspecao() {
         const primeiroAberto = desviosAbertos[0];
         if (!primeiraPendencia) primeiraPendencia = { sId: s.id, ci, campo: primeiroAberto ? { tipo: 'descricao', desvioId: primeiroAberto.id } : 'desvio' };
       }
+      const primeiroAbertoSemFoto = desviosAbertos.find(desvio =>
+        !getFotosValidasArray(desvio.fotos).length
+      );
+      if (primeiroAbertoSemFoto) {
+        faltamFotoDesvio.push(`${s.nome} - Critério ${ci+1}`);
+        if (!primeiraPendencia) primeiraPendencia = { sId: s.id, ci, campo: { tipo: 'foto', desvioId: primeiroAbertoSemFoto.id } };
+      } else if (cr.nota <= 3 && !desviosAbertos.length && aceitaObsLegada && !getFotosValidasArray(cr.fotos).length) {
+        faltamFotoDesvio.push(`${s.nome} - Critério ${ci+1}`);
+        if (!primeiraPendencia) primeiraPendencia = { sId: s.id, ci, campo: 'foto' };
+      }
       if (desviosResolvidos.length) {
         const primeiroSemFotoResolucao = desviosResolvidos.find(desvio =>
-          !temEvidenciaFoto(desvio.resolucaoFotos)
+          !getFotosValidasArray(desvio.resolucaoFotos).length
         );
         if (primeiroSemFotoResolucao) {
           faltamFotoResolucao.push(`${s.nome} - Critério ${ci+1}`);
@@ -11143,7 +11227,7 @@ async function salvarInspecao() {
         }
       } else if (criterioResolvidoNoFormulario(s.id, ci, cr)) {
         const fotos = getFotosValidasCriterio(cr);
-        if (!fotos.length && !temEvidenciaFoto(cr.fotos)) {
+        if (!fotos.length) {
           faltamFotoResolucao.push(`${s.nome} - Critério ${ci+1}`);
           if (!primeiraPendencia) primeiraPendencia = { sId: s.id, ci, campo: 'foto' };
         }
@@ -11154,6 +11238,11 @@ async function salvarInspecao() {
   if (faltamObs.length > 0) {
     destacarCriterioPendente(primeiraPendencia.sId, primeiraPendencia.ci, primeiraPendencia.campo);
     toast('Adicione pelo menos um desvio com descrição nos itens com nota de 0 a 3');
+    return;
+  }
+  if (faltamFotoDesvio.length > 0) {
+    destacarCriterioPendente(primeiraPendencia.sId, primeiraPendencia.ci, primeiraPendencia.campo);
+    toast('Anexe pelo menos uma foto de evidência em cada desvio aberto');
     return;
   }
   if (faltamFotoResolucao.length > 0) {
@@ -11244,8 +11333,14 @@ async function salvarInspecao() {
 
     if (!navigator.onLine || !hasFirebaseConfig()) {
       toast(isEditing ? 'Edição salva no aparelho. Sincroniza quando houver internet.' : 'Inspeção salva no aparelho. Sincroniza quando houver internet.');
+    } else if (!auth.currentUser) {
+      toast('Inspeção salva no aparelho. Faça login online para sincronizar.');
     } else {
-      toast(isEditing ? 'Inspeção editada com sucesso!' : 'Inspeção salva com sucesso!');
+      await syncPendingQueue();
+      const nuvemConfirmada = !APP.syncQueue.includes(savedInsp.id);
+      toast(nuvemConfirmada
+        ? (isEditing ? 'Inspeção editada com sucesso!' : 'Inspeção salva com sucesso!')
+        : 'Inspeção preservada no aparelho, mas a sincronização das fotos está pendente.');
     }
 
     currentInsp = null;
@@ -11954,6 +12049,7 @@ async function editarInspecao(id) {
     return;
   }
   await ensureInspectionPhotosAvailable(insp, { toastOnError: true });
+  const fotosRecuperadas = restoreInspectionPhotosFromEditDraft(insp);
   document.getElementById('modal-detalhe').classList.remove('open');
   currentInsp = JSON.parse(JSON.stringify(insp));
   currentInsp.__isEditing = true;
@@ -11974,7 +12070,9 @@ async function editarInspecao(id) {
   saveDraftNow();
   renderInspecaoForm();
   navTo('inspecao');
-  toast('Edição iniciada. Ajuste os dados e clique em Finalizar e Salvar.');
+  toast(fotosRecuperadas
+    ? `${fotosRecuperadas} foto(s) recuperada(s) e associada(s) aos respectivos desvios.`
+    : 'Edição iniciada. Ajuste os dados e clique em Finalizar e Salvar.');
 }
 
 // === Function: removerInspecao ===
