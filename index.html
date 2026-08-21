@@ -5240,7 +5240,6 @@ function getSetorialReportDashboardData(setor, periodo = getSetorialReportPeriod
           });
           if (resolucaoIncompleta) {
             resolucoesIncompletas.push(resolucaoIncompleta);
-            return;
           }
           resolvidasList.push(...itensResolvidos);
           return;
@@ -5256,7 +5255,6 @@ function getSetorialReportDashboardData(setor, periodo = getSetorialReportPeriod
         });
         if (resolucaoIncompleta) {
           resolucoesIncompletas.push(resolucaoIncompleta);
-          return;
         }
         resolvidasList.push({
           dataResolucao: insp.data,
@@ -5265,7 +5263,9 @@ function getSetorialReportDashboardData(setor, periodo = getSetorialReportPeriod
           senso: s.nome,
           criterio: s.criterios[ci],
           obsAnterior: crAnterior.obs || 'Sem observação.',
-          obsAtual: String(crAtual?.obs || '').trim(),
+          obsAtual: String(crAtual?.obs || '').trim() || (temEvidenciaFoto(crAtual?.fotos)
+            ? 'Resolvido com evidência anexada.'
+            : 'Resolvido; evidência fotográfica indisponível.'),
           sugestaoAtual: crAtual?.sugestao || 'Não informada.',
           fotosAnterior: getFotosNCAbertaComFallback(inspAnterior, s.id, ci, crAnterior),
           fotosResolucao: getFotosValidasCriterio(crAtual),
@@ -5307,7 +5307,6 @@ function getSetorialReportDashboardData(setor, periodo = getSetorialReportPeriod
           });
           if (resolucaoIncompleta) {
             resolucoesIncompletas.push(resolucaoIncompleta);
-            return;
           }
           resolvidasList.push(...itensResolvidos);
           return;
@@ -5323,7 +5322,6 @@ function getSetorialReportDashboardData(setor, periodo = getSetorialReportPeriod
         });
         if (resolucaoIncompleta) {
           resolucoesIncompletas.push(resolucaoIncompleta);
-          return;
         }
         resolvidasList.push({
           dataResolucao: inspOrigem.data,
@@ -5332,7 +5330,9 @@ function getSetorialReportDashboardData(setor, periodo = getSetorialReportPeriod
           senso: s.nome,
           criterio: s.criterios[ci],
           obsAnterior: crAnterior.obs || 'Sem observação.',
-          obsAtual: String(crAtual?.obs || '').trim(),
+          obsAtual: String(crAtual?.obs || '').trim() || (temEvidenciaFoto(crAtual?.fotos)
+            ? 'Resolvido com evidência anexada.'
+            : 'Resolvido; evidência fotográfica indisponível.'),
           sugestaoAtual: crAtual?.sugestao || 'Não informada.',
           fotosAnterior: getFotosNCAbertaComFallback(inspAnteriorOrigem, s.id, ci, crAnterior),
           fotosResolucao: getFotosValidasCriterio(crAtual),
@@ -5467,7 +5467,6 @@ function getGerenciaReportDashboardData(gerencia, periodo = getSetorialReportPer
             });
             if (resolucaoIncompleta) {
               resolucoesIncompletas.push(resolucaoIncompleta);
-              return;
             }
             ncResolvidas += itensResolvidos.length;
             itensResolvidos.forEach(item => {
@@ -5492,7 +5491,6 @@ function getGerenciaReportDashboardData(gerencia, periodo = getSetorialReportPer
             });
             if (resolucaoIncompleta) {
               resolucoesIncompletas.push(resolucaoIncompleta);
-              return;
             }
             ncResolvidas++;
             ncDetalhes.push({
@@ -5505,7 +5503,9 @@ function getGerenciaReportDashboardData(gerencia, periodo = getSetorialReportPer
               criterio: s.criterios[ci],
               obs: String(cr?.obs || '').trim(),
               obsAnterior: crAnt?.obs || 'Sem observação.',
-              obsAtual: String(cr?.obs || '').trim(),
+              obsAtual: String(cr?.obs || '').trim() || (temEvidenciaFoto(cr?.fotos)
+                ? 'Resolvido com evidência anexada.'
+                : 'Resolvido; evidência fotográfica indisponível.'),
               sugestao: cr?.sugestao || 'Não informada.',
               nota: cr?.nota ?? null,
               fotos: getFotosValidasCriterio(cr),
@@ -7091,10 +7091,17 @@ async function syncPendingQueue() {
       const inspSemFotos = JSON.parse(JSON.stringify(insp));
       const fotosDoc = extractInspectionPhotosForSync(inspSemFotos);
 
-      await db.collection("inspecoes").doc(insp.id).set(inspSemFotos, { merge: true });
+      const fotosDocTemConteudo = Object.keys(fotosDoc).length > 0;
+      const batch = db.batch();
+      batch.set(db.collection("inspecoes").doc(insp.id), inspSemFotos, { merge: true });
+      if (fotosDocTemConteudo) {
+        // Os dados e as fotos precisam chegar juntos. Assim, uma falha no envio
+        // não deixa a inspeção resolvida na nuvem sem a respectiva evidência.
+        batch.set(db.collection("inspecoes_fotos").doc(insp.id), fotosDoc, { merge: true });
+      }
+      await batch.commit();
 
-      if (Object.keys(fotosDoc).length > 0) {
-        await db.collection("inspecoes_fotos").doc(insp.id).set(fotosDoc, { merge: true });
+      if (fotosDocTemConteudo) {
         if (typeof db.waitForPendingWrites === 'function') await db.waitForPendingWrites();
         const fotosConfirmadas = await db.collection("inspecoes_fotos").doc(insp.id).get({ source: 'server' });
         if (!fotosConfirmadas.exists || !photoDocumentMatches(fotosDoc, fotosConfirmadas.data())) {
@@ -9758,11 +9765,11 @@ function getResolucaoIncompletaInfo(insp, s, ci, crAtual, extras = {}) {
 function getMensagemResolucaoIncompleta(lista) {
   const itens = Array.isArray(lista) ? lista : [];
   const primeiro = itens[0];
-  if (!primeiro) return 'Há desvio resolvido sem evidência de resolução.';
+  if (!primeiro) return 'O relatório contém desvio resolvido cuja evidência fotográfica está indisponível.';
   const detalhe = `${primeiro.setor || 'Setor'} - ${primeiro.local || 'Área'} · ${primeiro.senso || 'Senso'} · Critério ${primeiro.criterioIndice || ''}`;
   const campos = (primeiro.faltantes || []).join(' e ') || 'dados obrigatórios';
   const extra = itens.length > 1 ? ` (+${itens.length - 1} outra(s))` : '';
-  return `Corrija a resolução do desvio antes de gerar o relatório: ${detalhe} sem ${campos}${extra}.`;
+  return `Atenção: o relatório será gerado com evidência indisponível em ${detalhe}, sem ${campos}${extra}.`;
 }
 
 // === Function: hasPendenciaAnterior ===
@@ -9887,7 +9894,9 @@ function buildResolvedDesvioReportItems(insp, inspAnterior, s, ci, crAtual, crAn
       desvioIndice: idx + 1,
       desvioId: desvio.id,
       obsAnterior: desvio.descricao || anterior.descricao || crAnterior?.obs || 'Sem observação.',
-      obsAtual: String(desvio.resolucaoObs || '').trim() || 'Resolvido com evidência anexada.',
+      obsAtual: String(desvio.resolucaoObs || '').trim() || (temEvidenciaFoto(desvio.resolucaoFotos)
+        ? 'Resolvido com evidência anexada.'
+        : 'Resolvido; evidência fotográfica indisponível.'),
       sugestaoAtual: desvio.sugestao || anterior.sugestao || crAtual?.sugestao || 'Não informada.',
       fotosAnterior,
       fotosResolucao,
@@ -12555,7 +12564,6 @@ async function gerarPDFGerencia(options = {}) {
   const gerenciaData = getGerenciaReportDashboardData(gerencia, periodoSelecionado);
   if (gerenciaData.resolucoesIncompletas?.length) {
     if (shouldToast) toast(getMensagemResolucaoIncompleta(gerenciaData.resolucoesIncompletas));
-    return;
   }
   const periodoAtual = gerenciaData.periodo.periodoCodigo;
   const mesAnoAtual = gerenciaData.periodoTitulo;
@@ -13560,7 +13568,6 @@ async function gerarPDFSetorial(setor, options = {}) {
   const setorialData = getSetorialReportDashboardData(setor, periodoSelecionado);
   if (setorialData.resolucoesIncompletas?.length) {
     if (shouldToast) toast(getMensagemResolucaoIncompleta(setorialData.resolucoesIncompletas));
-    return;
   }
   const {
     inspsSetor,
