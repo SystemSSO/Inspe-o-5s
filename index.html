@@ -6069,6 +6069,28 @@
       return SMARTSHEET_AREA_LABELS[unidade]?.[setor] || `${unidade} - ${setor}`.trim();
     }
 
+    // === Function: shouldSplitSmartsheetBySubarea ===
+    function shouldSplitSmartsheetBySubarea(insp) {
+      return getUnidadeShortCode(getInspectionUnidade(insp)) === 'CD' &&
+        String(insp?.setor || '').trim() === 'Reflorestamento';
+    }
+
+    // === Function: getSmartsheetAggregationKey ===
+    function getSmartsheetAggregationKey(insp) {
+      const unidade = getInspectionUnidade(insp);
+      const setorOuArea = shouldSplitSmartsheetBySubarea(insp)
+        ? getSmartsheetAreaLabel(insp)
+        : String(insp?.setor || '').trim();
+      return [unidade, setorOuArea, insp?.periodo || ''].join('||');
+    }
+
+    // === Function: getSmartsheetAggregationLabel ===
+    function getSmartsheetAggregationLabel(insp) {
+      return shouldSplitSmartsheetBySubarea(insp)
+        ? getSmartsheetAreaLabel(insp)
+        : String(insp?.setor || insp?.id || '').trim();
+    }
+
     // === Function: criterioSmartsheetKey ===
     function criterioSmartsheetKey(sId, ci) {
       return `criterio_${sId}_${ci + 1}`;
@@ -7728,9 +7750,10 @@
       return rows;
     }
 
-    // Gera uma unica linha com a media das subareas do mesmo setor e periodo.
+    // Gera uma única linha com a média do agrupamento no mesmo período.
+    // Em Reflorestamento/CD, cada subárea é um agrupamento independente.
     // As notas dos sensos consolidadas fazem a formula de nota final do Smartsheet
-    // representar a media geral do setor, em vez da nota isolada de cada subarea.
+    // representar a média geral do setor ou da subárea de Reflorestamento.
     function buildSmartsheetSectorAverageRows(inspecoes, columnMap) {
       const itens = (Array.isArray(inspecoes) ? inspecoes : []).filter(Boolean);
       if (!itens.length) return [];
@@ -7742,7 +7765,9 @@
         area_dashboard: getSmartsheetAreaLabel(referencia),
         data_envio: formatSmartsheetDateShort(new Date()),
         nome: tecnicos.join('; '),
-        localizacao: referencia.setor || ''
+        localizacao: shouldSplitSmartsheetBySubarea(referencia)
+          ? (referencia.subarea || referencia.setor || '')
+          : (referencia.setor || '')
       };
 
       SENSOS.forEach((s, si) => {
@@ -7861,18 +7886,18 @@
 
       const grupos = new Map();
       itens.forEach(insp => {
-        const chave = [getInspectionUnidade(insp), insp.setor || '', insp.periodo || ''].join('||');
+        const chave = getSmartsheetAggregationKey(insp);
         if (!grupos.has(chave)) grupos.set(chave, []);
         grupos.get(chave).push(insp);
       });
 
       let enviadas = 0;
       const scopeText = label ? ` (${label})` : '';
-      setSmartsheetStatus(`Enviando ${grupos.size} média(s) de setor ao Smartsheet${scopeText}...`);
+      setSmartsheetStatus(`Enviando ${grupos.size} lançamento(s) de área/setor ao Smartsheet${scopeText}...`);
 
       for (const grupo of grupos.values()) {
         const referencia = grupo[0];
-        setSmartsheetStatus(`Enviando ao Smartsheet ${enviadas + 1}/${grupos.size}: média geral de ${referencia.setor || referencia.id}`);
+        setSmartsheetStatus(`Enviando ao Smartsheet ${enviadas + 1}/${grupos.size}: ${getSmartsheetAggregationLabel(referencia)}`);
         await syncSmartsheetSectorAverage(grupo);
         grupo.forEach(insp => {
           insp.smartsheetSent = true;
@@ -7885,7 +7910,7 @@
       renderSmartsheetSettings();
       const cfg = getSmartsheetConfig();
       if (enviadas) {
-        setSmartsheetStatus(`Smartsheet: ${enviadas} média(s) geral(is) de setor enviada(s)${scopeText} para Sheet ID ${cfg.sheetId}.`);
+        setSmartsheetStatus(`Smartsheet: ${enviadas} lançamento(s) de área/setor enviado(s)${scopeText} para Sheet ID ${cfg.sheetId}.`);
       }
       return enviadas;
     }
@@ -7909,7 +7934,7 @@
       persistLocalApp(APP);
 
       const enviadas = await syncSmartsheetInspectionsScoped(inspecoesPendentes, { label: 'pendentes' });
-      if (enviadas) toast(`${enviadas} média(s) geral(is) de setor enviada(s) ao Smartsheet.`);
+      if (enviadas) toast(`${enviadas} lançamento(s) de área/setor enviado(s) ao Smartsheet.`);
       return enviadas;
     }
 
