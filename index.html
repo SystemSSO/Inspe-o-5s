@@ -15040,6 +15040,8 @@
               const fx = compX + 3 + col * (colW + gapComp);
               const fy = by + 8;
               const legendaFoto = label === 'DEPOIS' ? String((item.fotoLegendasResolucao || [])[0] || '').trim() : '';
+              const legendaH = legendaFoto ? 11 : 0;
+              const imageBoxH = imgH - legendaH;
               doc.setFillColor(255, 255, 255);
               doc.setDrawColor(220, 230, 242);
               doc.roundedRect(fx, fy, colW - 3, 96, 1.5, 1.5, 'FD');
@@ -15048,7 +15050,7 @@
               doc.setFontSize(7);
               doc.text(label, fx + 2, fy + 5);
               if (dataUrl) {
-                drawGerencialImageInsideBox(dataUrl, fx + 2, fy + 7, colW - 7, imgH);
+                drawGerencialImageInsideBox(dataUrl, fx + 2, fy + 7, colW - 7, imageBoxH);
               } else {
                 doc.setTextColor(100, 116, 139);
                 doc.setFont('helvetica', 'normal');
@@ -15057,11 +15059,13 @@
               }
               if (legendaFoto) {
                 doc.setFillColor(255, 255, 255);
-                doc.rect(fx + 2, fy + 84, colW - 7, 11, 'F');
+                doc.rect(fx + 2, fy + 7 + imageBoxH, colW - 7, legendaH, 'F');
+                doc.setDrawColor(220, 230, 242);
+                doc.line(fx + 2, fy + 7 + imageBoxH, fx + colW - 5, fy + 7 + imageBoxH);
                 doc.setTextColor(22, 53, 159);
                 doc.setFont('helvetica', 'normal');
                 doc.setFontSize(6.5);
-                doc.text(doc.splitTextToSize(legendaFoto, colW - 10).slice(0, 2), fx + 4, fy + 88.5);
+                doc.text(doc.splitTextToSize(legendaFoto, colW - 10).slice(0, 2), fx + 4, fy + 7 + imageBoxH + 4.5);
               }
             });
 
@@ -15166,6 +15170,8 @@
                 const row = Math.floor(fi / fotosPorLinha);
                 const fx = margin + 3 + col * (fotoW + gapFoto);
                 const fy = by + row * (fotoH + gapFoto);
+                const legendaH = legendaFoto ? 13 : 0;
+                const imageBoxH = Math.max(24, fotoH - legendaH);
                 doc.setDrawColor(203, 213, 225);
                 doc.roundedRect(fx, fy, fotoW, fotoH, 1.5, 1.5);
                 if (dataUrl) {
@@ -15174,9 +15180,9 @@
                     const ratio = props.width / props.height;
                     let dw = fotoW;
                     let dh = dw / ratio;
-                    if (dh > fotoH) { dh = fotoH; dw = dh * ratio; }
+                    if (dh > imageBoxH) { dh = imageBoxH; dw = dh * ratio; }
                     const dx = fx + (fotoW - dw) / 2;
-                    const dy = fy + (fotoH - dh) / 2;
+                    const dy = fy + (imageBoxH - dh) / 2;
                     doc.addImage(dataUrl, dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG', dx, dy, dw, dh, undefined, 'FAST');
                   } catch {
                     doc.setTextColor(22, 53, 159);
@@ -15190,11 +15196,13 @@
                 }
                 if (legendaFoto) {
                   doc.setFillColor(255, 255, 255);
-                  doc.rect(fx + 1, fy + fotoH - 13, fotoW - 2, 12, 'F');
+                  doc.rect(fx + 1, fy + imageBoxH, fotoW - 2, legendaH - 1, 'F');
+                  doc.setDrawColor(203, 213, 225);
+                  doc.line(fx + 1, fy + imageBoxH, fx + fotoW - 1, fy + imageBoxH);
                   doc.setTextColor(22, 53, 159);
                   doc.setFont('helvetica', 'normal');
                   doc.setFontSize(6.5);
-                  doc.text(doc.splitTextToSize(legendaFoto, fotoW - 6).slice(0, 2), fx + 3, fy + fotoH - 8.5);
+                  doc.text(doc.splitTextToSize(legendaFoto, fotoW - 6).slice(0, 2), fx + 3, fy + imageBoxH + 4.5);
                 }
               }
 
@@ -15840,6 +15848,8 @@
                 const row = Math.floor(fi / fotosPorLinha);
                 const fx = margin + 3 + col * (fotoW + gapFoto);
                 const fy = by + row * (fotoH + gapFoto);
+                const legendaH = legendaFoto ? 13 : 0;
+                const imageBoxH = Math.max(24, fotoH - legendaH);
                 doc.setDrawColor(203, 213, 225);
                 doc.roundedRect(fx, fy, fotoW, fotoH, 1.5, 1.5);
                 try {
@@ -15847,9 +15857,9 @@
                   const ratio = props.width / props.height;
                   let dw = fotoW;
                   let dh = dw / ratio;
-                  if (dh > fotoH) { dh = fotoH; dw = dh * ratio; }
+                  if (dh > imageBoxH) { dh = imageBoxH; dw = dh * ratio; }
                   const dx = fx + (fotoW - dw) / 2;
-                  const dy = fy + (fotoH - dh) / 2;
+                  const dy = fy + (imageBoxH - dh) / 2;
                   doc.addImage(dataUrl, dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG', dx, dy, dw, dh, undefined, 'FAST');
                 } catch {
                   doc.setTextColor(22, 53, 159);
@@ -15858,11 +15868,13 @@
                 }
                 if (legendaFoto) {
                   doc.setFillColor(255, 255, 255);
-                  doc.rect(fx + 1, fy + fotoH - 13, fotoW - 2, 12, 'F');
+                  doc.rect(fx + 1, fy + imageBoxH, fotoW - 2, legendaH - 1, 'F');
+                  doc.setDrawColor(203, 213, 225);
+                  doc.line(fx + 1, fy + imageBoxH, fx + fotoW - 1, fy + imageBoxH);
                   doc.setTextColor(22, 53, 159);
                   doc.setFont('helvetica', 'normal');
                   doc.setFontSize(6.5);
-                  doc.text(doc.splitTextToSize(legendaFoto, fotoW - 6).slice(0, 2), fx + 3, fy + fotoH - 8.5);
+                  doc.text(doc.splitTextToSize(legendaFoto, fotoW - 6).slice(0, 2), fx + 3, fy + imageBoxH + 4.5);
                 }
               }
             } else {
@@ -15979,13 +15991,15 @@
               const fx = compX + 3 + col * (colW + gapComp);
               const fy = by + 8;
               const legendaFoto = label === 'DEPOIS' ? String((item.fotoLegendasResolucao || [])[0] || '').trim() : '';
+              const legendaH = legendaFoto ? 11 : 0;
+              const imageBoxH = imgH - legendaH;
               doc.setFillColor(255, 255, 255);
               doc.setDrawColor(220, 230, 242);
               doc.roundedRect(fx, fy, colW - 3, 96, 1.5, 1.5, 'FD');
               doc.setTextColor(71, 85, 105);
               doc.setFontSize(7);
               doc.text(label, fx + 2, fy + 5);
-              if (dataUrl) drawSetorialImageInsideBox(dataUrl, fx + 2, fy + 7, colW - 7, imgH);
+              if (dataUrl) drawSetorialImageInsideBox(dataUrl, fx + 2, fy + 7, colW - 7, imageBoxH);
               else {
                 doc.setTextColor(100, 116, 139);
                 doc.setFont('helvetica', 'normal');
@@ -15993,11 +16007,13 @@
               }
               if (legendaFoto) {
                 doc.setFillColor(255, 255, 255);
-                doc.rect(fx + 2, fy + 84, colW - 7, 11, 'F');
+                doc.rect(fx + 2, fy + 7 + imageBoxH, colW - 7, legendaH, 'F');
+                doc.setDrawColor(220, 230, 242);
+                doc.line(fx + 2, fy + 7 + imageBoxH, fx + colW - 5, fy + 7 + imageBoxH);
                 doc.setTextColor(22, 53, 159);
                 doc.setFont('helvetica', 'normal');
                 doc.setFontSize(6.5);
-                doc.text(doc.splitTextToSize(legendaFoto, colW - 10).slice(0, 2), fx + 4, fy + 88.5);
+                doc.text(doc.splitTextToSize(legendaFoto, colW - 10).slice(0, 2), fx + 4, fy + 7 + imageBoxH + 4.5);
               }
             });
 
@@ -16473,6 +16489,9 @@
           doc.text(badgeTxt, x + wCard / 2, yTop + 1.2, { align: 'center' });
 
           const imgAreaH = hCard - 20;
+          const legendaTxt = String(legenda || '').trim();
+          const legendaH = legendaTxt ? 16 : 0;
+          const imageBoxH = Math.max(24, imgAreaH - legendaH);
           const dataUrl = await imageUrlToDataURL(fotoUrl);
           if (dataUrl) {
             try {
@@ -16480,12 +16499,12 @@
               const ratio = props.width / props.height;
               let drawW = wCard;
               let drawH = drawW / ratio;
-              if (drawH > imgAreaH) {
-                drawH = imgAreaH;
+              if (drawH > imageBoxH) {
+                drawH = imageBoxH;
                 drawW = drawH * ratio;
               }
               const xi = x + (wCard - drawW) / 2;
-              const yi = yTop + (imgAreaH - drawH) / 2;
+              const yi = yTop + (imageBoxH - drawH) / 2;
               doc.addImage(dataUrl, dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG', xi, yi, drawW, drawH, undefined, 'FAST');
             } catch {
               doc.setTextColor(22, 53, 159);
@@ -16498,13 +16517,15 @@
             doc.text('Foto indisponível', x + wCard / 2, yTop + imgAreaH / 2, { align: 'center' });
           }
 
-          if (String(legenda || '').trim()) {
+          if (legendaTxt) {
             doc.setFillColor(255, 255, 255);
-            doc.rect(x + 2, yTop + imgAreaH - 16, wCard - 4, 14, 'F');
+            doc.rect(x + 2, yTop + imageBoxH, wCard - 4, legendaH - 2, 'F');
+            doc.setDrawColor(220, 230, 242);
+            doc.line(x + 2, yTop + imageBoxH, x + wCard - 2, yTop + imageBoxH);
             doc.setTextColor(...BLUE);
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(6.8);
-            doc.text(doc.splitTextToSize(String(legenda).trim(), wCard - 8).slice(0, 2), x + 4, yTop + imgAreaH - 10.5);
+            doc.text(doc.splitTextToSize(legendaTxt, wCard - 8).slice(0, 2), x + 4, yTop + imageBoxH + 5.5);
           }
 
           doc.setTextColor(...statusCol);
