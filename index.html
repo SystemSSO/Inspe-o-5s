@@ -4505,7 +4505,7 @@
           Testar conexão
         </button>
         <button class="btn-secondary" onclick="sincronizarTudoSmartsheet()" style="margin-top:8px">
-          Enviar todas as inspeções
+          Enviar inspeções do período atual
         </button>
         <button class="btn-secondary" onclick="sincronizarPendentesSmartsheet()" style="margin-top:8px">
           Enviar pendentes
@@ -7960,11 +7960,23 @@
     async function sincronizarTudoSmartsheet() {
       salvarSmartsheetConfig(false);
       if (!hasSmartsheetConfig()) return;
-      APP.inspecoes.forEach(insp => enqueueSmartsheetInspection(insp.id));
-      renderSmartsheetSettings();
+      APP = normalizeAppState(APP);
+      const periodoAtual = getCurrentReportPeriodCode();
+      const periodoLabel = getReportPeriodLabel(periodoAtual);
+      const inspecoesPeriodoAtual = APP.inspecoes.filter(insp =>
+        getInspectionPeriodCodeForReport(insp) === periodoAtual &&
+        !insp.deleted &&
+        !insp.deletedAt
+      );
+      if (!inspecoesPeriodoAtual.length) {
+        setSmartsheetStatus(`Nenhuma inspeção encontrada no período atual (${periodoLabel}).`, true);
+        toast('Nenhuma inspeção encontrada no período atual.');
+        return;
+      }
       try {
-        const enviadas = await syncPendingSmartsheetQueue();
-        if (!enviadas) setSmartsheetStatus('Nenhuma inspeção pendente para enviar ao Smartsheet.');
+        const enviadas = await syncSmartsheetInspectionsScoped(inspecoesPeriodoAtual, { label: `período ${periodoLabel}` });
+        if (!enviadas) setSmartsheetStatus(`Nenhuma inspeção de ${periodoLabel} foi enviada ao Smartsheet.`);
+        toast(`${enviadas} lançamento(s) de ${periodoLabel} enviado(s) ao Smartsheet.`);
       } catch (e) {
         console.error('Erro ao enviar Smartsheet:', e);
         setSmartsheetStatus(`Falha ao enviar ao Smartsheet: ${e.message}`, true);
@@ -7999,16 +8011,19 @@
 
       APP = normalizeAppState(APP);
       const unidade = normalizeUnidadeCode(currentUnidade, 'CD');
+      const periodoAtual = getCurrentReportPeriodCode();
+      const periodoLabel = getReportPeriodLabel(periodoAtual);
       const inspecoesSetor = APP.inspecoes.filter(insp =>
         getInspectionUnidade(insp) === unidade &&
         insp.setor === setor &&
+        getInspectionPeriodCodeForReport(insp) === periodoAtual &&
         !insp.deleted &&
         !insp.deletedAt
       );
 
       if (!inspecoesSetor.length) {
-        setSmartsheetStatus(`Nenhuma inspeção encontrada para o setor ${setor} na unidade ${UNIDADE_LABELS[unidade] || unidade}.`, true);
-        toast('Nenhuma inspeção encontrada para esse setor.');
+        setSmartsheetStatus(`Nenhuma inspeção encontrada para o setor ${setor} em ${periodoLabel}, na unidade ${UNIDADE_LABELS[unidade] || unidade}.`, true);
+        toast('Nenhuma inspeção encontrada para esse setor no período atual.');
         return;
       }
 
@@ -8017,6 +8032,7 @@
         '',
         `Unidade: ${UNIDADE_LABELS[unidade] || unidade}`,
         `Setor: ${setor}`,
+        `Período: ${periodoLabel}`,
         `Inspeções encontradas: ${inspecoesSetor.length}`,
         '',
         'Serão criadas novas linhas na planilha para esse teste.'
@@ -8028,9 +8044,9 @@
       }
 
       try {
-        const enviadas = await syncSmartsheetInspectionsScoped(inspecoesSetor, { label: `setor ${setor}` });
+        const enviadas = await syncSmartsheetInspectionsScoped(inspecoesSetor, { label: `setor ${setor}, período ${periodoLabel}` });
         if (!enviadas) setSmartsheetStatus('Nenhuma inspeção foi enviada ao Smartsheet.');
-        toast(`${enviadas} inspeção(ões) do setor enviada(s) ao Smartsheet.`);
+        toast(`${enviadas} lançamento(s) do setor enviado(s) ao Smartsheet.`);
       } catch (e) {
         console.error('Erro ao enviar setor ao Smartsheet:', e);
         setSmartsheetStatus(`Falha ao enviar setor: ${e.message}`, true);
@@ -8051,11 +8067,14 @@
 
       APP = normalizeAppState(APP);
       const unidade = normalizeUnidadeCode(currentUnidade, 'CD');
+      const periodoAtual = getCurrentReportPeriodCode();
+      const periodoLabel = getReportPeriodLabel(periodoAtual);
       const setores = getGerenciaSetoresAtivos(gerencia);
       const setoresSet = new Set(setores);
       const inspecoesGerencia = APP.inspecoes.filter(insp =>
         getInspectionUnidade(insp) === unidade &&
         setoresSet.has(insp.setor) &&
+        getInspectionPeriodCodeForReport(insp) === periodoAtual &&
         !insp.deleted &&
         !insp.deletedAt
       );
@@ -8067,8 +8086,8 @@
       }
 
       if (!inspecoesGerencia.length) {
-        setSmartsheetStatus(`Nenhuma inspeção encontrada para a gerência ${gerencia} na unidade ${UNIDADE_LABELS[unidade] || unidade}.`, true);
-        toast('Nenhuma inspeção encontrada para essa gerência.');
+        setSmartsheetStatus(`Nenhuma inspeção encontrada para a gerência ${gerencia} em ${periodoLabel}, na unidade ${UNIDADE_LABELS[unidade] || unidade}.`, true);
+        toast('Nenhuma inspeção encontrada para essa gerência no período atual.');
         return;
       }
 
@@ -8077,6 +8096,7 @@
         '',
         `Unidade: ${UNIDADE_LABELS[unidade] || unidade}`,
         `Gerência: ${gerencia}`,
+        `Período: ${periodoLabel}`,
         `Setores vinculados: ${setores.join(', ')}`,
         `Inspeções encontradas: ${inspecoesGerencia.length}`,
         '',
@@ -8089,9 +8109,9 @@
       }
 
       try {
-        const enviadas = await syncSmartsheetInspectionsScoped(inspecoesGerencia, { label: `gerência ${gerencia}` });
+        const enviadas = await syncSmartsheetInspectionsScoped(inspecoesGerencia, { label: `gerência ${gerencia}, período ${periodoLabel}` });
         if (!enviadas) setSmartsheetStatus('Nenhuma inspeção da gerência foi enviada ao Smartsheet.');
-        toast(`${enviadas} média(s) de setor da gerência enviada(s) ao Smartsheet.`);
+        toast(`${enviadas} lançamento(s) da gerência enviado(s) ao Smartsheet.`);
       } catch (e) {
         console.error('Erro ao enviar gerência ao Smartsheet:', e);
         setSmartsheetStatus(`Falha ao enviar gerência: ${e.message}`, true);
