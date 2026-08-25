@@ -4834,23 +4834,48 @@
         ]
       },
       {
-        nome: 'Segurança, Medicina e Resposta à Emergência',
+        nome: 'Segurança do Trabalho',
         subareas: [
-          '1 – Escritório Segurança (Copa / Sala de armários / Banheiros)',
-          '2 – Escritório Medicina (Banheiros / Recepção))',
-          '3 – Sala de arquivo morto (Próximo ao RH)',
-          '4 – Ponto de apoio (Sillion)',
-          '5 – Brigada (Galpão da brigada / Carreta de brigada)',
-          '6 – Container de resposta à emergência',
-          '7 – Sala de arquivo morto (Antiga carpintaria)',
-          '8 – Medicina reflorestamento'
+          '1 – Escritório administrativo (Copa / armários / Banheiros)',
+          '2 – Ponto de apoio Sillion',
+          '3 – Sala de arquivo morto (antiga carpintaria)'
+        ]
+      },
+      {
+        nome: 'Risco e Emergência',
+        subareas: [
+          '1 – Escritório administrativo (Copa / armários / Banheiros)',
+          '2 – Galpão / carreta da brigada',
+          '3 – Container'
+        ]
+      },
+      {
+        nome: 'Saúde',
+        subareas: [
+          '1 – Escritório administrativo (Banheiros / salas de operação / consultórios)',
+          '2 – Sala de arquivo morto (no prédio administrativo)'
         ]
       },
       {
         nome: 'Segurança Empresarial',
         subareas: [
           '1 – Portaria Balança',
-          '2 – Portaria Recepção (Catracas, Banheiros, Escritório)'
+          '2 – Portaria Recepção (Catracas, Banheiros, Escritório)',
+          '3 – Escritório no prédio administrativo',
+          '4 – Sala apoio meio ambiênte'
+        ]
+      },
+      {
+        nome: 'SGI',
+        subareas: [
+          '1 – Sala no prédio administrativo'
+        ]
+      },
+      {
+        nome: 'Relações Socioinst e Comunicação',
+        subareas: [
+          '1 – Sala administrativa',
+          '2 – Sala de apoio'
         ]
       },
       {
@@ -4878,7 +4903,13 @@
         ]
       },
       {
-        nome: 'Administração, Refeitório e RH',
+        nome: 'Supply Chain - Compras',
+        subareas: [
+          '1 – Sala administrativa'
+        ]
+      },
+      {
+        nome: 'Administração e RH',
         subareas: [
           '1 – Refeitório (Cozinha / Banheiros / Área de estoque de alimentos / Escritório / Tanque GLP)',
           '2 – Escritório de administração',
@@ -4887,7 +4918,9 @@
           '5 – Sala de espera dos taxistas',
           '6 – Alojamento clube dos supervisores',
           '7 – Clube dos supervisores (parte interna)',
-          '8 – Refeitório Horto Florestal'
+          '8 – Refeitório Horto Florestal',
+          '9 – Sala de saúde mental',
+          '10 – Sala de apoio RH'
         ]
       },
       {
@@ -4965,7 +4998,8 @@
           '2 – Silvicultura',
           '3 – Manutenção Mecânica',
           '4 – Colheita',
-          '5 – Viveiro'
+          '5 – Viveiro',
+          '6 – Medicina reflorestamento'
         ]
       }
     ];
@@ -6021,6 +6055,7 @@
         'Transporte Auxiliar': 'BA - Transporte Auxiliar'
       },
       CD: {
+        'Administração e RH': 'CD - Administração',
         'Administração, Refeitório e RH': 'CD - Administração',
         'Calcinação e Redução': 'CD - Calcinação e Redução',
         'Engenharia de Manutenção': 'CD - Engenharia de Manutenção',
@@ -6034,7 +6069,10 @@
         'Preparação de Carga': 'CD - Preparação de Cargas',
         'Refino': 'CD - Refino',
         'Reflorestamento': 'CD - Silvicultura',
+        'Risco e Emergência': 'CD - Segurança e Brigada',
+        'Saúde': 'CD - Segurança e Brigada',
         'Segurança Empresarial': 'CD - Segurança Empresarial',
+        'Segurança do Trabalho': 'CD - Segurança e Brigada',
         'Segurança, Medicina e Resposta à Emergência': 'CD - Segurança e Brigada',
         'Supply Chain - Físico': 'CD - Almoxarifado',
         'Tecnologia da Informação': 'CD - TI'
@@ -6065,7 +6103,7 @@
           if (subarea.includes('manutencao') || subarea.includes('maquinas') || subarea.includes('oleo diesel')) return 'CD - Manutenção Florestal';
           return 'CD - Silvicultura';
         }
-        if (setor === 'Administração, Refeitório e RH' && subarea.includes('rh')) return 'CD - RH';
+        if (['Administração e RH', 'Administração, Refeitório e RH'].includes(setor) && subarea.includes('rh')) return 'CD - RH';
       }
 
       return SMARTSHEET_AREA_LABELS[unidade]?.[setor] || `${unidade} - ${setor}`.trim();
@@ -13751,15 +13789,16 @@
         'Sustentabilidade': ['Meio Ambiente'],
         'Tecnologia da Informação': ['Tecnologia da Informação'],
         'BP Pessoas e Org Operacoes': [
-          // Administração/Refeitório/RH estão agrupados em um único setor no cadastro atual
-          'Administração, Refeitório e RH'
+          'Administração e RH'
         ],
-        'Supply Chain': ['Supply Chain - Físico'],
+        'Supply Chain': ['Supply Chain - Físico', 'Supply Chain - Compras'],
         'Plan Int e Modelo Operacional': ['Laboratório'],
+        'Relações Institucionais': ['Relações Socioinst e Comunicação'],
+        'Fundiario e Segurança Empresarial': ['Segurança Empresarial'],
         'Saúde Segurança Riscos e Resposta Emergência': [
-          // Segurança/Medicina/Resposta Emergência estão agrupados em um único setor no cadastro atual
-          'Segurança, Medicina e Resposta à Emergência',
-          'Segurança Empresarial'
+          'Segurança do Trabalho',
+          'Risco e Emergência',
+          'Saúde'
         ]
       };
       return map;
