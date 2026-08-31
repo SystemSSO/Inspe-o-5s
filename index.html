@@ -4795,7 +4795,8 @@
           '6 – Vila residencial',
           '7 – Estação de tratamento (Vila Residencial)',
           '8 – Viveiro',
-          '9 – Clube'
+          '9 – Clube',
+          '10 – Alojamento da Vila Residencial'
         ]
       },
       {
@@ -4917,7 +4918,6 @@
           '2 – Escritório administrativo',
           '3 – Sala de videoconferência',
           '4 – Sala de espera dos taxistas',
-          '5 – Alojamento da Vila Residencial',
           '6 – Cozinha do Clube',
           '7 – Refeitório do Horto Florestal',
           '8 – Sala de saúde mental',
@@ -5786,11 +5786,28 @@
 
       inspecoes.forEach(insp => {
         if (!insp?.id || getInspectionUnidade(insp) !== 'CD') return;
-        if (insp.setor !== 'Administração, Refeitório e RH') return;
-        // O setor foi consolidado/renomeado. Mantém a inspeção e sua subárea
-        // para que registros antigos voltem a aparecer na área administrativa.
-        insp.setor = 'Administração e RH';
-        idsAlterados.push(insp.id);
+        let alterada = false;
+        if (insp.setor === 'Administração, Refeitório e RH') {
+          // O setor foi consolidado/renomeado. Mantém a inspeção e sua subárea
+          // para que registros antigos voltem a aparecer na área administrativa.
+          insp.setor = 'Administração e RH';
+          alterada = true;
+        }
+
+        if (insp.setor === 'Administração e RH') {
+          const identidadeSubarea = normalizarIdentidadeSubarea(insp.subarea);
+          const alojamentosVila = new Set([
+            normalizarIdentidadeSubarea('Alojamento da Vila Residencial'),
+            normalizarIdentidadeSubarea('Alojamento clube dos supervisores')
+          ]);
+          if (alojamentosVila.has(identidadeSubarea)) {
+            insp.setor = 'Infraestrutura';
+            insp.subarea = '10 – Alojamento da Vila Residencial';
+            alterada = true;
+          }
+        }
+
+        if (alterada) idsAlterados.push(insp.id);
       });
 
       if (options.queueSync && idsAlterados.length) {
