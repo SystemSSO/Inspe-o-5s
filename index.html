@@ -5780,6 +5780,26 @@
       return idsAlterados;
     }
 
+    function migrarSetoresAdministrativosLegados(appState, options = {}) {
+      const inspecoes = Array.isArray(appState?.inspecoes) ? appState.inspecoes : [];
+      const idsAlterados = [];
+
+      inspecoes.forEach(insp => {
+        if (!insp?.id || getInspectionUnidade(insp) !== 'CD') return;
+        if (insp.setor !== 'Administração, Refeitório e RH') return;
+        // O setor foi consolidado/renomeado. Mantém a inspeção e sua subárea
+        // para que registros antigos voltem a aparecer na área administrativa.
+        insp.setor = 'Administração e RH';
+        idsAlterados.push(insp.id);
+      });
+
+      if (options.queueSync && idsAlterados.length) {
+        if (!Array.isArray(appState.syncQueue)) appState.syncQueue = [];
+        appState.syncQueue = [...new Set([...appState.syncQueue, ...idsAlterados])];
+      }
+      return idsAlterados;
+    }
+
     function normalizarIdentidadeSubarea(subarea) {
       return normalizeColumnTitle(getTextoSubareaSemNumero(subarea))
         .replace(/\bmetereologica\b/g, 'meteorologica')
@@ -9239,6 +9259,10 @@
           { inspecoes: cloudInsps },
           { queueSync: false }
         );
+        const idsAdministracaoMigrados = migrarSetoresAdministrativosLegados(
+          { inspecoes: cloudInsps },
+          { queueSync: false }
+        );
         const idsReflorestamentoMigrados = migrarInspecoesReflorestamentoParaAreasAtivas(
           { inspecoes: cloudInsps },
           { queueSync: false }
@@ -9260,10 +9284,11 @@
           if (APP.syncQueue.includes(i.id)) merged[i.id] = i;
         });
         APP.inspecoes = Object.values(merged).sort((a, b) => new Date(a.data) - new Date(b.data));
-        if (idsSegurancaSaudeMigrados.length || idsReflorestamentoMigrados.length || idsOrdenacaoMigrados.length) {
+        if (idsSegurancaSaudeMigrados.length || idsAdministracaoMigrados.length || idsReflorestamentoMigrados.length || idsOrdenacaoMigrados.length) {
           APP.syncQueue = [...new Set([
             ...APP.syncQueue,
             ...idsSegurancaSaudeMigrados,
+            ...idsAdministracaoMigrados,
             ...idsReflorestamentoMigrados,
             ...idsOrdenacaoMigrados
           ])];
@@ -9306,9 +9331,10 @@
 
     let APP = restoreFinalizedInspectionBackups(loadData());
     const idsSegurancaSaudeMigradosLocal = migrarInspecoesSegurancaSaudeLegadas(APP, { queueSync: true });
+    const idsAdministracaoMigradosLocal = migrarSetoresAdministrativosLegados(APP, { queueSync: true });
     const idsReflorestamentoMigradosLocal = migrarInspecoesReflorestamentoParaAreasAtivas(APP, { queueSync: true });
     const idsOrdenacaoMigradosLocal = migrarOrdemESubareasPadronizadas(APP, { queueSync: true });
-    if (idsSegurancaSaudeMigradosLocal.length || idsReflorestamentoMigradosLocal.length || idsOrdenacaoMigradosLocal.length) persistLocalApp(APP);
+    if (idsSegurancaSaudeMigradosLocal.length || idsAdministracaoMigradosLocal.length || idsReflorestamentoMigradosLocal.length || idsOrdenacaoMigradosLocal.length) persistLocalApp(APP);
     let currentTec = '';
     let currentUnidade = localStorage.getItem('aa5s_unit') || 'CD';
     let currentUserEmail = sessionStorage.getItem('aa5s_auth_email') || '';
