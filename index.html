@@ -4387,7 +4387,8 @@
           <label class="form-label">Período do relatório</label>
           <input type="month" class="form-input" id="rel-periodo-setorial" min="2026-01"
             aria-label="Selecionar mês e ano do relatório setorial" onclick="openReportMonthPicker(this)">
-          <div style="font-size:11px;color:var(--text2);line-height:1.4;margin-top:6px">O PDF mostra as inspeções deste mês e o progresso acumulado do trimestre até o mês selecionado.</div>
+          <div style="font-size:11px;color:var(--text2);line-height:1.4;margin-top:6px">O PDF mostra as inspeções deste
+            mês e o progresso acumulado do trimestre até o mês selecionado.</div>
         </div>
         <div class="form-group">
           <label class="form-label">Destinatário do e-mail</label>
@@ -4424,7 +4425,8 @@
           <label class="form-label">Período do relatório</label>
           <input type="month" class="form-input" id="rel-periodo-gerencia" min="2026-01"
             aria-label="Selecionar mês e ano do relatório gerencial" onclick="openReportMonthPicker(this)">
-          <div style="font-size:11px;color:var(--text2);line-height:1.4;margin-top:6px">O PDF mostra as inspeções deste mês e o progresso acumulado do trimestre até o mês selecionado.</div>
+          <div style="font-size:11px;color:var(--text2);line-height:1.4;margin-top:6px">O PDF mostra as inspeções deste
+            mês e o progresso acumulado do trimestre até o mês selecionado.</div>
         </div>
         <div class="form-group">
           <label class="form-label">Destinatário do e-mail</label>
@@ -4485,11 +4487,13 @@
         <div id="smartsheet-status" style="font-size:12px;color:var(--text2);margin:-4px 0 12px"></div>
         <div class="form-group">
           <label class="form-label">Selecionar setor</label>
-          <select class="form-select" id="smartsheet-setor-select" onchange="selecionarEscopoSmartsheet('setor')"></select>
+          <select class="form-select" id="smartsheet-setor-select"
+            onchange="selecionarEscopoSmartsheet('setor')"></select>
         </div>
         <div class="form-group">
           <label class="form-label">Selecionar gerência</label>
-          <select class="form-select" id="smartsheet-gerencia-select" onchange="selecionarEscopoSmartsheet('gerencia')"></select>
+          <select class="form-select" id="smartsheet-gerencia-select"
+            onchange="selecionarEscopoSmartsheet('gerencia')"></select>
         </div>
         <button class="btn-primary" onclick="salvarSmartsheetConfig()">
           <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
@@ -9194,6 +9198,18 @@
     }
 
     // === Function: ensureInspectionPhotosAvailable ===
+    function withTimeout(promise, timeoutMs, message = 'Tempo limite excedido.') {
+      let timer = null;
+      const timeout = new Promise((_, reject) => {
+        timer = setTimeout(() => {
+          const error = new Error(message);
+          error.code = 'photo-load-timeout';
+          reject(error);
+        }, Math.max(1, timeoutMs));
+      });
+      return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+    }
+
     async function ensureInspectionPhotosAvailable(insp, options = {}) {
       if (!insp?.id || !inspectionHasPhotoRefs(insp)) return true;
       await restoreLocalPhotosForInspection(insp);
@@ -9207,7 +9223,11 @@
       const syncStage = `buscando fotos ${insp.id}`;
       try {
         if (showStatus) setSyncStatus('syncing', 'Buscando fotos da inspeção...');
-        const cloudPhotos = await loadCloudInspectionPhotos(insp.id);
+        const cloudPhotos = await withTimeout(
+          loadCloudInspectionPhotos(insp.id),
+          Number(options.timeoutMs) || 8000,
+          `Tempo limite ao carregar as fotos da inspeção ${insp.id}.`
+        );
         const fotos = cloudPhotos.fotos;
         restoreInspectionPhotosFromDoc(insp, fotos);
         if (Object.keys(fotos || {}).length) {
@@ -9223,6 +9243,24 @@
       }
     }
 
+    async function ensurePreviousInspectionPhotosForForm(insp, baseCandidate = null) {
+      const base = baseCandidate || (insp?.baseId
+        ? APP.inspecoes.find(item => item.id === insp.baseId)
+        : null);
+      if (!insp || !base || !sameLocal(insp, base)) return null;
+      if (!inspectionHasPhotoRefs(base)) return base;
+
+      const loaded = await ensureInspectionPhotosAvailable(base, {
+        showStatus: true,
+        toastOnError: false,
+        timeoutMs: 10000
+      });
+      if (!loaded && inspectionHasPhotoRefs(base)) {
+        toast('A inspeção foi aberta, mas algumas fotos do desvio anterior não puderam ser recuperadas. Verifique a conexão e tente abrir novamente.');
+      }
+      return base;
+    }
+
     async function ensureReportPhotosAvailable(inspections = [], options = {}) {
       const unique = [];
       const seen = new Set();
@@ -9234,14 +9272,58 @@
       const withRefs = unique.filter(inspectionHasPhotoRefs);
       if (!withRefs.length) return true;
       if (options.showToast !== false) toast('Carregando fotos para o relatório...');
-      for (const insp of withRefs) {
-        await ensureInspectionPhotosAvailable(insp, {
-          showStatus: false,
-          toastOnError: options.toastOnError !== false
-        });
-      }
+      const deadline = Date.now() + (Number(options.totalTimeoutMs) || 15000);
+      let cursor = 0;
+      let falhas = 0;
+      const worker = async () => {
+        while (cursor < withRefs.length && Date.now() < deadline) {
+          const insp = withRefs[cursor++];
+          const restante = Math.max(500, deadline - Date.now());
+          const ok = await ensureInspectionPhotosAvailable(insp, {
+            showStatus: false,
+            toastOnError: false,
+            timeoutMs: Math.min(5000, restante)
+          });
+          if (!ok) falhas++;
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(4, withRefs.length) }, worker));
+      falhas += Math.max(0, withRefs.length - cursor);
       refreshSyncStatusIdle();
-      return true;
+      if (falhas && options.toastOnError !== false) {
+        toast(`${falhas} inspeção(ões) com fotos indisponíveis. O PDF será gerado com as demais informações.`);
+      }
+      return falhas === 0;
+    }
+
+    function getReportPhotoInspections(periodo, setores = []) {
+      const setorSet = new Set((Array.isArray(setores) ? setores : [setores]).filter(Boolean));
+      const selected = new Map();
+      const add = insp => { if (insp?.id) selected.set(insp.id, insp); };
+      const isRelevant = insp => {
+        if (!insp) return false;
+        if (setorSet.has(insp.setor)) return true;
+        return SENSOS.some(s => (insp.sensos?.[s.id] || []).some(cr =>
+          getDestinosCorresponsaveisCriterio(cr).some(destino => setorSet.has(destino))
+        ));
+      };
+
+      // Inspeções do mês alimentam as resoluções; a anterior fornece a foto
+      // "antes". Desvios ainda abertos podem ter origem em meses anteriores.
+      getInspectionsForReportPeriod(periodo).forEach(insp => {
+        const anterior = getInspecaoAnteriorMesmoLocal(insp);
+        if (isRelevant(insp) || isRelevant(anterior)) {
+          add(insp);
+          add(anterior);
+        }
+      });
+      getOpenDesvioItemsUntilReportPeriod(periodo)
+        .filter(({ insp, desvio }) =>
+          setorSet.has(insp.setor) || setorSet.has(String(desvio?.encaminharSetor || '').trim())
+        )
+        .forEach(({ insp }) => add(insp));
+
+      return Array.from(selected.values());
     }
 
     function photoDocumentMatches(expected, actual) {
@@ -11645,6 +11727,7 @@
       if (draftMesmoLocal && draftMesmoLocal.id && draftMesmoLocal.sensos) {
         currentInsp = draftMesmoLocal;
         await restoreLocalPhotosForInspection(currentInsp);
+        await ensurePreviousInspectionPhotosForForm(currentInsp);
         draftUIState = {
           ...draftUIState,
           ...(draftMesmoLocal.__draftMeta || {})
@@ -11687,6 +11770,7 @@
         currentInsp.sensos[s.id] = s.criterios.map(() => ({ nota: null, obs: '', sugestao: '', fotos: [], fotoLegendas: [], desvios: [], encaminharSetor: '', ncResolvida: false, ncAberta: false, autoReincidenciaFrom: null, autoReincidenciaTo: null }));
       });
       if (ultimaMesmoLocal && sameLocal(currentInsp, ultimaMesmoLocal)) {
+        await ensurePreviousInspectionPhotosForForm(currentInsp, ultimaMesmoLocal);
         aplicarRegraReincidencia(ultimaMesmoLocal);
       }
 
@@ -12274,8 +12358,18 @@
       const anterioresAbertos = getDesviosAbertosCriterio(criterioAnterior);
       anterioresAbertos.forEach((desvioAnterior, idx) => {
         const origemId = desvioAnterior.id || `desvio_anterior_${idx + 1}`;
-        const exists = atuais.some(item => item.origemId === origemId || item.id === origemId);
-        if (exists) return;
+        const existente = atuais.find(item => item.origemId === origemId || item.id === origemId);
+        if (existente) {
+          const fotosAtuais = getFotosValidasArray(existente.fotos);
+          const fotosOrigem = getFotosValidasArray(desvioAnterior.fotos);
+          if (!fotosAtuais.length && fotosOrigem.length) {
+            existente.fotos = [...fotosOrigem];
+            existente.fotoLegendas = Array.isArray(desvioAnterior.fotoLegendas)
+              ? [...desvioAnterior.fotoLegendas]
+              : [];
+          }
+          return;
+        }
         atuais.push(normalizeDesvio({
           origemId,
           descricao: desvioAnterior.descricao || '',
@@ -12393,7 +12487,7 @@
                 <option value="">— Responsabilidade local —</option>
                 ${setoresCorresponsaveis.map(nome => `<option value="${escapeHtml(nome)}" ${desvio.encaminharSetor === nome ? 'selected' : ''}>${escapeHtml(nome)}</option>`).join('')}
               </select>
-              ${renderDesvioFotosHtml(s.id, ci, desvio, 'abertura', resolvido)}
+              ${renderDesvioFotosHtml(s.id, ci, desvio, 'abertura', !!inherited)}
               ${inherited && resolvido ? `
                 <div class="desvio-resolution">
                   <textarea class="form-textarea" id="desvio-resolucao-${s.id}-${ci}-${desvio.id}" rows="2" placeholder="Observação da resolução deste desvio (opcional)" oninput="setDesvioField('${s.id}',${ci},'${desvio.id}','resolucaoObs',this.value)">${escapeHtml(desvio.resolucaoObs || '')}</textarea>
@@ -13952,6 +14046,7 @@
       if (draftMesmoLocal && draftMesmoLocal.id && draftMesmoLocal.sensos) {
         currentInsp = draftMesmoLocal;
         await restoreLocalPhotosForInspection(currentInsp);
+        await ensurePreviousInspectionPhotosForForm(currentInsp);
         draftUIState = {
           ...draftUIState,
           ...(draftMesmoLocal.__draftMeta || {})
@@ -13992,6 +14087,7 @@
         currentInsp.sensos[s.id] = s.criterios.map(() => ({ nota: null, obs: '', sugestao: '', fotos: [], fotoLegendas: [], desvios: [], encaminharSetor: '', ncResolvida: false, ncAberta: false, autoReincidenciaFrom: null, autoReincidenciaTo: null }));
       });
       if (sameLocal(currentInsp, base)) {
+        await ensurePreviousInspectionPhotosForForm(currentInsp, base);
         aplicarRegraReincidencia(base);
       }
 
@@ -14289,11 +14385,35 @@
     }
 
     // === Function: gerarPDF ===
-    function gerarPDF() {
+    function assertPdfLibraryAvailable() {
+      if (!window.jspdf || typeof window.jspdf.jsPDF !== 'function') {
+        throw new Error('O componente de PDF não foi carregado. Verifique a conexão com a internet e recarregue a página.');
+      }
+    }
+
+    function getPdfGenerationErrorMessage(error) {
+      const message = String(error?.message || error || '').trim();
+      if (!message) return 'Erro desconhecido durante a criação do documento.';
+      if (/jspdf|componente de pdf|is not a constructor/i.test(message)) {
+        return 'O componente de PDF não foi carregado. Verifique a conexão com a internet e recarregue a página.';
+      }
+      if (/quota|storage|armazenamento/i.test(message)) {
+        return 'O navegador está sem espaço disponível para montar o relatório.';
+      }
+      return message;
+    }
+
+    async function gerarPDF() {
       const setor = document.getElementById('rel-insp-select').value;
       if (!setor) { toast('Selecione um setor'); return; }
       const periodo = getSetorialReportPeriod(getReportPeriodInputValue('rel-periodo-setorial'));
-      gerarPDFSetorial(setor, { periodo });
+      try {
+        assertPdfLibraryAvailable();
+        await gerarPDFSetorial(setor, { periodo });
+      } catch (error) {
+        console.error('Erro ao gerar PDF setorial:', error);
+        toast(`Não foi possível gerar o PDF: ${getPdfGenerationErrorMessage(error)}`);
+      }
     }
 
     // === Function: enviarRelatorioSetorialEmail ===
@@ -14935,6 +15055,20 @@
 
     // === Function: gerarPDFGerencia ===
     async function gerarPDFGerencia(options = {}) {
+      try {
+        assertPdfLibraryAvailable();
+        return await gerarPDFGerenciaInterno(options);
+      } catch (error) {
+        console.error('Erro ao gerar PDF gerencial:', error);
+        if (options.showToast !== false) {
+          toast(`Não foi possível gerar o PDF: ${getPdfGenerationErrorMessage(error)}`);
+          return null;
+        }
+        throw error;
+      }
+    }
+
+    async function gerarPDFGerenciaInterno(options = {}) {
       const shouldSave = options.save !== false;
       const shouldToast = options.showToast !== false;
       const gerencia = document.getElementById('rel-gerencia-select')?.value || '';
@@ -14944,7 +15078,10 @@
       if (!setores.length) { toast('Nenhum setor mapeado para esta gerência'); return; }
 
       const periodoSelecionado = options.periodo || getSetorialReportPeriod(getReportPeriodInputValue('rel-periodo-gerencia'));
-      await ensureReportPhotosAvailable(getInspectionsUntilReportPeriod(periodoSelecionado), { showToast: shouldToast, toastOnError: shouldToast });
+      await ensureReportPhotosAvailable(getReportPhotoInspections(periodoSelecionado, setores), {
+        showToast: shouldToast,
+        toastOnError: shouldToast
+      });
       const gerenciaData = getGerenciaReportDashboardData(gerencia, periodoSelecionado);
       if (gerenciaData.resolucoesIncompletas?.length) {
         if (shouldToast) toast(getMensagemResolucaoIncompleta(gerenciaData.resolucoesIncompletas));
@@ -15768,6 +15905,7 @@
       const shouldSave = options.save !== false;
       const shouldToast = options.showToast !== false;
       if (shouldToast) toast('Gerando relatório setorial...');
+      assertPdfLibraryAvailable();
       const { jsPDF } = window.jspdf;
       // Gera PDF em modo paisagem (horizontal)
       const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' });
@@ -15994,7 +16132,10 @@
         }
       }
 
-      await ensureReportPhotosAvailable(getInspectionsUntilReportPeriod(periodoSelecionado), { showToast: shouldToast, toastOnError: shouldToast });
+      await ensureReportPhotosAvailable(getReportPhotoInspections(periodoSelecionado, [setor]), {
+        showToast: shouldToast,
+        toastOnError: shouldToast
+      });
       const setorialData = getSetorialReportDashboardData(setor, periodoSelecionado);
       if (setorialData.resolucoesIncompletas?.length) {
         if (shouldToast) toast(getMensagemResolucaoIncompleta(setorialData.resolucoesIncompletas));
