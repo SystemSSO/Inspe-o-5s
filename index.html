@@ -11117,7 +11117,6 @@
           const labelArea = areaKey === '__setor__' ? 'Área geral do setor' : areaKey;
           const totalArea = areasMap[areaKey].length;
           const score = ultima.notaGeral;
-          const desviosAbertosArea = getInspectionNcTotals(ultima).abertas;
           const statusClass = score >= 3.5 ? 'status-green' : score >= 2.5 ? 'status-gold' : score >= 1.5 ? 'status-orange' : 'status-red';
           const scoreTxt = typeof score === 'number' ? score.toFixed(2) : '—';
           const scoreColor = typeof score === 'number' ? notaCor(score) : 'var(--text2)';
@@ -11132,7 +11131,7 @@
             <div class="sector-area-top">
               <div style="flex:1">
                 <div class="sector-area-name">${labelArea}</div>
-                <div class="sector-area-meta"><strong>Concluída no trimestre</strong> · ${totalArea} inspeção(ões) · Última: ${getInspectionPeriodLabel(ultima)}${desviosAbertosArea ? ` · <span style="color:var(--gold);font-weight:700">Reinspeção necessária (${desviosAbertosArea} desvio(s))</span>` : ''}</div>
+                <div class="sector-area-meta"><strong>Concluída no trimestre</strong> · ${totalArea} inspeção(ões) · Última: ${getInspectionPeriodLabel(ultima)}</div>
               </div>
               <div style="font-family:var(--font-display); font-weight:700; color:${scoreColor}">${scoreTxt}</div>
             </div>
@@ -13399,7 +13398,7 @@
 
     function getSetorPontuacaoComparativo(setor, periodo = getSetorialReportPeriod()) {
       // A pontuação trimestral usa a situação mais recente de cada subárea no
-      // ciclo. Reinspeções contam como produtividade no mês, mas não duplicam o
+      // ciclo. Novas inspeções contam como produtividade no mês, mas não duplicam o
       // peso daquela subárea na média acumulada.
       const inspsSetor = getQuarterCoverageForSector(setor, periodo).latestInspections;
       const impactos = getImpactosCorresponsavelSetor(setor, periodo);
@@ -16206,7 +16205,6 @@
           const insp = coberturaTrimestral.latestInspections.find(item =>
             normalizarIdentidadeSubarea(item.subarea || 'Área geral do setor') === normalizarIdentidadeSubarea(area)
           );
-          const desviosAbertos = insp ? getInspectionNcTotals(insp).abertas : 0;
           const areaLines = doc.splitTextToSize(area, W - margin * 2 - 68);
           const rowH = Math.max(9, areaLines.length * 4 + 5);
           if (yy + rowH > H - 14) yy = renderHeader();
@@ -16218,9 +16216,9 @@
           doc.setFont('helvetica', 'normal');
           doc.setFontSize(8.5);
           doc.text(areaLines, margin + 4, yy);
-          doc.setTextColor(...(!concluida ? [244, 63, 94] : desviosAbertos ? [245, 158, 11] : [16, 185, 129]));
+          doc.setTextColor(...(concluida ? [16, 185, 129] : [244, 63, 94]));
           doc.setFont('helvetica', 'bold');
-          doc.text(concluida ? (desviosAbertos ? 'REINSPEÇÃO' : 'CONCLUÍDA') : 'PENDENTE', W - margin - 50, yy);
+          doc.text(concluida ? 'CONCLUÍDA' : 'PENDENTE', W - margin - 50, yy);
           doc.setTextColor(22, 53, 159);
           doc.setFont('helvetica', 'normal');
           doc.text(insp ? getReportPeriodLabel(getInspectionPeriodCodeForReport(insp)) : '—', W - margin - 4, yy, { align: 'right' });
