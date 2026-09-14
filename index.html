@@ -4387,6 +4387,7 @@
           <label class="form-label">Período do relatório</label>
           <input type="month" class="form-input" id="rel-periodo-setorial" min="2026-01"
             aria-label="Selecionar mês e ano do relatório setorial" onclick="openReportMonthPicker(this)">
+          <div style="font-size:11px;color:var(--text2);line-height:1.4;margin-top:6px">O PDF mostra as inspeções deste mês e o progresso acumulado do trimestre até o mês selecionado.</div>
         </div>
         <div class="form-group">
           <label class="form-label">Destinatário do e-mail</label>
@@ -4423,6 +4424,7 @@
           <label class="form-label">Período do relatório</label>
           <input type="month" class="form-input" id="rel-periodo-gerencia" min="2026-01"
             aria-label="Selecionar mês e ano do relatório gerencial" onclick="openReportMonthPicker(this)">
+          <div style="font-size:11px;color:var(--text2);line-height:1.4;margin-top:6px">O PDF mostra as inspeções deste mês e o progresso acumulado do trimestre até o mês selecionado.</div>
         </div>
         <div class="form-group">
           <label class="form-label">Destinatário do e-mail</label>
@@ -6963,6 +6965,127 @@
       return APP.inspecoes.filter(i => inspectionIsCurrentUnit(i) && inspectionBelongsToReportPeriod(i, periodo));
     }
 
+    // O registro da inspeção continua mensal, mas a cobertura operacional é
+    // controlada por trimestre-calendário. Ao selecionar um mês passado, o
+    // acumulado termina naquele mês e não "enxerga" inspeções futuras.
+    function getQuarterInfo(periodo = getSetorialReportPeriod()) {
+      const period = typeof periodo === 'string' ? getSetorialReportPeriod(periodo) : periodo;
+      const trimestre = Math.ceil(period.mesNumero / 3);
+      const mesInicio = ((trimestre - 1) * 3) + 1;
+      const mesFim = mesInicio + 2;
+      const inicioCodigo = `${period.ano}-${String(mesInicio).padStart(2, '0')}`;
+      const fimCodigo = `${period.ano}-${String(mesFim).padStart(2, '0')}`;
+      const mesNoTrimestre = period.mesNumero - mesInicio + 1;
+      return {
+        ...period,
+        trimestre,
+        mesInicio,
+        mesFim,
+        mesNoTrimestre,
+        inicioCodigo,
+        fimCodigo,
+        codigo: `${period.ano}-T${trimestre}`,
+        label: `${trimestre}º trimestre de ${period.ano}`,
+        acompanhamentoLabel: mesNoTrimestre < 3
+          ? `Acompanhamento parcial — ${mesNoTrimestre}º mês do ${trimestre}º trimestre`
+          : `Fechamento do ${trimestre}º trimestre`,
+        dataFim: new Date(period.ano, mesFim, 0, 23, 59, 59, 999)
+      };
+    }
+
+    function inspectionBelongsToQuarterThroughPeriod(insp, periodo = getSetorialReportPeriod()) {
+      const codigo = getInspectionPeriodCodeForReport(insp);
+      if (!codigo) return false;
+      const quarter = getQuarterInfo(periodo);
+      const valor = getPeriodSortCode(codigo);
+      return valor >= getPeriodSortCode(quarter.inicioCodigo) &&
+        valor <= getPeriodSortCode(quarter.periodoCodigo);
+    }
+
+    function getInspectionsForQuarterThroughPeriod(periodo = getSetorialReportPeriod()) {
+      return APP.inspecoes.filter(i =>
+        inspectionIsCurrentUnit(i) && inspectionBelongsToQuarterThroughPeriod(i, periodo)
+      );
+    }
+
+    function getLatestInspectionsByLocalInQuarter(periodo = getSetorialReportPeriod(), filters = {}) {
+      const latest = new Map();
+      getInspectionsForQuarterThroughPeriod(periodo)
+        .filter(insp => !filters.setor || insp.setor === filters.setor)
+        .filter(insp => !filters.setores || filters.setores.includes(insp.setor))
+        .sort(compareInspectionsByPeriodDesc)
+        .forEach(insp => {
+          const key = localKey(insp);
+          if (!latest.has(key)) latest.set(key, insp);
+        });
+      return Array.from(latest.values());
+    }
+
+    function getQuarterCoverageForSector(setor, periodo = getSetorialReportPeriod()) {
+      const quarter = getQuarterInfo(periodo);
+      const setorCfg = getSetorConfigAtivo(setor);
+      const areasEsperadas = (setorCfg?.subareas && setorCfg.subareas.length)
+        ? [...setorCfg.subareas]
+        : ['Área geral do setor'];
+      const expectedByKey = new Map(areasEsperadas.map(area => [normalizarIdentidadeSubarea(area), area]));
+      const latestAll = getLatestInspectionsByLocalInQuarter(periodo, { setor });
+      const latestByExpectedKey = new Map();
+
+      latestAll.forEach(insp => {
+        const area = insp.subarea || 'Área geral do setor';
+        const key = normalizarIdentidadeSubarea(area);
+        if (expectedByKey.has(key) && !latestByExpectedKey.has(key)) latestByExpectedKey.set(key, insp);
+      });
+
+      const areasConcluidas = areasEsperadas.filter(area => latestByExpectedKey.has(normalizarIdentidadeSubarea(area)));
+      const areasPendentes = areasEsperadas.filter(area => !latestByExpectedKey.has(normalizarIdentidadeSubarea(area)));
+      const totalAreas = areasEsperadas.length;
+      const concluidas = areasConcluidas.length;
+      const faltantes = areasPendentes.length;
+      const percentual = totalAreas ? Math.round((concluidas / totalAreas) * 100) : 100;
+      // Relatórios do 1º e 2º mês são fotografias parciais daquele momento;
+      // somente o mês de fechamento pode ser classificado como atrasado.
+      const trimestreEncerrado = quarter.mesNoTrimestre === 3 && new Date() > quarter.dataFim;
+      const status = faltantes === 0
+        ? 'Concluído'
+        : concluidas === 0
+          ? (trimestreEncerrado ? 'Atrasado' : 'Não iniciado')
+          : (trimestreEncerrado ? 'Atrasado' : 'Em andamento');
+
+      return {
+        setor,
+        quarter,
+        areasEsperadas,
+        areasConcluidas,
+        areasPendentes,
+        latestInspections: Array.from(latestByExpectedKey.values()),
+        totalAreas,
+        concluidas,
+        faltantes,
+        percentual,
+        status,
+        completo: faltantes === 0
+      };
+    }
+
+    function getQuarterCoverageForSectors(setores, periodo = getSetorialReportPeriod()) {
+      const porSetor = setores.map(setor => getQuarterCoverageForSector(setor, periodo));
+      const totalAreas = porSetor.reduce((sum, item) => sum + item.totalAreas, 0);
+      const concluidas = porSetor.reduce((sum, item) => sum + item.concluidas, 0);
+      const faltantes = porSetor.reduce((sum, item) => sum + item.faltantes, 0);
+      return {
+        quarter: getQuarterInfo(periodo),
+        porSetor,
+        totalAreas,
+        concluidas,
+        faltantes,
+        percentual: totalAreas ? Math.round((concluidas / totalAreas) * 100) : 100,
+        setoresConcluidos: porSetor.filter(item => item.completo).length,
+        totalSetores: porSetor.length,
+        completo: faltantes === 0
+      };
+    }
+
     // === Function: getInspectionsUntilReportPeriod ===
     function getInspectionsUntilReportPeriod(periodo = getSetorialReportPeriod()) {
       return APP.inspecoes.filter(i => inspectionIsCurrentUnit(i) && inspectionIsOnOrBeforeReportPeriod(i, periodo));
@@ -7076,6 +7199,8 @@
       const inspsPeriodo = getInspectionsForReportPeriod(periodo);
       const openDesviosAtePeriodo = getOpenDesvioItemsUntilReportPeriod(periodo);
       const inspsSetor = inspsPeriodo.filter(i => i.setor === setor);
+      const coberturaTrimestral = getQuarterCoverageForSector(setor, periodo);
+      const inspsSetorTrimestre = coberturaTrimestral.latestInspections;
       const pontuacaoCorresponsavel = getSetorPontuacaoComparativo(setor, periodo);
       const debitoList = uniqueDebitoRazoes(inspsSetor.flatMap(getDebitoRazoesInspecao))
         .filter(item => !item.tipos?.includes('corresponsavel') && item.tipo !== 'corresponsavel');
@@ -7271,7 +7396,7 @@
 
       const mediaGeral = pontuacaoCorresponsavel.mediaComExternas;
       const rankingLocais = {};
-      inspsSetor.forEach(insp => {
+      inspsSetorTrimestre.forEach(insp => {
         if (typeof insp.notaGeral !== 'number') return;
         const lk = localKey(insp);
         if (!rankingLocais[lk]) rankingLocais[lk] = { label: localLabel(insp), notas: [] };
@@ -7297,6 +7422,8 @@
         periodoTitulo,
         inspsPeriodo,
         inspsSetor,
+        inspsSetorTrimestre,
+        coberturaTrimestral,
         ncList,
         resolvidasList,
         resolucoesIncompletas,
@@ -7324,6 +7451,7 @@
       const periodoTitulo = `${periodo.mesNome.charAt(0).toUpperCase()}${periodo.mesNome.slice(1)} de ${periodo.ano}`;
       const setores = getGerenciaSetoresAtivos(gerencia);
       const inspsPeriodo = getGerenciaReportInspections(gerencia, periodo);
+      const coberturaTrimestral = getQuarterCoverageForSectors(setores, periodo);
       const openDesviosAtePeriodo = getOpenDesvioItemsUntilReportPeriod(periodo);
       const ncDetalhes = [];
       const resolucoesIncompletas = [];
@@ -7332,6 +7460,7 @@
 
       const resumo = setores.map(setor => {
         const inspsSetor = inspsPeriodo.filter(i => i.setor === setor);
+        const coberturaSetor = coberturaTrimestral.porSetor.find(item => item.setor === setor);
         const pontuacaoCorresponsavel = getSetorPontuacaoComparativo(setor, periodo);
         const media = pontuacaoCorresponsavel.mediaComExternas;
         let ncAbertas = 0;
@@ -7443,6 +7572,10 @@
         return {
           setor,
           inspecoes: inspsSetor.length,
+          coberturaTrimestral: coberturaSetor,
+          areasConcluidas: coberturaSetor?.concluidas || 0,
+          areasFaltantes: coberturaSetor?.faltantes || 0,
+          totalAreas: coberturaSetor?.totalAreas || 0,
           media,
           mediaSemNCExterna: pontuacaoCorresponsavel.mediaSemExternas,
           impactoNCExterna: pontuacaoCorresponsavel.impactoExternas,
@@ -7476,6 +7609,7 @@
         periodoTitulo,
         setores,
         inspsPeriodo,
+        coberturaTrimestral,
         resumo,
         totais,
         mediaGerencia,
@@ -7502,9 +7636,11 @@
         `Site: ${unidade}`,
         `Setor: ${setor}`,
         `Período: ${periodoTitulo}`,
-        `Áreas consideradas: ${resumo.locaisUnicos}`,
-        `Inspeções consideradas: ${resumo.totalInspecoes}`,
-        `Pontuação média do setor: ${resumo.mediaGeral !== null ? resumo.mediaGeral.toFixed(2) : '—'}`,
+        `Ciclo: ${resumo.coberturaTrimestral.quarter.acompanhamentoLabel}`,
+        `Inspeções realizadas no mês: ${resumo.totalInspecoes}`,
+        `Cobertura trimestral: ${resumo.coberturaTrimestral.concluidas}/${resumo.coberturaTrimestral.totalAreas} (${resumo.coberturaTrimestral.percentual}%)`,
+        `Subáreas que ainda faltam: ${resumo.coberturaTrimestral.faltantes}`,
+        `Pontuação trimestral ${resumo.coberturaTrimestral.completo ? 'final' : 'provisória'}: ${resumo.mediaGeral !== null ? resumo.mediaGeral.toFixed(2) : '—'}`,
         `Desvios abertos no setor: ${resumo.totalNCAbertas}`,
         `Desvios resolvidos no setor: ${resumo.totalResolvidas}`,
         '',
@@ -7536,9 +7672,12 @@
         '',
         `Gerência: ${gerencia}`,
         `Período: ${periodoTitulo}`,
+        `Ciclo: ${resumo.coberturaTrimestral.quarter.acompanhamentoLabel}`,
         `Setores mapeados: ${resumo.setores.length}`,
-        `Inspeções consideradas: ${resumo.totais.inspecoes}`,
-        `Pontuação média da gerência: ${resumo.mediaGerencia !== null ? resumo.mediaGerencia.toFixed(2) : '—'}`,
+        `Inspeções realizadas no mês: ${resumo.totais.inspecoes}`,
+        `Cobertura trimestral: ${resumo.coberturaTrimestral.concluidas}/${resumo.coberturaTrimestral.totalAreas} (${resumo.coberturaTrimestral.percentual}%)`,
+        `Subáreas que ainda faltam: ${resumo.coberturaTrimestral.faltantes}`,
+        `Pontuação trimestral ${resumo.coberturaTrimestral.completo ? 'final' : 'provisória'}: ${resumo.mediaGerencia !== null ? resumo.mediaGerencia.toFixed(2) : '—'}`,
         `Desvios abertos: ${resumo.totais.ncAbertas}`,
         `Desvios resolvidos: ${resumo.totais.ncResolvidas}`,
         '',
@@ -10531,6 +10670,12 @@
       if (!wrap) return;
 
       const now = new Date();
+      const periodoAtual = getSetorialReportPeriod(getCurrentReportPeriodCode());
+      const coberturaAtual = getQuarterCoverageForSectors(
+        getSetoresAtivos().map(setor => setor.nome),
+        periodoAtual
+      );
+      const diasRestantesTrimestre = Math.max(0, Math.ceil((coberturaAtual.quarter.dataFim - now) / 86400000));
       const pendencias = getPendenciasSnapshot();
       const abertas = pendencias.filter(p => p.aberta);
       const resolvidas = pendencias.filter(p => p.resolvida);
@@ -10569,16 +10714,7 @@
       const setoresCriticos = [...setores]
         .sort((a, b) => (b.abertas - a.abertas) || a.setor.localeCompare(b.setor, 'pt-BR'))
         .slice(0, 5);
-      const faltantesPorSetor = getSetoresAtivos().map(setorCfg => {
-        const setor = setorCfg.nome;
-        const areasEsperadas = (setorCfg.subareas && setorCfg.subareas.length)
-          ? [...setorCfg.subareas]
-          : ['Área geral do setor'];
-        const inspsSetor = APP.inspecoes.filter(i => inspectionIsCurrentUnit(i) && i.setor === setor);
-        const areasInspecionadas = new Set(inspsSetor.map(i => i.subarea || 'Área geral do setor'));
-        const faltantes = Math.max(0, areasEsperadas.length - [...areasInspecionadas].filter(a => areasEsperadas.includes(a)).length);
-        return { setor, faltantes, totalAreas: areasEsperadas.length };
-      })
+      const faltantesPorSetor = coberturaAtual.porSetor
         .sort((a, b) => b.faltantes - a.faltantes || a.setor.localeCompare(b.setor, 'pt-BR'))
         .slice(0, 8);
 
@@ -10669,6 +10805,21 @@
         <div class="dash-kpi-label">Setores Cadastrados</div>
         <div class="dash-kpi-value">${getAllSetorNames().length}</div>
       </div>
+      <div class="dash-kpi good">
+        <div class="dash-kpi-label">Cobertura do Trimestre</div>
+        <div class="dash-kpi-value green">${coberturaAtual.percentual}%</div>
+        <div class="dash-mini-meta">${coberturaAtual.concluidas}/${coberturaAtual.totalAreas} subáreas</div>
+      </div>
+      <div class="dash-kpi ${coberturaAtual.faltantes ? 'alert' : 'good'}">
+        <div class="dash-kpi-label">Faltam no Trimestre</div>
+        <div class="dash-kpi-value ${coberturaAtual.faltantes ? 'red' : 'green'}">${coberturaAtual.faltantes}</div>
+        <div class="dash-mini-meta">${diasRestantesTrimestre} dia(s) para encerrar</div>
+      </div>
+      <div class="dash-kpi">
+        <div class="dash-kpi-label">Setores Concluídos</div>
+        <div class="dash-kpi-value gold">${coberturaAtual.setoresConcluidos}/${coberturaAtual.totalSetores}</div>
+        <div class="dash-mini-meta">${coberturaAtual.quarter.label}</div>
+      </div>
     </div>
 
     <div class="dash-layout">
@@ -10704,13 +10855,13 @@
         </div>
 
         <div class="dash-side-section">
-          <div class="dash-side-title">Áreas Faltantes por Setor</div>
+          <div class="dash-side-title">Áreas Faltantes — ${coberturaAtual.quarter.label}</div>
           <div class="dash-mini-list">
             ${faltantesPorSetor.length === 0 ? `<div class="dash-mini-meta">Sem dados.</div>` : faltantesPorSetor.map(s => `
               <div class="dash-mini-item">
                 <div>
                   <div class="dash-mini-name">${s.setor}</div>
-                  <div class="dash-mini-meta">Total de áreas: ${s.totalAreas}</div>
+                  <div class="dash-mini-meta">${s.concluidas}/${s.totalAreas} concluídas · ${s.percentual}%</div>
                 </div>
                 <span class="dash-mini-pill ${s.faltantes > 0 ? 'red' : 'green'}">${s.faltantes}</span>
               </div>
@@ -10915,6 +11066,8 @@
     // === Function: sectorCardListHTML ===
     function sectorCardListHTML() {
       const setoresOrdenados = [...getSetoresAtivos().map(s => s.nome)];
+      const periodoAtual = getSetorialReportPeriod(getCurrentReportPeriodCode());
+      const trimestreAtual = getQuarterInfo(periodoAtual);
 
       return setoresOrdenados.map(setor => {
         const setorCfg = getSetorConfigAtivo(setor);
@@ -10926,6 +11079,7 @@
           .filter(i =>
             inspectionIsCurrentUnit(i) &&
             i.setor === setor &&
+            inspectionBelongsToQuarterThroughPeriod(i, periodoAtual) &&
             (!mostrarSomenteAreasAtivas || areasEsperadas.includes(i.subarea || 'Área geral do setor'))
           )
           .sort(compareInspectionsByPeriodDesc);
@@ -10939,19 +11093,10 @@
 
         const areaKeys = Object.keys(areasMap);
         const ultimaSetor = inspecoesSetor[0];
-        const ultimoPeriodoCodigo = getInspectionPeriodCodeForReport(ultimaSetor);
-        const inspecoesUltimoPeriodo = inspecoesSetor.filter(insp =>
-          getInspectionPeriodCodeForReport(insp) === ultimoPeriodoCodigo
-        );
-        const notasPorArea = {};
-        inspecoesUltimoPeriodo.forEach(insp => {
-          if (typeof insp.notaGeral !== 'number' || !Number.isFinite(insp.notaGeral)) return;
-          const areaKey = insp.subarea || '__setor__';
-          if (!notasPorArea[areaKey]) notasPorArea[areaKey] = [];
-          notasPorArea[areaKey].push(insp.notaGeral);
-        });
         const notaGeralSetor = averageNumbers(
-          Object.values(notasPorArea).map(notas => averageNumbers(notas))
+          areaKeys
+            .map(areaKey => areasMap[areaKey]?.[0]?.notaGeral)
+            .filter(nota => typeof nota === 'number' && Number.isFinite(nota))
         );
         const notaGeralSetorTxt = notaGeralSetor !== null ? notaGeralSetor.toFixed(2) : '—';
         const notaGeralSetorCor = notaGeralSetor !== null ? notaCor(notaGeralSetor) : 'var(--text2)';
@@ -10960,15 +11105,19 @@
         );
         const areasFaltantes = areasEsperadas.filter(a => !areasInspecionadas.has(a));
         const faltamAreas = Math.max(0, areasEsperadas.length - [...areasInspecionadas].filter(a => areasEsperadas.includes(a)).length);
+        const percentualCobertura = areasEsperadas.length
+          ? Math.round(((areasEsperadas.length - faltamAreas) / areasEsperadas.length) * 100)
+          : 100;
         const resumoSetor = areaKeys.length
-          ? `<span style="color:var(--green);font-weight:700">${areaKeys.length} área(s) com registro</span> · <span style="color:var(--red);font-weight:700">Faltam ${faltamAreas} área(s)</span>${ultimaSetor ? ` · <span style="color:var(--text2)">Último período: ${getInspectionPeriodLabel(ultimaSetor)}</span>` : ''}`
-          : 'Nenhuma área com registro ainda';
+          ? `<span style="color:var(--green);font-weight:700">${areasEsperadas.length - faltamAreas}/${areasEsperadas.length} concluídas</span> · <span style="color:${faltamAreas ? 'var(--red)' : 'var(--green)'};font-weight:700">${percentualCobertura}% · Faltam ${faltamAreas}</span> · <span style="color:var(--text2)">${trimestreAtual.label}</span>${ultimaSetor ? ` · <span style="color:var(--text2)">Última: ${getInspectionPeriodLabel(ultimaSetor)}</span>` : ''}`
+          : `<span style="color:var(--red);font-weight:700">Não iniciado · Faltam ${areasEsperadas.length}</span> · <span style="color:var(--text2)">${trimestreAtual.label}</span>`;
 
         const renderAreaInspecionada = (areaKey) => {
           const ultima = areasMap[areaKey][0];
           const labelArea = areaKey === '__setor__' ? 'Área geral do setor' : areaKey;
           const totalArea = areasMap[areaKey].length;
           const score = ultima.notaGeral;
+          const desviosAbertosArea = getInspectionNcTotals(ultima).abertas;
           const statusClass = score >= 3.5 ? 'status-green' : score >= 2.5 ? 'status-gold' : score >= 1.5 ? 'status-orange' : 'status-red';
           const scoreTxt = typeof score === 'number' ? score.toFixed(2) : '—';
           const scoreColor = typeof score === 'number' ? notaCor(score) : 'var(--text2)';
@@ -10983,7 +11132,7 @@
             <div class="sector-area-top">
               <div style="flex:1">
                 <div class="sector-area-name">${labelArea}</div>
-                <div class="sector-area-meta"><strong>${totalArea}</strong> inspeções · Período: ${getInspectionPeriodLabel(ultima)}</div>
+                <div class="sector-area-meta"><strong>Concluída no trimestre</strong> · ${totalArea} inspeção(ões) · Última: ${getInspectionPeriodLabel(ultima)}${desviosAbertosArea ? ` · <span style="color:var(--gold);font-weight:700">Reinspeção necessária (${desviosAbertosArea} desvio(s))</span>` : ''}</div>
               </div>
               <div style="font-family:var(--font-display); font-weight:700; color:${scoreColor}">${scoreTxt}</div>
             </div>
@@ -11000,7 +11149,7 @@
         <div class="sector-area-top">
           <div style="flex:1">
             <div class="sector-area-name" style="color:var(--red)">${area}</div>
-            <div class="sector-area-meta" style="color:var(--text2)">Área pendente de inspeção · Toque para iniciar</div>
+            <div class="sector-area-meta" style="color:var(--text2)">Pendente no ${trimestreAtual.label} · Toque para iniciar</div>
           </div>
           <div style="font-family:var(--font-display);font-weight:700;color:var(--red)">Pendente</div>
         </div>
@@ -11030,8 +11179,8 @@
             <div class="sector-title">${setor}</div>
             <div class="sector-sub">${resumoSetor}</div>
           </div>
-          <div class="sector-general-score" title="Média das subáreas no último período">
-            <span class="sector-general-score-label">Nota geral do setor</span>
+          <div class="sector-general-score" title="Média das subáreas avaliadas no trimestre atual">
+            <span class="sector-general-score-label">Nota trimestral${faltamAreas ? ' provisória' : ''}</span>
             <span class="sector-general-score-value" style="color:${notaGeralSetorCor}">${notaGeralSetorTxt}</span>
           </div>
           <div class="sector-chevron">
@@ -13249,7 +13398,10 @@
     }
 
     function getSetorPontuacaoComparativo(setor, periodo = getSetorialReportPeriod()) {
-      const inspsSetor = getInspectionsForReportPeriod(periodo).filter(i => i.setor === setor);
+      // A pontuação trimestral usa a situação mais recente de cada subárea no
+      // ciclo. Reinspeções contam como produtividade no mês, mas não duplicam o
+      // peso daquela subárea na média acumulada.
+      const inspsSetor = getQuarterCoverageForSector(setor, periodo).latestInspections;
       const impactos = getImpactosCorresponsavelSetor(setor, periodo);
       const locaisComNota = {};
       inspsSetor.forEach(insp => {
@@ -14809,6 +14961,7 @@
       const setoresComNCExterna = gerenciaData.setoresComNCExterna || [];
       const ncDetalhes = gerenciaData.ncDetalhes;
       const inspsPeriodo = gerenciaData.inspsPeriodo || [];
+      const coberturaTrimestral = gerenciaData.coberturaTrimestral;
       const unidadeCodigoGerencial = normalizeUnidadeCode(currentUnidade, 'CD');
       const unidadeSiteGerencial = `${UNIDADE_LABELS[unidadeCodigoGerencial] || unidadeCodigoGerencial} (${unidadeCodigoGerencial})`;
 
@@ -14902,8 +15055,8 @@
 
       function renderGerenciaObjetivoPage() {
         let yy = novaPaginaComCabecalho('Objetivo do Housekeeping', `${gerencia} · ${mesAnoAtual}`);
-        const objetivoTxt = `Este relatório apresenta a consolidação mensal de Housekeeping da gerência ${gerencia}, com análise integrada dos setores mapeados para apoiar a priorização de ações, melhoria contínua, segurança operacional, organização, limpeza e tomada de decisão.`;
-        const escopoTxt = `O Housekeeping avalia as condições das áreas inspecionadas por meio dos critérios 5S, registrando pontuação, desvios abertos, reincidências, encaminhamentos corresponsáveis e evidências de resolução no período selecionado.`;
+        const objetivoTxt = `Este relatório apresenta as inspeções realizadas em ${mesAnoAtual} e o acompanhamento acumulado do ${coberturaTrimestral.quarter.label} da gerência ${gerencia}.`;
+        const escopoTxt = `A movimentação mensal é apresentada separadamente da cobertura trimestral. A pontuação acumulada usa a inspeção mais recente de cada subárea até o mês selecionado e permanece provisória enquanto houver subáreas pendentes.`;
         const textoX = margin;
         const textoW = W - margin * 2 - 18;
 
@@ -14953,14 +15106,14 @@
             doc.setTextColor(22, 53, 159);
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(12);
-            doc.text('Áreas inspecionadas', margin, yy);
+            doc.text('Áreas inspecionadas no mês', margin, yy);
             yy += 8;
           }
         }
         doc.setTextColor(22, 53, 159);
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(10);
-        doc.text(`${rows.length} inspeção(ões) considerada(s) no período selecionado.`, margin, yy);
+        doc.text(`${rows.length} inspeção(ões) realizada(s) no mês selecionado.`, margin, yy);
         yy += 9;
 
         if (!rows.length) {
@@ -15009,6 +15162,37 @@
           doc.text(row.data, margin + 202, yy);
           doc.text(row.nota, W - margin - 4, yy, { align: 'right' });
           yy += rowH;
+        });
+      }
+
+      function renderGerenciaProgressoTrimestralPage() {
+        let yy = novaPaginaComCabecalho('Progresso Trimestral', `${gerencia} · ${coberturaTrimestral.quarter.acompanhamentoLabel}`);
+        doc.setTextColor(22, 53, 159);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(14);
+        doc.text(`Cobertura: ${coberturaTrimestral.concluidas}/${coberturaTrimestral.totalAreas} subáreas (${coberturaTrimestral.percentual}%)`, margin, yy);
+        yy += 7;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9.5);
+        doc.text(`Setores concluídos: ${coberturaTrimestral.setoresConcluidos}/${coberturaTrimestral.totalSetores} · Ainda faltam ${coberturaTrimestral.faltantes} subárea(s).`, margin, yy);
+        yy += 11;
+
+        coberturaTrimestral.porSetor.forEach(item => {
+          const pendentesTxt = item.areasPendentes.length ? item.areasPendentes.join(' · ') : 'Nenhuma — ciclo concluído';
+          const pendentesLines = doc.splitTextToSize(`Pendentes: ${pendentesTxt}`, W - margin * 2 - 8);
+          const rowH = Math.max(18, 12 + pendentesLines.length * 4);
+          if (yy + rowH > H - 14) yy = novaPaginaComCabecalho('Progresso Trimestral', `${gerencia} · ${coberturaTrimestral.quarter.label}`);
+          doc.setDrawColor(226, 232, 240);
+          doc.setFillColor(248, 250, 252);
+          doc.roundedRect(margin, yy - 5, W - margin * 2, rowH, 2, 2, 'FD');
+          doc.setTextColor(22, 53, 159);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(9.5);
+          doc.text(`${item.setor} — ${item.status} — ${item.concluidas}/${item.totalAreas} (${item.percentual}%)`, margin + 4, yy + 1);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8);
+          doc.text(pendentesLines, margin + 4, yy + 7);
+          yy += rowH + 4;
         });
       }
 
@@ -15163,6 +15347,7 @@
       // Capa + páginas introdutórias + resumo executivo
       await renderGerenciaCover();
       renderGerenciaObjetivoPage();
+      renderGerenciaProgressoTrimestralPage();
       doc.addPage();
       doc.setFillColor(255, 255, 255);
       doc.rect(0, 0, W, H, 'F');
@@ -15184,12 +15369,12 @@
       const row2Y = row1Y + cardH + 8;
       const totalNCGerencia = totais.ncAbertas + totais.ncResolvidas;
       const taxaResolucaoGerencia = totalNCGerencia ? `${Math.round((totais.ncResolvidas / totalNCGerencia) * 100)}%` : '—';
-      drawDashCard(margin, row1Y, cardW, cardH, 'Inspeções', totais.inspecoes, 'No mês atual', [22, 53, 159]);
-      drawDashCard(margin + cardW + gap, row1Y, cardW, cardH, 'Média Geral', mediaGerencia !== null ? mediaGerencia.toFixed(2) : '—', 'Nota média da gerência', [14, 165, 233]);
+      drawDashCard(margin, row1Y, cardW, cardH, 'Inspeções', totais.inspecoes, 'Realizadas no mês', [22, 53, 159]);
+      drawDashCard(margin + cardW + gap, row1Y, cardW, cardH, 'Média Trimestral', mediaGerencia !== null ? mediaGerencia.toFixed(2) : '—', coberturaTrimestral.completo ? 'Nota final' : 'Nota provisória', [14, 165, 233]);
       drawDashCard(margin + (cardW + gap) * 2, row1Y, cardW, cardH, 'Taxa de Resolução', taxaResolucaoGerencia, 'Resolvidas sobre desvios do período', [16, 185, 129]);
       drawDashCard(margin, row2Y, cardW, cardH, 'Desvios abertos', totais.ncAbertas, 'Inclui períodos anteriores', [244, 63, 94]);
       drawDashCard(margin + cardW + gap, row2Y, cardW, cardH, 'Desvios resolvidos', totais.ncResolvidas, 'Concluídas no período', [16, 185, 129]);
-      drawDashCard(margin + (cardW + gap) * 2, row2Y, cardW, cardH, 'Setores Totais', setores.length, 'Mapeados na gerência', [245, 158, 11]);
+      drawDashCard(margin + (cardW + gap) * 2, row2Y, cardW, cardH, 'Cobertura Trimestral', `${coberturaTrimestral.percentual}%`, `${coberturaTrimestral.faltantes} subárea(s) pendente(s)`, [245, 158, 11]);
 
       // Tabela resumida por setor
       y = row2Y + cardH + 14;
@@ -15215,8 +15400,8 @@
       doc.setFontSize(9.5);
       doc.text('Setor', resumoColX.setor, y + 6.5);
       doc.text('Status', resumoColX.status, y + 6.5, { align: 'center' });
-      doc.text('Inspeções', resumoColX.inspecoes, y + 6.5, { align: 'right' });
-      doc.text('Média', resumoColX.media, y + 6.5, { align: 'right' });
+      doc.text('Insp. mês', resumoColX.inspecoes, y + 6.5, { align: 'right' });
+      doc.text('Média trim.', resumoColX.media, y + 6.5, { align: 'right' });
       doc.text('Desvios abertos', resumoColX.ncAbertas, y + 6.5, { align: 'right' });
       doc.text('Desvios resolvidos', resumoColX.ncResolvidas, y + 6.5, { align: 'right' });
       y += 14;
@@ -15239,8 +15424,8 @@
           doc.setFontSize(9.5);
           doc.text('Setor', resumoColX.setor, y + 6.5);
           doc.text('Status', resumoColX.status, y + 6.5, { align: 'center' });
-          doc.text('Inspeções', resumoColX.inspecoes, y + 6.5, { align: 'right' });
-          doc.text('Média', resumoColX.media, y + 6.5, { align: 'right' });
+          doc.text('Insp. mês', resumoColX.inspecoes, y + 6.5, { align: 'right' });
+          doc.text('Média trim.', resumoColX.media, y + 6.5, { align: 'right' });
           doc.text('Desvios abertos', resumoColX.ncAbertas, y + 6.5, { align: 'right' });
           doc.text('Desvios resolvidos', resumoColX.ncResolvidas, y + 6.5, { align: 'right' });
           y += 14;
@@ -15251,7 +15436,12 @@
         }
         doc.setTextColor(22, 53, 159);
         doc.text(setorLines, resumoColX.setor, y);
-        const status = getReportStatus(r.media, r.ncAbertas);
+        const status = r.coberturaTrimestral?.completo
+          ? getReportStatus(r.media, r.ncAbertas)
+          : {
+            label: r.coberturaTrimestral?.status || 'Sem dados',
+            color: r.coberturaTrimestral?.status === 'Atrasado' ? [244, 63, 94] : [245, 158, 11]
+          };
         doc.setTextColor(...status.color);
         doc.setFont('helvetica', 'bold');
         doc.text(status.label, resumoColX.status, y, { align: 'center' });
@@ -15826,7 +16016,8 @@
         totalDesvios,
         totalDesviosRecebidos,
         melhorLocal,
-        piorLocal
+        piorLocal,
+        coberturaTrimestral
       } = setorialData;
 
       function renderSetorialObjetivoPage() {
@@ -15843,8 +16034,8 @@
         doc.text(`${setor} · ${mesAnoAtual}`, margin, 19);
 
         let yy = 34;
-        const objetivoTxt = `Este relatório tem como objetivo apresentar as informações do Housekeeping realizado no setor ${setor} durante ${mesAnoAtual}, identificando oportunidades de melhoria, condições inseguras, desvios de organização e limpeza, reincidências e ações concluídas.`;
-        const escopoTxt = 'A análise consolida as áreas inspecionadas no período selecionado, as pontuações por critérios 5S, os desvios abertos, os desvios resolvidos com evidência e os encaminhamentos corresponsáveis.';
+        const objetivoTxt = `Este relatório apresenta as inspeções realizadas no setor ${setor} em ${mesAnoAtual} e o progresso acumulado do ${coberturaTrimestral.quarter.label}.`;
+        const escopoTxt = 'A movimentação do mês é separada da cobertura trimestral. A pontuação acumulada utiliza a inspeção mais recente de cada subárea e permanece provisória até que todas sejam concluídas.';
         const textoX = margin;
         const textoW = W - margin * 2 - 18;
 
@@ -15915,13 +16106,13 @@
           doc.setTextColor(22, 53, 159);
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(12);
-          doc.text('Áreas inspecionadas', margin, yy);
+          doc.text('Áreas inspecionadas no mês', margin, yy);
           yy += 8;
         }
         doc.setTextColor(22, 53, 159);
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(10);
-        doc.text(`${rows.length} inspeção(ões) considerada(s) no período selecionado.`, margin, yy);
+        doc.text(`${rows.length} inspeção(ões) realizada(s) no mês selecionado.`, margin, yy);
         yy += 9;
 
         if (!rows.length) {
@@ -15984,13 +16175,65 @@
         });
       }
 
+      function renderSetorialProgressoTrimestralPage() {
+        const renderHeader = () => {
+          addNewPage();
+          doc.setFillColor(22, 53, 159);
+          doc.rect(0, 0, W, 22, 'F');
+          doc.setTextColor(255, 255, 255);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(13);
+          doc.text('Progresso Trimestral', margin, 14);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(9.5);
+          doc.text(`${setor} · ${coberturaTrimestral.quarter.acompanhamentoLabel}`, margin, 19);
+          return 34;
+        };
+
+        let yy = renderHeader();
+        doc.setTextColor(22, 53, 159);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(14);
+        doc.text(`Cobertura: ${coberturaTrimestral.concluidas}/${coberturaTrimestral.totalAreas} subáreas (${coberturaTrimestral.percentual}%)`, margin, yy);
+        yy += 7;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9.5);
+        doc.text(`Situação: ${coberturaTrimestral.status} · Ainda faltam ${coberturaTrimestral.faltantes} subárea(s).`, margin, yy);
+        yy += 12;
+
+        coberturaTrimestral.areasEsperadas.forEach((area, index) => {
+          const concluida = coberturaTrimestral.areasConcluidas.includes(area);
+          const insp = coberturaTrimestral.latestInspections.find(item =>
+            normalizarIdentidadeSubarea(item.subarea || 'Área geral do setor') === normalizarIdentidadeSubarea(area)
+          );
+          const desviosAbertos = insp ? getInspectionNcTotals(insp).abertas : 0;
+          const areaLines = doc.splitTextToSize(area, W - margin * 2 - 68);
+          const rowH = Math.max(9, areaLines.length * 4 + 5);
+          if (yy + rowH > H - 14) yy = renderHeader();
+          if (index % 2 === 0) {
+            doc.setFillColor(248, 250, 252);
+            doc.rect(margin, yy - 5, W - margin * 2, rowH, 'F');
+          }
+          doc.setTextColor(22, 53, 159);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8.5);
+          doc.text(areaLines, margin + 4, yy);
+          doc.setTextColor(...(!concluida ? [244, 63, 94] : desviosAbertos ? [245, 158, 11] : [16, 185, 129]));
+          doc.setFont('helvetica', 'bold');
+          doc.text(concluida ? (desviosAbertos ? 'REINSPEÇÃO' : 'CONCLUÍDA') : 'PENDENTE', W - margin - 50, yy);
+          doc.setTextColor(22, 53, 159);
+          doc.setFont('helvetica', 'normal');
+          doc.text(insp ? getReportPeriodLabel(getInspectionPeriodCodeForReport(insp)) : '—', W - margin - 4, yy, { align: 'right' });
+          yy += rowH;
+        });
+      }
+
       // Capa + páginas introdutórias + resumo executivo
       const capaAplicada = await renderSetorialCover();
-      if (capaAplicada) {
-        addNewPage();
-        renderSetorialObjetivoPage();
-        addNewPage();
-      }
+      if (capaAplicada) addNewPage();
+      renderSetorialObjetivoPage();
+      renderSetorialProgressoTrimestralPage();
+      addNewPage();
 
       doc.setFillColor(255, 255, 255);
       doc.rect(0, 0, W, H, 'F');
@@ -16039,13 +16282,13 @@
         ? `Inclui ${totalDesviosRecebidos} recebido(s)`
         : 'Abertos e resolvidos';
 
-      drawDashCard(margin, row1Y, cardW, cardH, 'Inspeções', totalInspecoes, 'No mês atual', [22, 53, 159]);
-      drawDashCard(margin + cardW + gap, row1Y, cardW, cardH, 'Média Geral', mediaGeral !== null ? mediaGeral.toFixed(2) : '—', 'Nota média do setor', [14, 165, 233]);
+      drawDashCard(margin, row1Y, cardW, cardH, 'Inspeções', totalInspecoes, 'Realizadas no mês', [22, 53, 159]);
+      drawDashCard(margin + cardW + gap, row1Y, cardW, cardH, 'Média Trimestral', mediaGeral !== null ? mediaGeral.toFixed(2) : '—', coberturaTrimestral.completo ? 'Nota final' : 'Nota provisória', [14, 165, 233]);
       drawDashCard(margin + (cardW + gap) * 2, row1Y, cardW, cardH, 'Taxa de Resolução', taxaResolucaoSetor, 'Resolvidas sobre desvios do período', [16, 185, 129]);
 
       drawDashCard(margin, row2Y, cardW, cardH, 'Desvios abertos', totalNCAbertas, 'Inclui períodos anteriores', [244, 63, 94]);
       drawDashCard(margin + cardW + gap, row2Y, cardW, cardH, 'Desvios resolvidos', totalResolvidas, 'Resolvidos no período', [16, 185, 129]);
-      drawDashCard(margin + (cardW + gap) * 2, row2Y, cardW, cardH, 'Total de desvios', totalNCSetor, totalDesviosSubtitle, [245, 158, 11]);
+      drawDashCard(margin + (cardW + gap) * 2, row2Y, cardW, cardH, 'Cobertura Trimestral', `${coberturaTrimestral.percentual}%`, `${coberturaTrimestral.faltantes} subárea(s) pendente(s)`, [245, 158, 11]);
 
       const boxY = row2Y + cardH + 10;
       doc.setDrawColor(226, 232, 240);
@@ -16344,7 +16587,7 @@
       doc.text(`Gerado em ${now.toLocaleString('pt-BR')}`, W / 2, H - 8, { align: 'center' });
       renderObrigadoSlide();
 
-      const fileName = `Housekeeping_${sanitizePdfFileName(setor)}_${anoAtual}_${String(now.getMonth() + 1).padStart(2, '0')}.pdf`;
+      const fileName = `Housekeeping_${sanitizePdfFileName(setor)}_${periodoAtual}.pdf`;
       if (shouldSave) doc.save(fileName);
       if (shouldToast) toast('Relatório setorial gerado com sucesso!');
       return { doc, fileName, periodo: periodoAtual, mesAno: mesAnoAtual };
