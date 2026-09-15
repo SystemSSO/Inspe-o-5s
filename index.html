@@ -4998,13 +4998,94 @@
         ]
       },
       {
-        nome: 'Reflorestamento',
+        nome: 'Administração Florestal',
         subareas: [
-          '1 – Administração',
-          '2 – Silvicultura',
-          '3 – Manutenção mecânica',
-          '4 – Colheita',
-          '5 – Viveiro'
+          '1 – Escritório',
+          '2 – Banheiro',
+          '3 – Jardinagem',
+          '4 – Área de Lazer',
+          '5 – Vias internas e externas',
+          '6 – Área de apoio e H&F',
+          '7 – Coleta Seletiva ADM',
+          '8 – Sala de Reuniões',
+          '9 – Arquivo Morto ADM',
+          '10 – Copa',
+          '11 – Rio Vermelho',
+          '12 – Casas de apoio'
+        ]
+      },
+      {
+        nome: 'Viveiro Florestal',
+        subareas: [
+          '1 – Vestiários',
+          '2 – Escritório',
+          '3 – Banheiros',
+          '4 – Depósito de Produtos Químicos',
+          '5 – Casa de vegetação 1, 2 e 3',
+          '6 – Jardim Suspenso',
+          '7 – Sombreamento',
+          '8 – Rustificação',
+          '9 – Expedição',
+          '10 – Tanque Australiano',
+          '11 – Casa de bombas',
+          '12 – Fábrica de tubetes',
+          '13 – Grupo Gerador',
+          '14 – Poço artesiano',
+          '15 – Estacionamento externo',
+          '16 – Estoque de peças hidráulicas',
+          '17 – Depósito de ferramentas e materiais',
+          '18 – Coleta Seletiva Viveiro'
+        ]
+      },
+      {
+        nome: 'Silvicultura',
+        subareas: [
+          '1 – Plantio',
+          '2 – Combate',
+          '3 – Roçada',
+          '4 – Preparação do Solo',
+          '5 – Galpão de reunião',
+          '6 – Depósito de defensivos fora de estoque',
+          '7 – Depósito de insumos externo',
+          '8 – Depósito de embalagens',
+          '9 – Vestiário Silvicultura',
+          '10 – Depósito de EPIs fora de estoque',
+          '11 – Casa de apoio',
+          '12 – Área de implementos',
+          '13 – Rosariana',
+          '14 – Cristo Redentor',
+          '15 – Trailer Escritório'
+        ]
+      },
+      {
+        nome: 'Colheita Florestal',
+        subareas: [
+          '1 – Sala de Apoio',
+          '2 – Depósito de Materiais',
+          '3 – Limpeza de Área',
+          '4 – Carregamento',
+          '5 – Arraste',
+          '6 – Traçamento',
+          '7 – Trailer de Apoio'
+        ]
+      },
+      {
+        nome: 'Manutenção Florestal',
+        subareas: [
+          '1 – Pátio Sucata',
+          '2 – Depósito de materiais',
+          '3 – Ferramentaria',
+          '4 – Banheiro',
+          '5 – Ponto de Abastecimento',
+          '6 – Lavador',
+          '7 – Área de Fabricação de peças',
+          '8 – Galpão Interno',
+          '9 – Área Externa',
+          '10 – Baia de Calibração',
+          '11 – Coleta Seletiva Manut',
+          '12 – Gerador',
+          '13 – Depósito de inflamáveis',
+          '14 – Sala de Elétrica'
         ]
       }
     ];
@@ -5323,6 +5404,14 @@
       CD: SETORES,
       BA: SETORES_BA
     };
+
+    const SETORES_FLORESTAIS_NAMES = [
+      'Administração Florestal',
+      'Viveiro Florestal',
+      'Silvicultura',
+      'Colheita Florestal',
+      'Manutenção Florestal'
+    ];
 
     const CORRESPONSAVEL_EXTRA_SETOR_NAMES = [
       'Manutenção Elétrica'
@@ -5679,9 +5768,9 @@
     function getSetorSubareasAtivas(setorNome, unidade = currentUnidade) {
       const unit = normalizeUnidadeCode(unidade, currentUnidade || 'CD');
       const base = getSetoresBasePorUnidade(unit).find(s => s.nome === setorNome);
-      // A estrutura de Reflorestamento é fixa. Ignora personalizações locais
-      // antigas para que as subáreas removidas não reapareçam no seletor.
-      if (unit === 'CD' && setorNome === 'Reflorestamento') {
+      // O novo cadastro florestal vem da planilha. Não reaproveita listas
+      // personalizadas da estrutura antiga de Reflorestamento.
+      if (unit === 'CD' && SETORES_FLORESTAIS_NAMES.includes(setorNome)) {
         return Array.isArray(base?.subareas) ? [...base.subareas] : [];
       }
       const store = getAreaOverridesStore();
@@ -5690,35 +5779,43 @@
       return Array.isArray(base?.subareas) ? [...base.subareas] : [];
     }
 
-    const REFLORESTAMENTO_AREAS_ATIVAS = {
-      administracao: '1 – Administração',
-      silvicultura: '4 – Silvicultura',
-      manutencao: '3 – Manutenção mecânica',
-      colheita: '2 – Colheita',
-      viveiro: '5 – Viveiro'
-    };
+    function normalizarSubareaFlorestal(subarea) {
+      return normalizarIdentidadeSubarea(subarea)
+        .replace(/\bvejetacao\b/g, 'vegetacao')
+        .replace(/\bjardin\b/g, 'jardim')
+        .replace(/\bexpedincao\b/g, 'expedicao')
+        .replace(/\btraller\b/g, 'trailer')
+        .replace(/\b2e3\b/g, '2 3')
+        .replace(/\bbanheiros\b/g, 'banheiro');
+    }
 
-    function getAreaReflorestamentoMigrada(areaAnterior) {
-      const area = normalizeColumnTitle(areaAnterior || '');
-      if (!area) return '';
-      if (area.includes('administracao')) return REFLORESTAMENTO_AREAS_ATIVAS.administracao;
-      if (area.includes('colheita')) return REFLORESTAMENTO_AREAS_ATIVAS.colheita;
-      if (area.includes('viveiro') || area.includes('produtos quimicos') || area.includes('casa de defensivos')) {
-        return REFLORESTAMENTO_AREAS_ATIVAS.viveiro;
+    function getDestinoInspecaoFlorestal(insp) {
+      const identidade = normalizarSubareaFlorestal(insp?.subarea || '');
+      if (!identidade) return { setor: '', subarea: '' };
+      const setores = SETORES.filter(setor => SETORES_FLORESTAIS_NAMES.includes(setor.nome));
+      // Usa os nomes ativos já ordenados/renumerados, nunca números fixos.
+      const candidatos = setores.flatMap(setor => setor.subareas
+        .filter(subarea => normalizarSubareaFlorestal(subarea) === identidade)
+        .map(subarea => ({ setor: setor.nome, subarea })));
+      if (candidatos.length === 1) return candidatos[0];
+
+      const categoriasAntigas = {
+        administracao: 'Administração Florestal',
+        'administracao florestal': 'Administração Florestal',
+        viveiro: 'Viveiro Florestal',
+        'viveiro florestal': 'Viveiro Florestal',
+        silvicultura: 'Silvicultura',
+        colheita: 'Colheita Florestal',
+        'colheita florestal': 'Colheita Florestal',
+        'manutencao mecanica': 'Manutenção Florestal',
+        'manutencao florestal': 'Manutenção Florestal'
+      };
+      if (categoriasAntigas[identidade]) {
+        // Um checklist consolidado pode cobrir vários locais. Move apenas
+        // o setor e mantém o escopo original, sem dar cobertura a 66 locais.
+        return { setor: categoriasAntigas[identidade], subarea: '' };
       }
-      if (
-        area.includes('manutencao') ||
-        area.includes('implementos') ||
-        area.includes('estacionamento de maquinas') ||
-        area.includes('lavador') ||
-        area.includes('oleo diesel')
-      ) {
-        return REFLORESTAMENTO_AREAS_ATIVAS.manutencao;
-      }
-      if (area.includes('silvicultura') || area.includes('horto') || area.includes('sala de treinamentos')) {
-        return REFLORESTAMENTO_AREAS_ATIVAS.silvicultura;
-      }
-      return '';
+      return { setor: '', subarea: '' };
     }
 
     function migrarInspecoesReflorestamentoParaAreasAtivas(appState, options = {}) {
@@ -5727,9 +5824,22 @@
 
       inspecoes.forEach(insp => {
         if (!insp?.id || getInspectionUnidade(insp) !== 'CD' || insp.setor !== 'Reflorestamento') return;
-        const novaArea = getAreaReflorestamentoMigrada(insp.subarea);
-        if (!novaArea || novaArea === insp.subarea) return;
-        insp.subarea = novaArea;
+        if (insp.migracaoFlorestal?.versao === 2 && !insp.migracaoFlorestal.destinoSetor) return;
+        const destino = getDestinoInspecaoFlorestal(insp);
+        insp.migracaoFlorestal = {
+          versao: 2,
+          origemSetor: insp.setor,
+          origemSubarea: insp.subarea || '',
+          destinoSetor: destino.setor,
+          status: destino.subarea ? 'migrada' : 'pendente',
+          motivo: destino.subarea
+            ? 'Correspondência única com uma subárea da planilha.'
+            : destino.setor
+              ? 'Checklist da categoria antiga; subárea específica não identificada.'
+              : 'Local antigo sem correspondência única na planilha.'
+        };
+        if (destino.setor) insp.setor = destino.setor;
+        if (destino.subarea) insp.subarea = destino.subarea;
         idsAlterados.push(insp.id);
       });
 
@@ -6309,6 +6419,12 @@
         'Preparação de Carga': 'CD - Preparação de Cargas',
         'Refino': 'CD - Refino',
         'Reflorestamento': 'CD - Silvicultura',
+        // Mantém os rótulos históricos da integração para os novos setores.
+        'Administração Florestal': 'CD - Administração Florestal',
+        'Viveiro Florestal': 'CD - Viveiro',
+        'Silvicultura': 'CD - Silvicultura',
+        'Colheita Florestal': 'CD - Colheita',
+        'Manutenção Florestal': 'CD - Manutenção Florestal',
         'Risco e Emergência': 'CD - Segurança e Brigada',
         'Saúde': 'CD - Segurança e Brigada',
         'Segurança Empresarial': 'CD - Segurança Empresarial',
@@ -6443,6 +6559,9 @@
         `Unidade: ${getInspectionUnidade(insp) || '—'}`,
         `Setor: ${insp.setor || '—'}`,
         `Área/Subárea: ${insp.subarea || 'Área geral'}`,
+        ...(insp.migracaoFlorestal?.status === 'pendente'
+          ? [`Classificação: ${insp.migracaoFlorestal.motivo}`, `Local original: ${insp.migracaoFlorestal.origemSetor} / ${insp.migracaoFlorestal.origemSubarea || 'Área geral'}`]
+          : []),
         `Período: ${formatPeriodoTitulo(insp.periodo, insp.data) || insp.periodo || '—'}`,
         `Data de criação: ${insp.data ? new Date(insp.data).toLocaleString('pt-BR') : '—'}`,
         `Técnico: ${insp.tecnico || '—'}`,
@@ -8669,10 +8788,21 @@
         const cleanBackup = { ...backup };
         delete cleanBackup.__backupUpdatedAt;
         const idx = app.inspecoes.findIndex(i => i?.id === cleanBackup.id);
+        if (idx >= 0 && cleanBackup.setor === 'Reflorestamento' && app.inspecoes[idx].migracaoFlorestal?.versao === 2) {
+          // Uma cópia anterior à segregação não pode restaurar a identidade
+          // antiga sobre uma inspeção já migrada/classificada.
+          cleanBackup.setor = app.inspecoes[idx].setor;
+          cleanBackup.subarea = app.inspecoes[idx].subarea;
+          cleanBackup.migracaoFlorestal = app.inspecoes[idx].migracaoFlorestal;
+        }
         if (idx >= 0) app.inspecoes[idx] = { ...app.inspecoes[idx], ...cleanBackup };
         else app.inspecoes.push(cleanBackup);
         if (!app.syncQueue.includes(cleanBackup.id)) app.syncQueue.push(cleanBackup.id);
       });
+      // Também protege recuperações feitas depois da inicialização (sync).
+      // Medicina é separada antes da migração do restante da estrutura.
+      migrarInspecoesSegurancaSaudeLegadas(app, { queueSync: true });
+      migrarInspecoesReflorestamentoParaAreasAtivas(app, { queueSync: true });
       return normalizeAppState(app);
     }
 
@@ -11183,13 +11313,11 @@
         const areasEsperadas = (setorCfg?.subareas && setorCfg.subareas.length)
           ? [...setorCfg.subareas]
           : ['Área geral do setor'];
-        const mostrarSomenteAreasAtivas = currentUnidade === 'CD' && setor === 'Reflorestamento';
         const inspecoesSetor = APP.inspecoes
           .filter(i =>
             inspectionIsCurrentUnit(i) &&
             i.setor === setor &&
-            inspectionBelongsToQuarterThroughPeriod(i, periodoAtual) &&
-            (!mostrarSomenteAreasAtivas || areasEsperadas.includes(i.subarea || 'Área geral do setor'))
+            inspectionBelongsToQuarterThroughPeriod(i, periodoAtual)
           )
           .sort(compareInspectionsByPeriodDesc);
         const areasMap = {};
@@ -11223,10 +11351,11 @@
 
         const renderAreaInspecionada = (areaKey) => {
           const ultima = areasMap[areaKey][0];
+          const classificacaoPendente = ultima.migracaoFlorestal?.status === 'pendente';
           const labelArea = areaKey === '__setor__' ? 'Área geral do setor' : areaKey;
           const totalArea = areasMap[areaKey].length;
           const score = ultima.notaGeral;
-          const statusClass = score >= 3.5 ? 'status-green' : score >= 2.5 ? 'status-gold' : score >= 1.5 ? 'status-orange' : 'status-red';
+          const statusClass = classificacaoPendente ? 'status-gold' : score >= 3.5 ? 'status-green' : score >= 2.5 ? 'status-gold' : score >= 1.5 ? 'status-orange' : 'status-red';
           const scoreTxt = typeof score === 'number' ? score.toFixed(2) : '—';
           const scoreColor = typeof score === 'number' ? notaCor(score) : 'var(--text2)';
 
@@ -11240,7 +11369,7 @@
             <div class="sector-area-top">
               <div style="flex:1">
                 <div class="sector-area-name">${labelArea}</div>
-                <div class="sector-area-meta"><strong>Concluída no trimestre</strong> · ${totalArea} inspeção(ões) · Última: ${getInspectionPeriodLabel(ultima)}</div>
+                <div class="sector-area-meta"><strong>${classificacaoPendente ? 'Histórico consolidado · Subárea específica pendente' : 'Concluída no trimestre'}</strong> · ${totalArea} inspeção(ões) · Última: ${getInspectionPeriodLabel(ultima)}</div>
               </div>
               <div style="font-family:var(--font-display); font-weight:700; color:${scoreColor}">${scoreTxt}</div>
             </div>
@@ -14280,7 +14409,7 @@
       if (unit !== 'CD') return {};
 
       const map = {
-        'Produção CD': ['Preparação de Carga', 'Expedição', 'Refino', 'Calcinação e Redução', 'Reflorestamento'],
+        'Produção CD': ['Preparação de Carga', 'Expedição', 'Refino', 'Calcinação e Redução', ...SETORES_FLORESTAIS_NAMES],
         'Manutenção': ['Manutenção Mecânica', 'Manutenção Elétrica'],
         'Desempenho de Contratadas Infraestrutura e Engenharia': [
           'Engenharia de Manutenção',
