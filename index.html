@@ -2066,6 +2066,54 @@
       transform: translateY(-1px);
     }
 
+    .home-period-filter {
+      margin: 0 16px 12px;
+      display: grid;
+      grid-template-columns: minmax(90px, 1fr) minmax(0, 2fr);
+      gap: 10px;
+    }
+
+    .home-period-filter .form-label {
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .home-period-summary {
+      grid-column: 1 / -1;
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--text2);
+    }
+
+    .sector-inspection-history {
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+    }
+
+    .sector-inspection-history summary {
+      cursor: pointer;
+      color: var(--orange);
+      font-weight: 600;
+    }
+
+    .sector-inspection-link {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      width: 100%;
+      padding: 10px 0;
+      background: transparent;
+      border: 0;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
+
     @media (max-width: 420px) {
       .home-actions {
         grid-template-columns: 1fr;
@@ -4177,6 +4225,22 @@
       </div>
 
       <div class="section-title">Setores e locais</div>
+      <div class="home-period-filter">
+        <div>
+          <label class="form-label" for="home-year-filter">Ano</label>
+          <select class="form-select" id="home-year-filter" onchange="changeHomeQuarterFilter()"></select>
+        </div>
+        <div>
+          <label class="form-label" for="home-quarter-filter">Trimestre</label>
+          <select class="form-select" id="home-quarter-filter" onchange="changeHomeQuarterFilter()">
+            <option value="1">1º trimestre · Jan–Mar</option>
+            <option value="2">2º trimestre · Abr–Jun</option>
+            <option value="3">3º trimestre · Jul–Set</option>
+            <option value="4">4º trimestre · Out–Dez</option>
+          </select>
+        </div>
+        <div class="home-period-summary" id="home-quarter-summary" role="status" aria-live="polite"></div>
+      </div>
       <div class="search-container">
         <div class="search-input-wrapper">
           <div class="search-icon">
@@ -10752,14 +10816,57 @@
     }
 
 
+    // === Function: getHomeQuarterPeriod ===
+    function getHomeQuarterPeriod() {
+      const saved = localStorage.getItem(`aa5s_home_quarter_${currentUnidade}`) || '';
+      const match = saved.match(/^(\d{4})-T([1-4])$/);
+      const current = getQuarterInfo(getCurrentReportPeriodCode());
+      const ano = match ? Number(match[1]) : current.ano;
+      const trimestre = match ? Number(match[2]) : current.trimestre;
+      // O filtro abrange os três meses completos do trimestre escolhido.
+      return getSetorialReportPeriod(`${ano}-${String(trimestre * 3).padStart(2, '0')}`);
+    }
+
+    function renderHomeQuarterFilter() {
+      const yearSelect = document.getElementById('home-year-filter');
+      const quarterSelect = document.getElementById('home-quarter-filter');
+      const summary = document.getElementById('home-quarter-summary');
+      if (!yearSelect || !quarterSelect || !summary) return;
+      const periodo = getHomeQuarterPeriod();
+      const quarter = getQuarterInfo(periodo);
+      const years = new Set([periodo.ano, getSetorialReportPeriod().ano]);
+      APP.inspecoes.filter(inspectionIsCurrentUnit).forEach(insp => {
+        const code = getInspectionPeriodCodeForReport(insp);
+        if (code) years.add(Number(code.slice(0, 4)));
+      });
+      yearSelect.innerHTML = [...years].sort((a, b) => b - a)
+        .map(year => `<option value="${year}">${year}</option>`).join('');
+      yearSelect.value = String(quarter.ano);
+      quarterSelect.value = String(quarter.trimestre);
+      const count = getInspectionsForQuarterThroughPeriod(periodo).length;
+      const months = `${MESES_PT_BR[quarter.mesInicio - 1]} a ${MESES_PT_BR[quarter.mesFim - 1]}`;
+      summary.textContent = `${quarter.label} · ${months} · ${count} ${count === 1 ? 'inspeção' : 'inspeções'}`;
+    }
+
+    function changeHomeQuarterFilter() {
+      const ano = document.getElementById('home-year-filter')?.value || '';
+      const trimestre = document.getElementById('home-quarter-filter')?.value || '';
+      const code = `${ano}-T${trimestre}`;
+      if (!/^\d{4}-T[1-4]$/.test(code)) return;
+      localStorage.setItem(`aa5s_home_quarter_${currentUnidade}`, code);
+      renderHome();
+    }
+
     // === Function: renderHome ===
     function renderHome() {
       applyUnitAccess();
       document.getElementById('home-tec-name').textContent = currentTec || 'Selecionar técnico';
       document.getElementById('home-unit-name').textContent = currentUnidade;
 
+      renderHomeQuarterFilter();
       const sectorList = document.getElementById('home-sector-list');
       sectorList.innerHTML = sectorCardListHTML();
+      filterSectors(document.getElementById('sector-search')?.value || '', false);
     }
 
     // === Function: getLatestDraftForCurrentUnit ===
@@ -11150,7 +11257,13 @@
     }
 
     // === Function: filterSectors ===
-    function filterSectors(query) {
+    function filterSectors(query, renderList = true) {
+      // Recria também as subáreas ao mudar a busca, para recuperar as que ficaram
+      // ocultas quando o trimestre foi trocado com uma pesquisa ativa.
+      if (renderList) {
+        const list = document.getElementById('home-sector-list');
+        if (list) list.innerHTML = sectorCardListHTML();
+      }
       const q = query.toLowerCase().trim();
       const cards = document.querySelectorAll('.sector-card');
 
@@ -11305,8 +11418,9 @@
     // === Function: sectorCardListHTML ===
     function sectorCardListHTML() {
       const setoresOrdenados = [...getSetoresAtivos().map(s => s.nome)];
-      const periodoAtual = getSetorialReportPeriod(getCurrentReportPeriodCode());
-      const trimestreAtual = getQuarterInfo(periodoAtual);
+      const periodoSelecionado = getHomeQuarterPeriod();
+      const trimestreSelecionado = getQuarterInfo(periodoSelecionado);
+      const isCurrentQuarter = trimestreSelecionado.codigo === getQuarterInfo(getCurrentReportPeriodCode()).codigo;
 
       return setoresOrdenados.map(setor => {
         const setorCfg = getSetorConfigAtivo(setor);
@@ -11317,7 +11431,7 @@
           .filter(i =>
             inspectionIsCurrentUnit(i) &&
             i.setor === setor &&
-            inspectionBelongsToQuarterThroughPeriod(i, periodoAtual)
+            inspectionBelongsToQuarterThroughPeriod(i, periodoSelecionado)
           )
           .sort(compareInspectionsByPeriodDesc);
         const areasMap = {};
@@ -11346,8 +11460,8 @@
           ? Math.round(((areasEsperadas.length - faltamAreas) / areasEsperadas.length) * 100)
           : 100;
         const resumoSetor = areaKeys.length
-          ? `<span style="color:var(--green);font-weight:700">${areasEsperadas.length - faltamAreas}/${areasEsperadas.length} concluídas</span> · <span style="color:${faltamAreas ? 'var(--red)' : 'var(--green)'};font-weight:700">${percentualCobertura}% · Faltam ${faltamAreas}</span> · <span style="color:var(--text2)">${trimestreAtual.label}</span>${ultimaSetor ? ` · <span style="color:var(--text2)">Última: ${getInspectionPeriodLabel(ultimaSetor)}</span>` : ''}`
-          : `<span style="color:var(--red);font-weight:700">Não iniciado · Faltam ${areasEsperadas.length}</span> · <span style="color:var(--text2)">${trimestreAtual.label}</span>`;
+          ? `<span style="color:var(--green);font-weight:700">${areasEsperadas.length - faltamAreas}/${areasEsperadas.length} concluídas</span> · <span style="color:${faltamAreas ? 'var(--red)' : 'var(--green)'};font-weight:700">${percentualCobertura}% · Faltam ${faltamAreas}</span> · <span style="color:var(--text2)">${trimestreSelecionado.label}</span>${ultimaSetor ? ` · <span style="color:var(--text2)">Última: ${getInspectionPeriodLabel(ultimaSetor)}</span>` : ''}`
+          : `<span style="color:var(--red);font-weight:700">Não iniciado · Faltam ${areasEsperadas.length}</span> · <span style="color:var(--text2)">${trimestreSelecionado.label}</span>`;
 
         const renderAreaInspecionada = (areaKey) => {
           const ultima = areasMap[areaKey][0];
@@ -11373,6 +11487,13 @@
               </div>
               <div style="font-family:var(--font-display); font-weight:700; color:${scoreColor}">${scoreTxt}</div>
             </div>
+            ${totalArea > 1 ? `<details class="sector-inspection-history" onclick="event.stopPropagation()">
+              <summary>Ver as ${totalArea} inspeções do trimestre</summary>
+              ${areasMap[areaKey].map(insp => `<button type="button" class="sector-inspection-link" onclick="openDetalhe('${insp.id}')" aria-label="Ver inspeção de ${escapeHtml(getInspectionPeriodLabel(insp))}">
+                <span>${getInspectionPeriodLabel(insp)} · ${formatDate(insp.data)}</span>
+                <strong style="color:${notaCor(insp.notaGeral)}">${typeof insp.notaGeral === 'number' ? insp.notaGeral.toFixed(2) : '—'}</strong>
+              </button>`).join('')}
+            </details>` : ''}
           </div>`;
         };
 
@@ -11382,11 +11503,11 @@
           if (!areaMatch && searchQuery !== '') return '';
           const setorSafe = setor.replace(/'/g, "\\'");
           const areaSafe = area.replace(/'/g, "\\'");
-          return `<div class="sector-area-item" onclick="iniciarInspecaoAreaPendente('${setorSafe}','${areaSafe}')" style="cursor:pointer;border-color:rgba(244,63,94,0.35);background:rgba(244,63,94,0.08)">
+          return `<div class="sector-area-item" ${isCurrentQuarter ? `onclick="iniciarInspecaoAreaPendente('${setorSafe}','${areaSafe}')"` : ''} style="cursor:${isCurrentQuarter ? 'pointer' : 'default'};border-color:rgba(244,63,94,0.35);background:rgba(244,63,94,0.08)">
         <div class="sector-area-top">
           <div style="flex:1">
             <div class="sector-area-name" style="color:var(--red)">${area}</div>
-            <div class="sector-area-meta" style="color:var(--text2)">Pendente no ${trimestreAtual.label} · Toque para iniciar</div>
+            <div class="sector-area-meta" style="color:var(--text2)">${isCurrentQuarter ? `Pendente no ${trimestreSelecionado.label} · Toque para iniciar` : `Sem inspeção no ${trimestreSelecionado.label}`}</div>
           </div>
           <div style="font-family:var(--font-display);font-weight:700;color:var(--red)">Pendente</div>
         </div>
@@ -11416,7 +11537,7 @@
             <div class="sector-title">${setor}</div>
             <div class="sector-sub">${resumoSetor}</div>
           </div>
-          <div class="sector-general-score" title="Média das subáreas avaliadas no trimestre atual">
+          <div class="sector-general-score" title="Média das últimas notas de cada local no ${trimestreSelecionado.label}">
             <span class="sector-general-score-label">Nota trimestral${faltamAreas ? ' provisória' : ''}</span>
             <span class="sector-general-score-value" style="color:${notaGeralSetorCor}">${notaGeralSetorTxt}</span>
           </div>
