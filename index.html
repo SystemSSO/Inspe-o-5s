@@ -12053,6 +12053,7 @@
         encaminharSetor: String(desvio.encaminharSetor ?? fallback.encaminharSetor ?? ''),
         fotos: Array.isArray(desvio.fotos) ? desvio.fotos : (Array.isArray(fallback.fotos) ? fallback.fotos : []),
         fotoLegendas: Array.isArray(desvio.fotoLegendas) ? desvio.fotoLegendas : (Array.isArray(fallback.fotoLegendas) ? fallback.fotoLegendas : []),
+        fotosEditadas: desvio.fotosEditadas === true || fallback.fotosEditadas === true,
         status,
         resolucaoObs: String(desvio.resolucaoObs ?? fallback.resolucaoObs ?? ''),
         resolucaoFotos: Array.isArray(desvio.resolucaoFotos) ? desvio.resolucaoFotos : (Array.isArray(fallback.resolucaoFotos) ? fallback.resolucaoFotos : []),
@@ -12519,7 +12520,9 @@
         if (existente) {
           const fotosAtuais = getFotosValidasArray(existente.fotos);
           const fotosOrigem = getFotosValidasArray(desvioAnterior.fotos);
-          if (!fotosAtuais.length && fotosOrigem.length) {
+          // Uma remoção intencional deve continuar vazia até receber outra foto,
+          // inclusive depois de retomar o rascunho ou renderizar o formulário.
+          if (!existente.fotosEditadas && !fotosAtuais.length && fotosOrigem.length) {
             existente.fotos = [...fotosOrigem];
             existente.fotoLegendas = Array.isArray(desvioAnterior.fotoLegendas)
               ? [...desvioAnterior.fotoLegendas]
@@ -12644,7 +12647,7 @@
                 <option value="">— Responsabilidade local —</option>
                 ${setoresCorresponsaveis.map(nome => `<option value="${escapeHtml(nome)}" ${desvio.encaminharSetor === nome ? 'selected' : ''}>${escapeHtml(nome)}</option>`).join('')}
               </select>
-              ${renderDesvioFotosHtml(s.id, ci, desvio, 'abertura', !!inherited)}
+              ${renderDesvioFotosHtml(s.id, ci, desvio, 'abertura', !!inherited && resolvido)}
               ${inherited && resolvido ? `
                 <div class="desvio-resolution">
                   <textarea class="form-textarea" id="desvio-resolucao-${s.id}-${ci}-${desvio.id}" rows="2" placeholder="Observação da resolução deste desvio (opcional)" oninput="setDesvioField('${s.id}',${ci},'${desvio.id}','resolucaoObs',this.value)">${escapeHtml(desvio.resolucaoObs || '')}</textarea>
@@ -12828,8 +12831,9 @@
       const legendasKey = kind === 'resolucao' ? 'resolucaoFotoLegendas' : 'fotoLegendas';
       if (Array.isArray(desvio[fotosKey])) desvio[fotosKey].splice(fi, 1);
       if (Array.isArray(desvio[legendasKey])) desvio[legendasKey].splice(fi, 1);
+      if (fotosKey === 'fotos') desvio.fotosEditadas = true;
       refreshCriterioAfterDesvioChange(sId, ci);
-      renderInspecaoForm();
+      renderDesvioFotoGrid(sId, ci, desvioId, kind);
     }
 
     // === Function: criterioHTML ===
@@ -13304,6 +13308,7 @@
             if (!Array.isArray(desvio[legendasKey])) desvio[legendasKey] = [];
             desvio[fotosKey].push(fotoSrc);
             desvio[legendasKey].push('');
+            if (fotosKey === 'fotos') desvio.fotosEditadas = true;
             refreshCriterioAfterDesvioChange(sId, ci, { saveDraft: false });
           } else {
             if (!Array.isArray(criterio.fotos)) criterio.fotos = [];
